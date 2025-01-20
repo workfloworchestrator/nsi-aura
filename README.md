@@ -11,7 +11,7 @@ via network automation.
 
 ```
 cd existing_repo
-git remote add origin https://git.ia.surfsara.nl/arno.bakker/nsi-aura.git
+git remote add origin git@github.com:workfloworchestrator/nsi-aura.git 
 git branch -M main
 git push -uf origin main
 ```
@@ -24,7 +24,7 @@ git push -uf origin main
 pip3 install fastui lxml requests
 pip3 install "fastapi[standard]"
 
-~/Library/Python/3.9/bin/fastapi dev nsi-aura.py
+~/Library/Python/3.9/bin/fastapi dev nsi_aura.py
 ```
 
 ## Authors
