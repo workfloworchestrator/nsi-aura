@@ -9,31 +9,42 @@ via network automation.
 
 ## Getting started
 
+Clone the GitHub repository:
+
+```shell
+git clone https://github.com/workfloworchestrator/nsi-aura.git
 ```
-cd existing_repo
-git remote add origin git@github.com:workfloworchestrator/nsi-aura.git 
-git branch -M main
-git push -uf origin main
+
+Create a Python virtual environment, like `venv`, and install the devpendencies:
+
+```shell
+python -m venv venv
+. venv/bin/activate
+pip install .
 ```
 
+And run nsi-aura:
 
-## Test and Deploy
-
-
+```shell
+fastapi dev nsi_aura.py
 ```
-pip3 install fastui lxml requests
-pip3 install "fastapi[standard]"
 
-~/Library/Python/3.9/bin/fastapi dev nsi_aura.py
+## Development
+
+Editable install with development tools:
+
+```shell
+pip install '.[dev]'
 ```
 
 ## Authors
-Arno Bakker (SURF),
+Arno Bakker (SURF)  
 Hans Trompert (SURF)
 
 ## License
-Some open-source license, TBD.
+Apache-2.0
 
+<!--
 ## TODO
 
 ## Name
@@ -75,3 +86,4 @@ For open source projects, say how it is licensed.
 
 ## Project status
 If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+-->

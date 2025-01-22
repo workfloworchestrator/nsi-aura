@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nsi-aura"
+version = "0.0.1"
+dependencies = [
+  "fastui",
+  "lxml",
+  "requests",
+  "fastapi[standard]",
+]
+requires-python = ">=3.12"
+authors = [
+  {name = "Arno Bakker"},
+  {name = "Hans Trompert"},
+]
+maintainers = [
+  {name = "Arno Bakker"},
+]
+description = "Lovely Spam! Wonderful Spam!"
+readme = "README.md"
+keywords = [
+  "ANA",
+  "NSI",
+  "Python",
+]
+classifiers = [
+]
+
+license = {file = "LICENSE.txt"}
+
+[project.optional-dependencies]
+dev = [
+  "ruff",
+  "mypy",
+]
+
+[project.urls]
+# Homepage =
+# Documentation =
+Repository = "https://github.com/workfloworchestrator/nsi-aura.git"
+# "Bug Tracker" =
+# Changelog =
+
+[project.scripts]
+
+[project.gui-scripts]
+
+[tool.ruff]
+line-length = 120
+select = ["B", "C", "D", "E", "F", "I", "N", "RET", "S", "T", "W"]
+target-version = "py313"
+ignore = [
+    "C417",
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "D202",
+    "E501",
+    "N806",
+    "B905",
+    "N805",
+    "B904",
+    "N803",
+    "N801",
+    "N815",
+    "N802",
+]
