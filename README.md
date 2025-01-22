@@ -15,7 +15,7 @@ Clone the GitHub repository:
 git clone https://github.com/workfloworchestrator/nsi-aura.git
 ```
 
-Create a Python virtual environment, like `venv`, and install the devpendencies:
+Create a Python virtual environment, like `venv`, and install the dependencies:
 
 ```shell
 python -m venv venv

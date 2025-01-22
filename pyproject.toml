@@ -18,8 +18,9 @@ authors = [
 ]
 maintainers = [
   {name = "Arno Bakker"},
+  {name = "Hans Trompert"},
 ]
-description = "Lovely Spam! Wonderful Spam!"
+description = "Network Service Interface (NSI) ultimate Requester Agent (uRA) for the Advanced North Atlantic (ANA) consortium"
 readme = "README.md"
 keywords = [
   "ANA",
