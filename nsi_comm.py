@@ -15,143 +15,154 @@
 #
 # NSI Communications functions
 # ============================
-# @author: Arno Bakker 
+# @author: Arno Bakker
 #
 # No fastAPI code allowed here
 #
-import sys
-import os
+import base64
+import datetime
 import traceback
+import uuid
+import zlib
+from io import BytesIO
+
 import requests
 from urllib3.util.retry import Retry
-from io import BytesIO
-import datetime
-import uuid
-import base64
-import zlib
-import copy
 
 try:
     from lxml import etree
 except ImportError:
     import xml.etree.ElementTree as etree
 
+
 def prettyprint(element, **kwargs):
     xml = etree.tostring(element, pretty_print=True, **kwargs)
-    print(xml.decode(), end='')
+    print(xml.decode(), end="")
 
 
-FIND_ANYWHERE_PREFIX='.//'
+FIND_ANYWHERE_PREFIX = ".//"
 
 #
 # All items parsed from XML/SOAP get a numerical id about the order in which they were found
 # in the XML
 #
-FASTUID_ID_KEY="fastui_id"
+FASTUID_ID_KEY = "fastui_id"
 
 
 #
 # /dds/documents from DDS
-# 
+#
 # See https://stackoverflow.com/questions/40772297/syntaxerror-prefix-a-not-found-in-prefix-map
 #
-DOCUMENTS_TAG="{http://schemas.ogf.org/nsi/2014/02/discovery/types}documents" # aka ns2:documents
-DOCUMENT_TAG="{http://schemas.ogf.org/nsi/2014/02/discovery/types}document" # aka ns2:document
-LOCAL_TAG="{http://schemas.ogf.org/nsi/2014/02/discovery/types}local"       # aka ns2:local
-NSA_SHORT_TAG="nsa"
-CONTENT_SHORT_TAG="content"
-TYPE_SHORT_TAG="type"
-CONTENT_SHORT_TAG="content"
-DISCOVERY_POSTFIX_MIME_TYPE="vnd.ogf.nsi.nsa.v1+xml"   # no group/ ?
-TOPOLOGY_POSTFIX_MIME_TYPE="vnd.ogf.nsi.topology.v2+xml"
+DOCUMENTS_TAG = "{http://schemas.ogf.org/nsi/2014/02/discovery/types}documents"  # aka ns2:documents
+DOCUMENT_TAG = "{http://schemas.ogf.org/nsi/2014/02/discovery/types}document"  # aka ns2:document
+LOCAL_TAG = "{http://schemas.ogf.org/nsi/2014/02/discovery/types}local"  # aka ns2:local
+NSA_SHORT_TAG = "nsa"
+CONTENT_SHORT_TAG = "content"
+TYPE_SHORT_TAG = "type"
+CONTENT_SHORT_TAG = "content"
+DISCOVERY_POSTFIX_MIME_TYPE = "vnd.ogf.nsi.nsa.v1+xml"  # no group/ ?
+TOPOLOGY_POSTFIX_MIME_TYPE = "vnd.ogf.nsi.topology.v2+xml"
 
 
 #
 # /discovery XML from SuPA
 #
 ## Metadata
-NSA_TAG='{http://schemas.ogf.org/nsi/2014/02/discovery/nsa}nsa'
+NSA_TAG = "{http://schemas.ogf.org/nsi/2014/02/discovery/nsa}nsa"
 NSA_ID_ATTRIB = "id"
 NSA_VERSION_ATTRIB = "version"
 NSA_EXPIRES_ATTRIB = "expires"
 
 
-INTERFACE_TAG="interface"
-TYPE_IN_INTERFACE_TAG="type"
-HREF_IN_INTERFACE_TAG="href"
+INTERFACE_TAG = "interface"
+TYPE_IN_INTERFACE_TAG = "type"
+HREF_IN_INTERFACE_TAG = "href"
 
-TOPOLOGY_SERVICE_MIME_TYPE='application/vnd.ogf.nsi.topology.v2+xml'
-SOAP_PROVIDER_MIME_TYPE='application/vnd.ogf.nsi.cs.v2.provider+soap'
+TOPOLOGY_SERVICE_MIME_TYPE = "application/vnd.ogf.nsi.topology.v2+xml"
+SOAP_PROVIDER_MIME_TYPE = "application/vnd.ogf.nsi.cs.v2.provider+soap"
 
-SOAP_HTTP_CONTENT_MIME_TYPE_AND_ENCODING='text/xml;charset=utf-8' 
-SOAP_HTTP_CONTENT_MIME_TYPE_NO_ENCODING='text/xml'
+SOAP_HTTP_CONTENT_MIME_TYPE_AND_ENCODING = "text/xml;charset=utf-8"
+SOAP_HTTP_CONTENT_MIME_TYPE_NO_ENCODING = "text/xml"
 
 #
 # /topology XML from SuPA
 #
-SWITCHING_SERVICE_TAG='{http://schemas.ogf.org/nml/2013/05/base#}SwitchingService'
-BIDI_PORT_TAG='{http://schemas.ogf.org/nml/2013/05/base#}BidirectionalPort'
-RELATION_TAG='{http://schemas.ogf.org/nml/2013/05/base#}Relation'
-LABEL_GROUP_TAG='{http://schemas.ogf.org/nml/2013/05/base#}LabelGroup'
+SWITCHING_SERVICE_TAG = "{http://schemas.ogf.org/nml/2013/05/base#}SwitchingService"
+BIDI_PORT_TAG = "{http://schemas.ogf.org/nml/2013/05/base#}BidirectionalPort"
+RELATION_TAG = "{http://schemas.ogf.org/nml/2013/05/base#}Relation"
+LABEL_GROUP_TAG = "{http://schemas.ogf.org/nml/2013/05/base#}LabelGroup"
 
-INPORT_IN_POSTFIX=":in"
-OUTPORT_OUT_POSTFIX=":out"
+INPORT_IN_POSTFIX = ":in"
+OUTPORT_OUT_POSTFIX = ":out"
 
 RELATION_HAS_INBOUND_PORT_TYPE = "http://schemas.ogf.org/nml/2013/05/base#hasInboundPort"
 RELATION_HAS_OUTBOUND_PORT_TYPE = "http://schemas.ogf.org/nml/2013/05/base#hasOutboundPort"
-PORTGROUP_TAG='{http://schemas.ogf.org/nml/2013/05/base#}PortGroup'
+PORTGROUP_TAG = "{http://schemas.ogf.org/nml/2013/05/base#}PortGroup"
 
-RELATION_IS_ALIAS_TYPE='http://schemas.ogf.org/nml/2013/05/base#isAlias'
-RELATION_TYPE_ATTRIB="type"
-PORTGROUP_ID_ATTRIB="id"
+RELATION_IS_ALIAS_TYPE = "http://schemas.ogf.org/nml/2013/05/base#isAlias"
+RELATION_TYPE_ATTRIB = "type"
+PORTGROUP_ID_ATTRIB = "id"
 
 #
 # NSI QUERY SOAP reply
-# 
+#
 
 # QUERY SOAP REPLY
-S_RESERVATION_TAG='reservation'
-S_CONNECTION_ID_TAG='connectionId'
-S_DESCRIPTION_TAG='description'
-S_STARTTIME_TAG='startTime'
-S_ENDTIME_TAG='endTime'
-S_SOURCE_STP_TAG='sourceSTP'
-S_DEST_STP_TAG='destSTP'
-S_REQUESTER_NSA_TAG='requesterNSA'
-S_RESERVATION_STATE_TAG='reservationState'
-S_LIFECYCLE_STATE_TAG='lifecycleState'
-S_DATAPLANE_STATUS_TAG='dataPlaneStatus'   # HACKED into value of <active>
+S_RESERVATION_TAG = "reservation"
+S_CONNECTION_ID_TAG = "connectionId"
+S_DESCRIPTION_TAG = "description"
+S_STARTTIME_TAG = "startTime"
+S_ENDTIME_TAG = "endTime"
+S_SOURCE_STP_TAG = "sourceSTP"
+S_DEST_STP_TAG = "destSTP"
+S_REQUESTER_NSA_TAG = "requesterNSA"
+S_RESERVATION_STATE_TAG = "reservationState"
+S_LIFECYCLE_STATE_TAG = "lifecycleState"
+S_DATAPLANE_STATUS_TAG = "dataPlaneStatus"  # HACKED into value of <active>
 
-S_QUERY_REPLY_TAGS=[S_RESERVATION_TAG,S_CONNECTION_ID_TAG,S_DESCRIPTION_TAG,S_STARTTIME_TAG,S_ENDTIME_TAG,S_SOURCE_STP_TAG,S_DEST_STP_TAG,S_REQUESTER_NSA_TAG,S_RESERVATION_STATE_TAG,S_LIFECYCLE_STATE_TAG,S_DATAPLANE_STATUS_TAG]
+S_QUERY_REPLY_TAGS = [
+    S_RESERVATION_TAG,
+    S_CONNECTION_ID_TAG,
+    S_DESCRIPTION_TAG,
+    S_STARTTIME_TAG,
+    S_ENDTIME_TAG,
+    S_SOURCE_STP_TAG,
+    S_DEST_STP_TAG,
+    S_REQUESTER_NSA_TAG,
+    S_RESERVATION_STATE_TAG,
+    S_LIFECYCLE_STATE_TAG,
+    S_DATAPLANE_STATUS_TAG,
+]
 
-S_DATAPLANE_STATUS_ACTIVE_TAG='active'
+S_DATAPLANE_STATUS_ACTIVE_TAG = "active"
 
-NSI_RESERVATION_FAILED_STATE = 'ReserveFailed'
-NSI_RESERVATION_TIMEOUT_STATE = 'ReserveTimeout'
+NSI_RESERVATION_FAILED_STATE = "ReserveFailed"
+NSI_RESERVATION_TIMEOUT_STATE = "ReserveTimeout"
 
 # NSI RESERVE SOAP reply
-# 
+#
 ## S_CONNECTION_ID_TAG='connectionId'
 
 # NSI RESERVE COMMIT SOAP reply
-# 
-S_CORRELATION_ID_TAG='correlationId'
+#
+S_CORRELATION_ID_TAG = "correlationId"
 
 
-S_FAULTSTRING_TAG = 'faultstring'
+S_FAULTSTRING_TAG = "faultstring"
 
 
 #
 # NSI RESERVE async callback from Orchestrator
 #
-S_RESERVE_CONFIRMED_TAG='{http://schemas.ogf.org/nsi/2013/12/connection/types}reserveConfirmed'
+S_RESERVE_CONFIRMED_TAG = "{http://schemas.ogf.org/nsi/2013/12/connection/types}reserveConfirmed"
 
 
 #
 # NSI QUERY RECURSIVE async callback from Orchestrator
-S_QUERY_RECURSIVE_CONFIRMED_TAG='{http://schemas.ogf.org/nsi/2013/12/connection/types}queryRecursiveConfirmed'
-S_CHILDREN_TAG="children"
-S_CHILD_TAG="child"
+S_QUERY_RECURSIVE_CONFIRMED_TAG = "{http://schemas.ogf.org/nsi/2013/12/connection/types}queryRecursiveConfirmed"
+S_CHILDREN_TAG = "children"
+S_CHILD_TAG = "child"
 
 
 def generate_uuid():
@@ -159,10 +170,10 @@ def generate_uuid():
     return myuuid
 
 
-URN_UUID_PREFIX="urn:uuid:"
-URN_STP_PREFIX="urn:ogf:network:example.domain:2001:topology:"
-URN_STP_NAME="name"
-URN_STP_VLAN="vlan"
+URN_UUID_PREFIX = "urn:uuid:"
+URN_STP_PREFIX = "urn:ogf:network:example.domain:2001:topology:"
+URN_STP_NAME = "name"
+URN_STP_VLAN = "vlan"
 
 
 # Template files currently in /static
@@ -175,73 +186,71 @@ NSI_RESERVE_XML_CONNECTION_PREFIX = "ANA-GRAM Connection"
 # DONE: providerNSA in all msgs set to value from NSA id from /discovery
 
 # TODO: capacity
-message_keys = [  
-    "#CORRELATION-ID#",         # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
-    "#REPLY-TO-URL#",           # http://127.0.0.1:7080/NSI/services/RequesterService2
-    "#CONNECTION-DESCRIPTION#", # string w/spaces
+message_keys = [
+    "#CORRELATION-ID#",  # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
+    "#REPLY-TO-URL#",  # http://127.0.0.1:7080/NSI/services/RequesterService2
+    "#CONNECTION-DESCRIPTION#",  # string w/spaces
     "#GLOBAL-RESERVATION-ID#",  # urn:uuid:c46b7412-2263-46c6-b497-54f52e9f9ff4
     "#CONNECTION-START-TIME#",  # 2024-09-26T12:00:00+00:00  # ARNO: no timezone?
-    "#CONNECTION-END-TIME#",    # 2024-09-26T22:00:00+00:00
-    "#SOURCE-STP#",             # urn:ogf:network:example.domain:2001:topology:port12?vlan=1002 
-    "#DEST-STP#",               # urn:ogf:network:example.domain:2001:topology:port12?vlan=1002 
-    "#PROVIDER-NSA-ID#"         # urn:ogf:network:example.domain:2001:nsa:supa 
+    "#CONNECTION-END-TIME#",  # 2024-09-26T22:00:00+00:00
+    "#SOURCE-STP#",  # urn:ogf:network:example.domain:2001:topology:port12?vlan=1002
+    "#DEST-STP#",  # urn:ogf:network:example.domain:2001:topology:port12?vlan=1002
+    "#PROVIDER-NSA-ID#",  # urn:ogf:network:example.domain:2001:nsa:supa
 ]
 
 
 # RESERVE COMMIT
 NSI_RESERVE_COMMIT_TEMPLATE_XMLFILE = "ReserveCommit.xml"
 
-reserve_commit_keys = [  
-    "#CORRELATION-ID#",         # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
-    "#REPLY-TO-URL#",           # http://127.0.0.1:7080/NSI/services/RequesterService2
-    "#CONNECTION-ID#",          # note: no urn prefix: 2d71c50b-a6ff-46e5-8e37-567470ba832a
-    "#PROVIDER-NSA-ID#"         # urn:ogf:network:example.domain:2001:nsa:supa 
+reserve_commit_keys = [
+    "#CORRELATION-ID#",  # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
+    "#REPLY-TO-URL#",  # http://127.0.0.1:7080/NSI/services/RequesterService2
+    "#CONNECTION-ID#",  # note: no urn prefix: 2d71c50b-a6ff-46e5-8e37-567470ba832a
+    "#PROVIDER-NSA-ID#",  # urn:ogf:network:example.domain:2001:nsa:supa
 ]
 
 
 # PROVISION
 NSI_PROVISION_TEMPLATE_XMLFILE = "Provision.xml"
 
-provision_keys = [  
-    "#CORRELATION-ID#",         # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
-    "#REPLY-TO-URL#",           # http://127.0.0.1:7080/NSI/services/RequesterService2
-    "#CONNECTION-ID#",          # note: no urn prefix: 2d71c50b-a6ff-46e5-8e37-567470ba832a
-    "#PROVIDER-NSA-ID#"         # urn:ogf:network:example.domain:2001:nsa:supa 
+provision_keys = [
+    "#CORRELATION-ID#",  # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
+    "#REPLY-TO-URL#",  # http://127.0.0.1:7080/NSI/services/RequesterService2
+    "#CONNECTION-ID#",  # note: no urn prefix: 2d71c50b-a6ff-46e5-8e37-567470ba832a
+    "#PROVIDER-NSA-ID#",  # urn:ogf:network:example.domain:2001:nsa:supa
 ]
 
 # TERMINATE
 NSI_TERMINATE_TEMPLATE_XMLFILE = "Terminate.xml"
 
-terminate_keys = [  
-    "#CORRELATION-ID#",         # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
-    "#REPLY-TO-URL#",           # http://127.0.0.1:7080/NSI/services/RequesterService2
-    "#CONNECTION-ID#",          # note: no urn prefix: 2d71c50b-a6ff-46e5-8e37-567470ba832a
-    "#PROVIDER-NSA-ID#"         # urn:ogf:network:example.domain:2001:nsa:supa 
+terminate_keys = [
+    "#CORRELATION-ID#",  # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
+    "#REPLY-TO-URL#",  # http://127.0.0.1:7080/NSI/services/RequesterService2
+    "#CONNECTION-ID#",  # note: no urn prefix: 2d71c50b-a6ff-46e5-8e37-567470ba832a
+    "#PROVIDER-NSA-ID#",  # urn:ogf:network:example.domain:2001:nsa:supa
 ]
 
 
 # RELEASE
 NSI_RELEASE_TEMPLATE_XMLFILE = "Release.xml"
 
-release_keys = [  
-    "#CORRELATION-ID#",         # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
-    "#REPLY-TO-URL#",           # http://127.0.0.1:7080/NSI/services/RequesterService2
-    "#CONNECTION-ID#",          # note: no urn prefix: 2d71c50b-a6ff-46e5-8e37-567470ba832a
-    "#PROVIDER-NSA-ID#"         # urn:ogf:network:example.domain:2001:nsa:supa 
+release_keys = [
+    "#CORRELATION-ID#",  # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
+    "#REPLY-TO-URL#",  # http://127.0.0.1:7080/NSI/services/RequesterService2
+    "#CONNECTION-ID#",  # note: no urn prefix: 2d71c50b-a6ff-46e5-8e37-567470ba832a
+    "#PROVIDER-NSA-ID#",  # urn:ogf:network:example.domain:2001:nsa:supa
 ]
 
 
 # RESERVE_TIMEOUT_ACK
 NSI_RESERVE_TIMEOUT_ACK_TEMPLATE_XMLFILE = "ReserveTimeoutACK.xml"
 
-reserve_timeout_ack_keys = [  
-    "#CORRELATION-ID#",         # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
-    "#REPLY-TO-URL#",           # http://127.0.0.1:7080/NSI/services/RequesterService2
-    "#CONNECTION-ID#",          # note: no urn prefix: 2d71c50b-a6ff-46e5-8e37-567470ba832a
-    "#PROVIDER-NSA-ID#"         # urn:ogf:network:example.domain:2001:nsa:supa 
+reserve_timeout_ack_keys = [
+    "#CORRELATION-ID#",  # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
+    "#REPLY-TO-URL#",  # http://127.0.0.1:7080/NSI/services/RequesterService2
+    "#CONNECTION-ID#",  # note: no urn prefix: 2d71c50b-a6ff-46e5-8e37-567470ba832a
+    "#PROVIDER-NSA-ID#",  # urn:ogf:network:example.domain:2001:nsa:supa
 ]
-
-
 
 
 # QUERY
@@ -251,42 +260,48 @@ NSI_QUERY_SUMMARY_SYNC_TEMPLATE_XMLFILE = "QuerySummarySync.xml"
 #      <connectionId>af7e02ef-608a-42d7-89b3-9f701051a58e</connectionId>
 #      <ifModifiedSince>2022-09-01T14:50:46.767879+00:00</ifModifiedSince>
 #     <globalReservationId>76cc6c3c-a126-4174-8016-11f00012ec1d</globalReservationId>
-query_summary_sync_keys = [  
-    "#CORRELATION-ID#",         # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
-    "#REPLY-TO-URL#",           # http://127.0.0.1:7080/NSI/services/RequesterService2
-    "#PROVIDER-NSA-ID#"         # urn:ogf:network:example.domain:2001:nsa:supa 
+query_summary_sync_keys = [
+    "#CORRELATION-ID#",  # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
+    "#REPLY-TO-URL#",  # http://127.0.0.1:7080/NSI/services/RequesterService2
+    "#PROVIDER-NSA-ID#",  # urn:ogf:network:example.domain:2001:nsa:supa
 ]
 
 
 # QUERY_RECURSIVE
 NSI_QUERY_RECURSIVE_TEMPLATE_XMLFILE = "QueryRecursive.xml"
 
-query_recursive_keys = [  
-    "#CORRELATION-ID#",         # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
-    "#REPLY-TO-URL#",           # http://127.0.0.1:7080/NSI/services/RequesterService2
-    "#CONNECTION-ID#",          # note: no urn prefix: 2d71c50b-a6ff-46e5-8e37-567470ba832a
-    "#PROVIDER-NSA-ID#"         # urn:ogf:network:example.domain:2001:nsa:supa 
+query_recursive_keys = [
+    "#CORRELATION-ID#",  # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
+    "#REPLY-TO-URL#",  # http://127.0.0.1:7080/NSI/services/RequesterService2
+    "#CONNECTION-ID#",  # note: no urn prefix: 2d71c50b-a6ff-46e5-8e37-567470ba832a
+    "#PROVIDER-NSA-ID#",  # urn:ogf:network:example.domain:2001:nsa:supa
 ]
 
 
-
-
-
-
 def stp_dict_to_urn(stp_dict):
-    return stp_dict[URN_STP_NAME]+'?'+URN_STP_VLAN+'='+str(stp_dict[URN_STP_VLAN])
+    return stp_dict[URN_STP_NAME] + "?" + URN_STP_VLAN + "=" + str(stp_dict[URN_STP_VLAN])
 
 
-def generate_reserve_xml(message_templstr,correlation_uuid_py,reply_to_url,connection_descr,global_reservation_uuid_py,start_datetime_py,end_datetime_py,source_stp_dict,dest_stp_dict,provider_nsa_id):
+def generate_reserve_xml(
+    message_templstr,
+    correlation_uuid_py,
+    reply_to_url,
+    connection_descr,
+    global_reservation_uuid_py,
+    start_datetime_py,
+    end_datetime_py,
+    source_stp_dict,
+    dest_stp_dict,
+    provider_nsa_id,
+):
     # Generate values
-    correlation_urn = URN_UUID_PREFIX+str(correlation_uuid_py)
-    global_reservation_urn = URN_UUID_PREFIX+str(global_reservation_uuid_py)
+    correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
+    global_reservation_urn = URN_UUID_PREFIX + str(global_reservation_uuid_py)
     start_time_str = start_datetime_py.isoformat()
     end_time_str = end_datetime_py.isoformat()
-    
+
     source_stp_str = stp_dict_to_urn(source_stp_dict)
     dest_stp_str = stp_dict_to_urn(dest_stp_dict)
-
 
     message_dict = {}
     message_dict["#CORRELATION-ID#"] = correlation_urn
@@ -301,34 +316,31 @@ def generate_reserve_xml(message_templstr,correlation_uuid_py,reply_to_url,conne
 
     message_xml = message_templstr
     for message_key in message_keys:
-        message_xml = message_xml.replace(message_key,message_dict[message_key])
+        message_xml = message_xml.replace(message_key, message_dict[message_key])
 
     return message_xml
 
 
-
-def generate_reserve_commit_xml(message_templstr,correlation_uuid_py,reply_to_url,connid_str,provider_nsa_id):
+def generate_reserve_commit_xml(message_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id):
     # Generate values
-    correlation_urn = URN_UUID_PREFIX+str(correlation_uuid_py)
+    correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
     message_dict = {}
     message_dict["#CORRELATION-ID#"] = correlation_urn
     message_dict["#REPLY-TO-URL#"] = reply_to_url
     message_dict["#CONNECTION-ID#"] = connid_str
     message_dict["#PROVIDER-NSA-ID#"] = provider_nsa_id
-    
+
     message_xml = message_templstr
     for message_key in reserve_commit_keys:
-        message_xml = message_xml.replace(message_key,message_dict[message_key])
+        message_xml = message_xml.replace(message_key, message_dict[message_key])
 
     return message_xml
 
 
-
-
-def generate_provision_xml(message_templstr,correlation_uuid_py,reply_to_url,connid_str,provider_nsa_id):
+def generate_provision_xml(message_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id):
     # Generate values
-    correlation_urn = URN_UUID_PREFIX+str(correlation_uuid_py)
+    correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
     message_dict = {}
     message_dict["#CORRELATION-ID#"] = correlation_urn
@@ -338,31 +350,14 @@ def generate_provision_xml(message_templstr,correlation_uuid_py,reply_to_url,con
 
     message_xml = message_templstr
     for message_key in provision_keys:
-        message_xml = message_xml.replace(message_key,message_dict[message_key])
+        message_xml = message_xml.replace(message_key, message_dict[message_key])
 
     return message_xml
 
 
-def generate_terminate_xml(message_templstr,correlation_uuid_py,reply_to_url,connid_str,provider_nsa_id):
+def generate_terminate_xml(message_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id):
     # Generate values
-    correlation_urn = URN_UUID_PREFIX+str(correlation_uuid_py)
-
-    message_dict = {}
-    message_dict["#CORRELATION-ID#"] = correlation_urn
-    message_dict["#REPLY-TO-URL#"] = reply_to_url
-    message_dict["#CONNECTION-ID#"] = connid_str
-    message_dict["#PROVIDER-NSA-ID#"] = provider_nsa_id
-    
-    message_xml = message_templstr
-    for message_key in terminate_keys:
-        message_xml = message_xml.replace(message_key,message_dict[message_key])
-
-    return message_xml
-
-
-def generate_release_xml(message_templstr,correlation_uuid_py,reply_to_url,connid_str,provider_nsa_id):
-    # Generate values
-    correlation_urn = URN_UUID_PREFIX+str(correlation_uuid_py)
+    correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
     message_dict = {}
     message_dict["#CORRELATION-ID#"] = correlation_urn
@@ -372,14 +367,14 @@ def generate_release_xml(message_templstr,correlation_uuid_py,reply_to_url,conni
 
     message_xml = message_templstr
     for message_key in terminate_keys:
-        message_xml = message_xml.replace(message_key,message_dict[message_key])
+        message_xml = message_xml.replace(message_key, message_dict[message_key])
 
     return message_xml
 
 
-def generate_reserve_timeout_ack_xml(message_templstr,correlation_uuid_py,reply_to_url,connid_str,provider_nsa_id):
+def generate_release_xml(message_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id):
     # Generate values
-    correlation_urn = URN_UUID_PREFIX+str(correlation_uuid_py)
+    correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
     message_dict = {}
     message_dict["#CORRELATION-ID#"] = correlation_urn
@@ -389,33 +384,48 @@ def generate_reserve_timeout_ack_xml(message_templstr,correlation_uuid_py,reply_
 
     message_xml = message_templstr
     for message_key in terminate_keys:
-        message_xml = message_xml.replace(message_key,message_dict[message_key])
+        message_xml = message_xml.replace(message_key, message_dict[message_key])
 
     return message_xml
 
 
-
-
-def generate_query_summary_sync_xml(message_templstr,correlation_uuid_py,reply_to_url,provider_nsa_id):
+def generate_reserve_timeout_ack_xml(message_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id):
     # Generate values
-    correlation_urn = URN_UUID_PREFIX+str(correlation_uuid_py)
+    correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
+
+    message_dict = {}
+    message_dict["#CORRELATION-ID#"] = correlation_urn
+    message_dict["#REPLY-TO-URL#"] = reply_to_url
+    message_dict["#CONNECTION-ID#"] = connid_str
+    message_dict["#PROVIDER-NSA-ID#"] = provider_nsa_id
+
+    message_xml = message_templstr
+    for message_key in terminate_keys:
+        message_xml = message_xml.replace(message_key, message_dict[message_key])
+
+    return message_xml
+
+
+def generate_query_summary_sync_xml(message_templstr, correlation_uuid_py, reply_to_url, provider_nsa_id):
+    # Generate values
+    correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
     message_dict = {}
     message_dict["#CORRELATION-ID#"] = correlation_urn
     message_dict["#REPLY-TO-URL#"] = reply_to_url
     message_dict["#PROVIDER-NSA-ID#"] = provider_nsa_id
-    
+
     message_xml = message_templstr
     for message_key in query_summary_sync_keys:
-        message_xml = message_xml.replace(message_key,message_dict[message_key])
+        message_xml = message_xml.replace(message_key, message_dict[message_key])
 
-    print("QUERY_XML",message_xml)
+    print("QUERY_XML", message_xml)
     return message_xml
 
 
-def generate_query_recursive_xml(message_templstr,correlation_uuid_py,reply_to_url,connid_str,provider_nsa_id):
+def generate_query_recursive_xml(message_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id):
     # Generate values
-    correlation_urn = URN_UUID_PREFIX+str(correlation_uuid_py)
+    correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
     message_dict = {}
     message_dict["#CORRELATION-ID#"] = correlation_urn
@@ -425,20 +435,17 @@ def generate_query_recursive_xml(message_templstr,correlation_uuid_py,reply_to_u
 
     message_xml = message_templstr
     for message_key in terminate_keys:
-        message_xml = message_xml.replace(message_key,message_dict[message_key])
+        message_xml = message_xml.replace(message_key, message_dict[message_key])
 
     return message_xml
-
-
-
-
 
 
 #
 # Library
 #
 
-perscert = None   # pair of pubkey and privkey filenames, in PEM
+perscert = None  # pair of pubkey and privkey filenames, in PEM
+
 
 def nsi_comm_init(cert):
     global perscert
@@ -447,59 +454,54 @@ def nsi_comm_init(cert):
     session = requests.Session()
 
     # requests can only work with passphrase-less private keys!
-    #session.cert = '../DO-NOT-COMMIT-arno-certs-2024.p12'
+    # session.cert = '../DO-NOT-COMMIT-arno-certs-2024.p12'
     # No work, dunno why
-    #session.cert= ('../arno-perscert-pub-2024.crt', '../DO-NOT-COMMIT-arno-priv-2024.pem')
+    # session.cert= ('../arno-perscert-pub-2024.crt', '../DO-NOT-COMMIT-arno-priv-2024.pem')
 
     # Getting Max Retry errors? Due to passphrase protected private key
     # https://stackoverflow.com/questions/23013220/max-retries-exceeded-with-url-in-requests
     retry = Retry(connect=3, backoff_factor=0.5)
     adapter = requests.adapters.HTTPAdapter(max_retries=retry)
-    session.mount('http://', adapter)
-    session.mount('https://', adapter)
-
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
 
 
 def nsi_util_get_and_parse_xml(url):
     xml = nsi_util_get_xml(url)
     if xml is None:
         return xml
-    else:
-        return nsi_util_parse_xml(xml)
+    return nsi_util_parse_xml(xml)
 
 
 def nsi_util_get_xml(url):
 
     global perscert
     # throws Exception to higher layer for display to user
-    print("SENDING HTTP REQUEST FOR XML",url)
+    print("SENDING HTTP REQUEST FOR XML", url)
     # 2024-11-08: SuPA moxy currently has self-signed certificate
     r = requests.get(url, verify=False, cert=perscert)
-    #logger.debug print(r.status_code)
-    #logger.debug print(r.headers['content-type'])
-    #logger.debug print(r.encoding)
+    # logger.debug print(r.status_code)
+    # logger.debug print(r.headers['content-type'])
+    # logger.debug print(r.encoding)
     print(r.status_code)
-    print(r.headers['content-type'])
+    print(r.headers["content-type"])
     print(r.encoding)
     print(r.content)
-    #except:
+    # except:
     #    print("nsi_util_get_and_parse_xml: error talking to "+url,file=sys.stderr)
     #    traceback.print_exc()
     #    return None
 
-
-    content_type = r.headers['content-type']
+    content_type = r.headers["content-type"]
     content_type = content_type.lower()  # UTF-8 and utf-8
-    if content_type == 'application/xml' or content_type.startswith('text/xml'):
+    if content_type == "application/xml" or content_type.startswith("text/xml"):
         return r.content
-    else:
-        print(url+" did not return XML, but "+r.headers['content-type'])
-        return None
+    print(url + " did not return XML, but " + r.headers["content-type"])
+    return None
 
 
 def nsi_util_parse_xml(xml):
-    """
-    Parse XML
+    """Parse XML
     return etree
     """
     xml_file = BytesIO(xml)
@@ -507,13 +509,9 @@ def nsi_util_parse_xml(xml):
     return tree
 
 
-
-
-
 # Read discover information, return dict with found services
 def nsi_get_dds_documents(url):
-    """
-    Returns a dictionary with:
+    """Returns a dictionary with:
     "local" : a discovery dictionary for the NSI Orchestrator / Safnari
     "documents" : a dictionary of documents, one per NSA-ID mentioned.
     Typically there is a topology and a discovery document, which are decoded
@@ -522,16 +520,15 @@ def nsi_get_dds_documents(url):
     TODO: All topology data from all uPAs is downloaded in one go. Will this scale?
     """
     # REPLACE
-    #with open(os.path.join("samples","dds.xml")) as dds_file:
+    # with open(os.path.join("samples","dds.xml")) as dds_file:
     #    tree = etree.parse(dds_file)
-    #dds_file.close()
-
+    # dds_file.close()
 
     local = {}
     local["metadata"] = {}
     local["services"] = {}
     documents = {}
-    
+
     tree = nsi_util_get_and_parse_xml(url)
     # Throws Exception
 
@@ -545,56 +542,54 @@ def nsi_get_dds_documents(url):
     ###element = tree.find(FIND_ANYWHERE_PREFIX+DOCUMENTS_TAG)
 
     # Arno: I see the top-level documents tag, but cannot get it using find
-    #tag = tree.find(FIND_ANYWHERE_PREFIX+DOCUMENTS_TAG)
+    # tag = tree.find(FIND_ANYWHERE_PREFIX+DOCUMENTS_TAG)
     for tag in root.iter():
         if tag.tag == DOCUMENTS_TAG:
             element = tag
             break
 
-    for tag in element.findall(FIND_ANYWHERE_PREFIX+DOCUMENT_TAG):
+    for tag in element.findall(FIND_ANYWHERE_PREFIX + DOCUMENT_TAG):
 
         print(f"nsi_get_dds_documents FOUND document {tag.tag} - {tag.text} --- {tag.attrib}")
-        nsa = tag.find(FIND_ANYWHERE_PREFIX+NSA_SHORT_TAG)
-        type = tag.find(FIND_ANYWHERE_PREFIX+TYPE_SHORT_TAG)
-        content = tag.find(FIND_ANYWHERE_PREFIX+CONTENT_SHORT_TAG)
+        nsa = tag.find(FIND_ANYWHERE_PREFIX + NSA_SHORT_TAG)
+        type = tag.find(FIND_ANYWHERE_PREFIX + TYPE_SHORT_TAG)
+        content = tag.find(FIND_ANYWHERE_PREFIX + CONTENT_SHORT_TAG)
 
         # Data is distributed, so we need to build a database that we fill in as we parse pieces
         nsa_id = nsa.text
         if nsa_id not in documents:
-            documents[nsa_id] = {"discovery":None,"topology":None}
+            documents[nsa_id] = {"discovery": None, "topology": None}
 
         # Piece of puzzle?
         if type.text == DISCOVERY_POSTFIX_MIME_TYPE or type.text == TOPOLOGY_POSTFIX_MIME_TYPE:
 
             gzipped = base64.b64decode(content.text)
             # See https://stackoverflow.com/questions/2695152/in-python-how-do-i-decode-gzip-encoding
-            xml=zlib.decompress(gzipped, 16+zlib.MAX_WBITS)
+            xml = zlib.decompress(gzipped, 16 + zlib.MAX_WBITS)
 
             tree2 = nsi_util_parse_xml(xml)
             # Throws exception
-
 
             if type.text == DISCOVERY_POSTFIX_MIME_TYPE:
                 disc_dict = nsi_parse_discovery_xml_tree(tree2)
                 # Sanity check: compare nsa.text to ["metadata"]["id"]
                 # print("GET DOCUMENTS: COMPARE",nsa.text)
-                print("nsi_get_dds_documents: DISC",disc_dict)
-                
+                print("nsi_get_dds_documents: DISC", disc_dict)
+
                 documents[nsa_id]["discovery"] = disc_dict
 
             elif type.text == TOPOLOGY_POSTFIX_MIME_TYPE:
                 topo_dict = nsi_parse_topology_sdp_xml_tree(tree2)
                 # Sanity check: compare nsa.text to ["metadata"]["id"]
                 # print("GET DOCUMENTS: COMPARE",nsa.text)
-                print("nsi_get_dds_documents: TOPO",topo_dict)
+                print("nsi_get_dds_documents: TOPO", topo_dict)
 
                 documents[nsa_id]["topology"] = topo_dict
-
 
     complete_documents = {}
     for nsa_id in documents.keys():
         document = documents[nsa_id]
-        print("nsi_get_dds_documents: COMPLETE?",document)
+        print("nsi_get_dds_documents: COMPLETE?", document)
         # Add to set when info complete
         if document["discovery"] is not None and document["topology"] is not None:
 
@@ -602,27 +597,26 @@ def nsi_get_dds_documents(url):
             print("nsi_get_dds_documents: ADDING DOC", nsa_id)
             complete_documents[nsa_id] = document
 
-
     #
     # Decode ns2:local entry, which points to the Orchestrator/Safnari
-    #     
+    #
     # Arno: CHECK I see the top-level documents tag, but cannot get it using find
     ##tag = tree.find(FIND_ANYWHERE_PREFIX+LOCAL_TAG)
-    #tag = tree.find(FIND_ANYWHERE_PREFIX+DOCUMENTS_TAG)
+    # tag = tree.find(FIND_ANYWHERE_PREFIX+DOCUMENTS_TAG)
     for element in root.iter():
         if element.tag == LOCAL_TAG:
             tag = element
             break
 
-    nsa = tag.find(FIND_ANYWHERE_PREFIX+NSA_SHORT_TAG)
-    type = tag.find(FIND_ANYWHERE_PREFIX+TYPE_SHORT_TAG)
-    content = tag.find(FIND_ANYWHERE_PREFIX+CONTENT_SHORT_TAG)
+    nsa = tag.find(FIND_ANYWHERE_PREFIX + NSA_SHORT_TAG)
+    type = tag.find(FIND_ANYWHERE_PREFIX + TYPE_SHORT_TAG)
+    content = tag.find(FIND_ANYWHERE_PREFIX + CONTENT_SHORT_TAG)
 
     if type.text == DISCOVERY_POSTFIX_MIME_TYPE:
 
         gzipped = base64.b64decode(content.text)
         # See https://stackoverflow.com/questions/2695152/in-python-how-do-i-decode-gzip-encoding
-        xml=zlib.decompress(gzipped, 16+zlib.MAX_WBITS)
+        xml = zlib.decompress(gzipped, 16 + zlib.MAX_WBITS)
 
         tree2 = nsi_util_parse_xml(xml)
         # Throws exception
@@ -630,20 +624,15 @@ def nsi_get_dds_documents(url):
         local = nsi_parse_discovery_xml_tree(tree2)
         # Sanity check: compare nsa.text to ["metadata"]["id"]
         # print("GET DOCUMENTS: COMPARE",nsa.text)
-        print("GET DOCUMENT: ORCH local",local)
+        print("GET DOCUMENT: ORCH local", local)
 
-
-    ret_dict = {"local":local,"documents":complete_documents}
+    ret_dict = {"local": local, "documents": complete_documents}
     return ret_dict
-
-
-
 
 
 # Read discover information, return dict with found services
 def nsi_get_discovery(url):
-    """
-    Returns a discovery dictionary with:
+    """Returns a discovery dictionary with:
     "metadata": info about the topology
     "services": Key is the MIME type, value the URL
     """
@@ -656,11 +645,8 @@ def nsi_get_discovery(url):
     return nsi_parse_discovery_xml_tree(tree)
 
 
-
 def nsi_parse_discovery_xml_tree(tree):
-    """
-    Get discovery dict from tree
-    """
+    """Get discovery dict from tree"""
     metadata = {}
     metadata[NSA_ID_ATTRIB] = None
     metadata[NSA_VERSION_ATTRIB] = None
@@ -669,60 +655,55 @@ def nsi_parse_discovery_xml_tree(tree):
 
     root = tree.getroot()
 
-    #for element in root.iter():
+    # for element in root.iter():
     #    print(f"#FOUND {element.tag} - {element.text} --- {element.attrib}")
 
     # Store metadata
-   
+
     # Arno: I see the top-level NSA tag, but cannot get it using find
-    #tag = tree.find(FIND_ANYWHERE_PREFIX+NSA_TAG)
-    #tag = tree.find(FIND_ANYWHERE_PREFIX+"nsa:nsa")
-    #tag = tree.find("nsa:nsa")
-    #tag = tree.find(FIND_ANYWHERE_PREFIX+NSA_TAG+":nsa")
+    # tag = tree.find(FIND_ANYWHERE_PREFIX+NSA_TAG)
+    # tag = tree.find(FIND_ANYWHERE_PREFIX+"nsa:nsa")
+    # tag = tree.find("nsa:nsa")
+    # tag = tree.find(FIND_ANYWHERE_PREFIX+NSA_TAG+":nsa")
     for element in root.iter():
         if element.tag == NSA_TAG:
             tag = element
             break
-        
-    #print("TOPO NSA list",tag)
-    #print("TOPO NSA attribs",tag.attrib)
+
+    # print("TOPO NSA list",tag)
+    # print("TOPO NSA attribs",tag.attrib)
 
     metadata[NSA_ID_ATTRIB] = tag.attrib[NSA_ID_ATTRIB]
     metadata[NSA_VERSION_ATTRIB] = tag.attrib[NSA_VERSION_ATTRIB]
     metadata[NSA_EXPIRES_ATTRIB] = tag.attrib[NSA_EXPIRES_ATTRIB]
     # TODO more info
 
-    #print("TOPO META",metadata)
+    # print("TOPO META",metadata)
 
     # Find all interface tags
-    for element in tree.findall(FIND_ANYWHERE_PREFIX+INTERFACE_TAG):
+    for element in tree.findall(FIND_ANYWHERE_PREFIX + INTERFACE_TAG):
         print(f"#FOUND interface {element.tag} - {element.text} --- {element.attrib}")
-        itype = element.find(FIND_ANYWHERE_PREFIX+TYPE_IN_INTERFACE_TAG)
-        href = element.find(FIND_ANYWHERE_PREFIX+HREF_IN_INTERFACE_TAG)
-        print("SERVICE",itype.text,href.text)
+        itype = element.find(FIND_ANYWHERE_PREFIX + TYPE_IN_INTERFACE_TAG)
+        href = element.find(FIND_ANYWHERE_PREFIX + HREF_IN_INTERFACE_TAG)
+        print("SERVICE", itype.text, href.text)
         services[itype.text] = href.text
-        
-    disc_dict = {"metadata":metadata,"services":services}
+
+    disc_dict = {"metadata": metadata, "services": services}
     return disc_dict
-
-
-
 
 
 # Read discover information, return dict with found services
 def nsi_get_discovery(url):
-    """
-    Returns a discovery dictionary with:
+    """Returns a discovery dictionary with:
     "metadata": info about the topology
     "services": Key is the MIME type, value the URL
     """
-
     metadata = {}
     metadata[NSA_ID_ATTRIB] = None
     metadata[NSA_VERSION_ATTRIB] = None
     metadata[NSA_EXPIRES_ATTRIB] = None
     services = {}
-    disc_dict = {"metadata":metadata,"services":services}
+    disc_dict = {"metadata": metadata, "services": services}
 
     tree = nsi_util_get_and_parse_xml(url)
     if tree is None:
@@ -730,53 +711,50 @@ def nsi_get_discovery(url):
 
     root = tree.getroot()
 
-    #for element in root.iter():
+    # for element in root.iter():
     #    print(f"#FOUND {element.tag} - {element.text} --- {element.attrib}")
 
     # Store metadata
-   
+
     # Arno: I see the top-level NSA tag, but cannot get it using find
-    #tag = tree.find(FIND_ANYWHERE_PREFIX+NSA_TAG)
-    #tag = tree.find(FIND_ANYWHERE_PREFIX+"nsa:nsa")
-    #tag = tree.find("nsa:nsa")
-    #tag = tree.find(FIND_ANYWHERE_PREFIX+NSA_TAG+":nsa")
+    # tag = tree.find(FIND_ANYWHERE_PREFIX+NSA_TAG)
+    # tag = tree.find(FIND_ANYWHERE_PREFIX+"nsa:nsa")
+    # tag = tree.find("nsa:nsa")
+    # tag = tree.find(FIND_ANYWHERE_PREFIX+NSA_TAG+":nsa")
     for element in root.iter():
         if element.tag == NSA_TAG:
             tag = element
             break
-        
-    #print("TOPO NSA list",tag)
-    #print("TOPO NSA attribs",tag.attrib)
+
+    # print("TOPO NSA list",tag)
+    # print("TOPO NSA attribs",tag.attrib)
 
     metadata[NSA_ID_ATTRIB] = tag.attrib[NSA_ID_ATTRIB]
     metadata[NSA_VERSION_ATTRIB] = tag.attrib[NSA_VERSION_ATTRIB]
     metadata[NSA_EXPIRES_ATTRIB] = tag.attrib[NSA_EXPIRES_ATTRIB]
     # TODO more info
 
-    #print("TOPO META",metadata)
+    # print("TOPO META",metadata)
 
     # Find all interface tags
-    for element in tree.findall(FIND_ANYWHERE_PREFIX+INTERFACE_TAG):
+    for element in tree.findall(FIND_ANYWHERE_PREFIX + INTERFACE_TAG):
         print(f"#FOUND interface {element.tag} - {element.text} --- {element.attrib}")
-        itype = element.find(FIND_ANYWHERE_PREFIX+TYPE_IN_INTERFACE_TAG)
-        href = element.find(FIND_ANYWHERE_PREFIX+HREF_IN_INTERFACE_TAG)
-        print("SERVICE",itype.text,href.text)
+        itype = element.find(FIND_ANYWHERE_PREFIX + TYPE_IN_INTERFACE_TAG)
+        href = element.find(FIND_ANYWHERE_PREFIX + HREF_IN_INTERFACE_TAG)
+        print("SERVICE", itype.text, href.text)
         services[itype.text] = href.text
-        
-    disc_dict = {"metadata":metadata,"services":services}
+
+    disc_dict = {"metadata": metadata, "services": services}
     return disc_dict
-
-
 
 
 # Read topology.xml from SuPA
 def nsi_get_topology(url):
-    """
-    Returns a dictionary of STPs (=Qualified STP, Unqualified STP, SDP)
+    """Returns a dictionary of STPs (=Qualified STP, Unqualified STP, SDP)
     Key is the id. Values are:
     fastui_id: int, in the order found in XML
     vlanranges: int or int-int (qualified, vs unqualified) or int-int,int-int
-    
+
     Ignores STP vs SDP, no longer used.
     """
     xml = nsi_util_get_xml(url)
@@ -788,51 +766,45 @@ def nsi_get_topology(url):
     return nsi_parse_topology_xml_tree(tree)
 
 
-
 def nsi_parse_topology_xml_tree(tree):
-    """
-    Find all BidirectionalPorts, ignoring STP vs SDP. No longer used.
-    """
-
+    """Find all BidirectionalPorts, ignoring STP vs SDP. No longer used."""
     # Find all BidirectionalPort tags
     bidiports = {}
 
     bidicount = 1
-    for element in tree.findall(FIND_ANYWHERE_PREFIX+BIDI_PORT_TAG):
-        #logger.debug print(f"#FOUND PortGroup {element.tag} - {element.text} --- {element.attrib}")
+    for element in tree.findall(FIND_ANYWHERE_PREFIX + BIDI_PORT_TAG):
+        # logger.debug print(f"#FOUND PortGroup {element.tag} - {element.text} --- {element.attrib}")
         bidiport_id = element.attrib["id"]
-        bidiports[bidiport_id] = {FASTUID_ID_KEY:bidicount}   # id for fastui
-        bidicount +=1
+        bidiports[bidiport_id] = {FASTUID_ID_KEY: bidicount}  # id for fastui
+        bidicount += 1
 
+    # logger.debug print("#BIDIPORTS",bidiports)
 
-    #logger.debug print("#BIDIPORTS",bidiports) 
-
-
-    # Find Relation hasInbountPort, which contains PortGroups that have the VLANS per unidirectional STP, 
+    # Find Relation hasInbountPort, which contains PortGroups that have the VLANS per unidirectional STP,
     # i.e., bidi + ":in". I consider those to be the same as the outbond ones.
 
-    for element in tree.findall(FIND_ANYWHERE_PREFIX+RELATION_TAG):
-        #print(f"#FOUND2 Relation {element.tag} - {element.text} --- {element.attrib}")
+    for element in tree.findall(FIND_ANYWHERE_PREFIX + RELATION_TAG):
+        # print(f"#FOUND2 Relation {element.tag} - {element.text} --- {element.attrib}")
         if element.attrib["type"] == RELATION_HAS_INBOUND_PORT_TYPE:
-            
-            #logger.debug print("#hasINBOUNDPORT")
-            #for inport in element.find(FIND_ANYWHERE_PREFIX+PORTGROUP_TAG):
-            for inport in element.iterfind(FIND_ANYWHERE_PREFIX+PORTGROUP_TAG):
 
-                #logger.debug print("#INBOUND PORTGROUP",inport.attrib)
+            # logger.debug print("#hasINBOUNDPORT")
+            # for inport in element.find(FIND_ANYWHERE_PREFIX+PORTGROUP_TAG):
+            for inport in element.iterfind(FIND_ANYWHERE_PREFIX + PORTGROUP_TAG):
+
+                # logger.debug print("#INBOUND PORTGROUP",inport.attrib)
 
                 # ISSUE: also matches PortGroup isAlias within
 
                 if inport is not None:
-                    inport_id = inport.attrib["id"]   # this is the bidiport_id + ":in"
-                    bidiport_id = inport_id[:-len(INPORT_IN_POSTFIX)]
+                    inport_id = inport.attrib["id"]  # this is the bidiport_id + ":in"
+                    bidiport_id = inport_id[: -len(INPORT_IN_POSTFIX)]
 
-                    #logger.debug print("INPORT",bidiport_id)
+                    # logger.debug print("INPORT",bidiport_id)
 
-                    lg = inport.find(FIND_ANYWHERE_PREFIX+LABEL_GROUP_TAG)
-                    #logger.debug print("LABELGROUP",lg)
+                    lg = inport.find(FIND_ANYWHERE_PREFIX + LABEL_GROUP_TAG)
+                    # logger.debug print("LABELGROUP",lg)
                     if lg is not None:
-                        #logger.debug print("#VLANS",lg.text)
+                        # logger.debug print("#VLANS",lg.text)
                         vlanstr = lg.text
 
                     if inport is not None and lg is not None:
@@ -842,8 +814,7 @@ def nsi_parse_topology_xml_tree(tree):
                         except KeyError:
                             traceback.print_exc()
 
-
-    return bidiports 
+    return bidiports
 
 
 # Read topology.xml from NSI-DDS
@@ -851,8 +822,7 @@ def nsi_parse_topology_xml_tree(tree):
 # TODO: complete & test
 #
 def nsi_get_topology_sdp(url):
-    """
-    Returns a dictionary of STPs (=Qualified STP, Unqualified STP, SDP)
+    """Returns a dictionary of STPs (=Qualified STP, Unqualified STP, SDP)
     Key is the id. Values are:
     fastui_id: int, in the order found in XML
     vlanranges: int or int-int (qualified, vs unqualified) or int-int,int-int
@@ -868,73 +838,70 @@ def nsi_get_topology_sdp(url):
 
 
 def nsi_parse_topology_sdp_xml_tree(tree):
-    """
-    Find all STP and SDPs in the tree
+    """Find all STP and SDPs in the tree
     Returns: a dictionary:
     "stps" : all BiDirectionalPorts (in variant), a dictionary indexed by port id
     "sdps" : all BiDirectionalPorts linked via isAlias, a list with "inport","outport" and "vlanranges"
     """
-    
     # Find all BidirectionalPort tags
     bidiports = {}
 
     bidicount = 1
-    for element in tree.findall(FIND_ANYWHERE_PREFIX+BIDI_PORT_TAG):
-        #logger.debug print(f"#FOUND PortGroup {element.tag} - {element.text} --- {element.attrib}")
+    for element in tree.findall(FIND_ANYWHERE_PREFIX + BIDI_PORT_TAG):
+        # logger.debug print(f"#FOUND PortGroup {element.tag} - {element.text} --- {element.attrib}")
         bidiport_id = element.attrib["id"]
 
-        print("nsi_parse_topology_sdp_xml_tree: DDSSTP",bidiport_id)
+        print("nsi_parse_topology_sdp_xml_tree: DDSSTP", bidiport_id)
         # Prepare new dict
-        bidiports[bidiport_id] = {FASTUID_ID_KEY:bidicount}   # id for fastui
-        bidicount +=1
+        bidiports[bidiport_id] = {FASTUID_ID_KEY: bidicount}  # id for fastui
+        bidicount += 1
 
-
-#    #logger.debug print("#BIDIPORTS",bidiports) 
+    #    #logger.debug print("#BIDIPORTS",bidiports)
 
     sdps = []
 
-    # Find Relation hasInbountPort, which contains PortGroups that have the VLANS per unidirectional STP, 
+    # Find Relation hasInbountPort, which contains PortGroups that have the VLANS per unidirectional STP,
     # i.e., bidi + ":in". I consider those to be the same as the outbond ones.
     #
-    # Also 
+    # Also
 
-    for element in tree.findall(FIND_ANYWHERE_PREFIX+RELATION_TAG):
-        #print(f"#FOUND2 Relation {element.tag} - {element.text} --- {element.attrib}")
+    for element in tree.findall(FIND_ANYWHERE_PREFIX + RELATION_TAG):
+        # print(f"#FOUND2 Relation {element.tag} - {element.text} --- {element.attrib}")
         if element.attrib["type"] == RELATION_HAS_INBOUND_PORT_TYPE:
-            
-            #logger.debug print("#hasINBOUNDPORT")
-            #for inport in element.find(FIND_ANYWHERE_PREFIX+PORTGROUP_TAG):
-            for inport in element.iterfind(FIND_ANYWHERE_PREFIX+PORTGROUP_TAG):
 
-                #logger.debug print("#INBOUND PORTGROUP",inport.attrib)
+            # logger.debug print("#hasINBOUNDPORT")
+            # for inport in element.find(FIND_ANYWHERE_PREFIX+PORTGROUP_TAG):
+            for inport in element.iterfind(FIND_ANYWHERE_PREFIX + PORTGROUP_TAG):
+
+                # logger.debug print("#INBOUND PORTGROUP",inport.attrib)
 
                 # ISSUE: also matches PortGroup isAlias within
 
                 if inport is not None:
-                    inport_id = inport.attrib["id"]   # this is the bidiport_id + ":in"
-                    bidiport_id = inport_id[:-len(INPORT_IN_POSTFIX)]
+                    inport_id = inport.attrib["id"]  # this is the bidiport_id + ":in"
+                    bidiport_id = inport_id[: -len(INPORT_IN_POSTFIX)]
 
-                    #logger.debug print("INPORT",bidiport_id)
+                    # logger.debug print("INPORT",bidiport_id)
 
-                    lg = inport.find(FIND_ANYWHERE_PREFIX+LABEL_GROUP_TAG)
-                    #logger.debug print("LABELGROUP",lg)
+                    lg = inport.find(FIND_ANYWHERE_PREFIX + LABEL_GROUP_TAG)
+                    # logger.debug print("LABELGROUP",lg)
                     if lg is not None:
-                        #logger.debug print("#VLANS",lg.text)
+                        # logger.debug print("#VLANS",lg.text)
                         vlanstr = lg.text
 
-                    relalias = inport.find(FIND_ANYWHERE_PREFIX+RELATION_TAG)
-                    print("nsi_parse_topology_sdp_xml_tree: ALIAS",relalias)
+                    relalias = inport.find(FIND_ANYWHERE_PREFIX + RELATION_TAG)
+                    print("nsi_parse_topology_sdp_xml_tree: ALIAS", relalias)
                     if relalias is not None:
-                        #print("nsi_parse_topology_sdp_xml_tree: ALIAS attrib",relalias.attrib)
+                        # print("nsi_parse_topology_sdp_xml_tree: ALIAS attrib",relalias.attrib)
                         if relalias.attrib[RELATION_TYPE_ATTRIB] == RELATION_IS_ALIAS_TYPE:
                             # Found SDP
-                            outport = relalias.find(FIND_ANYWHERE_PREFIX+PORTGROUP_TAG)
+                            outport = relalias.find(FIND_ANYWHERE_PREFIX + PORTGROUP_TAG)
                             if outport is None:
                                 print("nsi_parse_topology_sdp_xml_tree: No portgroup in Relation isAlias")
                             else:
                                 outport_id = outport.attrib[PORTGROUP_ID_ATTRIB]
-                                print("nsi_parse_topology_sdp_xml_tree: SDP found from",inport_id,"to",outport_id)
-                                sdp = {"inport":inport_id,"outport":outport_id,"vlanranges":vlanstr}
+                                print("nsi_parse_topology_sdp_xml_tree: SDP found from", inport_id, "to", outport_id)
+                                sdp = {"inport": inport_id, "outport": outport_id, "vlanranges": vlanstr}
                                 sdps.append(sdp)
 
                     if inport is not None and lg is not None:
@@ -950,14 +917,14 @@ def nsi_parse_topology_sdp_xml_tree(tree):
         found = False
         for sdp in sdps:
 
-            print("SOADM:",sdp,bidiports[sbidiport_id])
+            print("SOADM:", sdp, bidiports[sbidiport_id])
             inport_id = sdp["inport"]
-            tbidiport_id = inport_id[:-len(INPORT_IN_POSTFIX)]
+            tbidiport_id = inport_id[: -len(INPORT_IN_POSTFIX)]
             if sbidiport_id == tbidiport_id:
                 print("Dropping SDP from STPs", sbidiport_id)
                 found = True
         if not found:
-            print("Adding STP to STPs",sbidiport_id)
+            print("Adding STP to STPs", sbidiport_id)
             stps[sbidiport_id] = bidiports[sbidiport_id]
 
     retdict = {}
@@ -966,96 +933,111 @@ def nsi_parse_topology_sdp_xml_tree(tree):
     return retdict
 
 
-
-
-
-
-
-
 #
 # SOAP functions
 #
-def nsi_connections_query(query_summary_sync_templstr,request_url,callback_url_prefix,provider_nsa_id):
-    """
-    NSI QUERY
+def nsi_connections_query(query_summary_sync_templstr, request_url, callback_url_prefix, provider_nsa_id):
+    """NSI QUERY
     Returns: See nsi_soap_parse_query_reply
     """
     try:
         correlation_uuid_py = generate_uuid()
 
         # RESTFUL: Do Not Store (TODO or for security)
-        reply_to_url = callback_url_prefix+"/query-callback/?corruuid="+str(correlation_uuid_py)
-        
-        query_xml = generate_query_summary_sync_xml(query_summary_sync_templstr,correlation_uuid_py,reply_to_url,provider_nsa_id)
+        reply_to_url = callback_url_prefix + "/query-callback/?corruuid=" + str(correlation_uuid_py)
+
+        query_xml = generate_query_summary_sync_xml(
+            query_summary_sync_templstr, correlation_uuid_py, reply_to_url, provider_nsa_id
+        )
 
         # TODO: send XML to Safnari
-        print("nsi_connections_query: QUERY XML",query_xml)
+        print("nsi_connections_query: QUERY XML", query_xml)
         print("nsi_connections_query: CALLING ORCH")
-        soap_xml = nsi_util_post_soap(request_url,query_xml)
+        soap_xml = nsi_util_post_soap(request_url, query_xml)
         reservations = nsi_soap_parse_query_reply(soap_xml)
 
-        print("nsi_connections_query: Got reply parsed",reservations)
+        print("nsi_connections_query: Got reply parsed", reservations)
         return reservations
 
     except:
         traceback.print_exc()
 
 
-
-
-def nsi_reserve(reserve_templstr,request_url,correlation_uuid_py,orch_reply_to_url:str, provider_nsa_id:str, epnamea:str, epvlana: int, epnamez:str, epvlanz: int, linkname:str, linkid:int, duration_td: datetime.timedelta):
-    """
-    NSI RESERVE(SOAP-template,)
+def nsi_reserve(
+    reserve_templstr,
+    request_url,
+    correlation_uuid_py,
+    orch_reply_to_url: str,
+    provider_nsa_id: str,
+    epnamea: str,
+    epvlana: int,
+    epnamez: str,
+    epvlanz: int,
+    linkname: str,
+    linkid: int,
+    duration_td: datetime.timedelta,
+):
+    """NSI RESERVE(SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"globalReservationId", "connectionId":connectionId] as strings
     """
     try:
         # TODO: generate correlation again here as before, reply_to_url does not have to contain it.
-        #correlation_uuid_py = generate_uuid()
-        connection_descr = NSI_RESERVE_XML_CONNECTION_PREFIX+" "+epnamea+" to "+epnamez+" over "+linkname
+        # correlation_uuid_py = generate_uuid()
+        connection_descr = NSI_RESERVE_XML_CONNECTION_PREFIX + " " + epnamea + " to " + epnamez + " over " + linkname
         global_reservation_uuid_py = generate_uuid()
         start_datetime_py = datetime.datetime.now(datetime.timezone.utc)
-        end_datetime_py = start_datetime_py+duration_td
-        source_stp_dict = {URN_STP_NAME:epnamea, URN_STP_VLAN:epvlana} 
-        dest_stp_dict = {URN_STP_NAME:epnamez, URN_STP_VLAN:epvlanz}
-        
-        # RESTFUL: Do Not Store (TODO or for security)
-        #reply_to_url = SERVER_URL_PREFIX+"/reserve-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)
-        # I get an error from SuPA: Unexpected character \'=\' (code 61); expected a semi-colon after the reference for entity \'globresuuid\'\n
-        #reply_to_url = callback_url_prefix+"/reserve-callback/"
-        reply_to_url = orch_reply_to_url
-        
-        reserve_xml = generate_reserve_xml(reserve_templstr,correlation_uuid_py,reply_to_url,connection_descr,global_reservation_uuid_py,start_datetime_py,end_datetime_py,source_stp_dict,dest_stp_dict,provider_nsa_id)
+        end_datetime_py = start_datetime_py + duration_td
+        source_stp_dict = {URN_STP_NAME: epnamea, URN_STP_VLAN: epvlana}
+        dest_stp_dict = {URN_STP_NAME: epnamez, URN_STP_VLAN: epvlanz}
 
+        # RESTFUL: Do Not Store (TODO or for security)
+        # reply_to_url = SERVER_URL_PREFIX+"/reserve-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)
+        # I get an error from SuPA: Unexpected character \'=\' (code 61); expected a semi-colon after the reference for entity \'globresuuid\'\n
+        # reply_to_url = callback_url_prefix+"/reserve-callback/"
+        reply_to_url = orch_reply_to_url
+
+        reserve_xml = generate_reserve_xml(
+            reserve_templstr,
+            correlation_uuid_py,
+            reply_to_url,
+            connection_descr,
+            global_reservation_uuid_py,
+            start_datetime_py,
+            end_datetime_py,
+            source_stp_dict,
+            dest_stp_dict,
+            provider_nsa_id,
+        )
 
         # h4xor Unknown provider NSA ID error:
-        #reserve_xml = reserve_xml.replace('urn:ogf:network:anaeng.global:2024:nsa:nsi-aura','urn:ogf:network:surf.nl:2020:onsaclient')
+        # reserve_xml = reserve_xml.replace('urn:ogf:network:anaeng.global:2024:nsa:nsi-aura','urn:ogf:network:surf.nl:2020:onsaclient')
 
-        #reserve_xml = reserve_xml.replace("urn:ogf:network:example.domain:2001:nsa:supa","urn:ogf:network:anaeng.global:2024:nsa:nsi-aura")
-        #reserve_xml = reserve_xml.replace("urn:ogf:network:example.domain:2001:nsa:supa",'urn:ogf:network:surf.nl:2020:onsaclient')
+        # reserve_xml = reserve_xml.replace("urn:ogf:network:example.domain:2001:nsa:supa","urn:ogf:network:anaeng.global:2024:nsa:nsi-aura")
+        # reserve_xml = reserve_xml.replace("urn:ogf:network:example.domain:2001:nsa:supa",'urn:ogf:network:surf.nl:2020:onsaclient')
 
-        #reserve_xml = reserve_xml.replace("urn:ogf:network:example.domain:2001:nsa:supa",'urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:ana-moxy')
+        # reserve_xml = reserve_xml.replace("urn:ogf:network:example.domain:2001:nsa:supa",'urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:ana-moxy')
         # WORKS
-        #reserve_xml = reserve_xml.replace("urn:ogf:network:example.domain:2001:nsa:supa","urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:nsa:supa")
-        
+        # reserve_xml = reserve_xml.replace("urn:ogf:network:example.domain:2001:nsa:supa","urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:nsa:supa")
+
         ## TODO REFACTOR
-        ##reserve_xml = reserve_xml.replace("urn:ogf:network:example.domain:2001:nsa:supa",provider_nsa_id)        
+        ##reserve_xml = reserve_xml.replace("urn:ogf:network:example.domain:2001:nsa:supa",provider_nsa_id)
 
         # TODO: send XML to Safnari
-        # via Python requests lib, synchronously via POST. 
+        # via Python requests lib, synchronously via POST.
         # Wait here for HTTP reply, which must have given CorrelationId
         # extract ConnectionId, pass on. TODO: how? UI needs to wait
 
-        print("RESERVE: Request XML",reserve_xml)
+        print("RESERVE: Request XML", reserve_xml)
 
         # TODO: send XML to Safnari
         print("RESERVE: CALLING ORCH")
-        soap_xml = nsi_util_post_soap(request_url,reserve_xml)
+        soap_xml = nsi_util_post_soap(request_url, reserve_xml)
 
-        print("RESERVE: GOT HTTP REPLY",soap_xml)
+        print("RESERVE: GOT HTTP REPLY", soap_xml)
 
         retdict = nsi_soap_parse_reserve_reply(soap_xml)
-       
-        print("RESERVE: Got connectionId",retdict)
+
+        print("RESERVE: Got connectionId", retdict)
         retdict["correlationId"] = str(correlation_uuid_py)
         retdict["globalReservationId"] = str(global_reservation_uuid_py)
         # ,"connectionId":connection_id_str}
@@ -1065,34 +1047,35 @@ def nsi_reserve(reserve_templstr,request_url,correlation_uuid_py,orch_reply_to_u
         traceback.print_exc()
 
 
-
-
-def nsi_reserve_commit(reserve_commit_templstr,request_url,callback_url_prefix:str, provider_nsa_id:str, connid_str):
-    """
-    NSI RESERVE_COMMIT(SOAP-template,)
+def nsi_reserve_commit(
+    reserve_commit_templstr, request_url, callback_url_prefix: str, provider_nsa_id: str, connid_str
+):
+    """NSI RESERVE_COMMIT(SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"connectionId":connectionId] as strings
     """
     try:
         correlation_uuid_py = generate_uuid()
 
         # RESTFUL: Do Not Store (TODO or for security)
-        #reply_to_url = callback_url_prefix+"/reserve-commit-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)+"&connid"+connid_str
+        # reply_to_url = callback_url_prefix+"/reserve-commit-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)+"&connid"+connid_str
         # I get an error from SuPA: Unexpected character \'=\' (code 61); expected a semi-colon after the reference for entity \'globresuuid\'\n
-        reply_to_url = callback_url_prefix+"/reserve-commit-callback/"
+        reply_to_url = callback_url_prefix + "/reserve-commit-callback/"
 
-        reserve_commit_xml = generate_reserve_commit_xml(reserve_commit_templstr,correlation_uuid_py,reply_to_url,connid_str,provider_nsa_id)
+        reserve_commit_xml = generate_reserve_commit_xml(
+            reserve_commit_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id
+        )
 
-        print("RESERVE-COMMIT: Request XML",reserve_commit_xml)
+        print("RESERVE-COMMIT: Request XML", reserve_commit_xml)
 
         # TODO: send XML to Safnari
         print("RESERVE-COMMIT: CALLING ORCH")
-        soap_xml = nsi_util_post_soap(request_url,reserve_commit_xml)
+        soap_xml = nsi_util_post_soap(request_url, reserve_commit_xml)
 
-        print("RESERVE-COMMIT: GOT HTTP REPLY",soap_xml)
+        print("RESERVE-COMMIT: GOT HTTP REPLY", soap_xml)
 
         retdict = nsi_soap_parse_reserve_commit_reply(soap_xml)
-       
-        print("RESERVE-COMMIT: Got correlationId",retdict)
+
+        print("RESERVE-COMMIT: Got correlationId", retdict)
 
         # TODO: verify correlationId are the same
 
@@ -1102,32 +1085,33 @@ def nsi_reserve_commit(reserve_commit_templstr,request_url,callback_url_prefix:s
         traceback.print_exc()
 
 
-def nsi_provision(provision_templstr,request_url,callback_url_prefix:str, provider_nsa_id:str, connid_str):
-    """
-    NSI PROVISION(SOAP-template,)
+def nsi_provision(provision_templstr, request_url, callback_url_prefix: str, provider_nsa_id: str, connid_str):
+    """NSI PROVISION(SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"globalReservationId","connectionId":connectionId] as strings
     """
     try:
         correlation_uuid_py = generate_uuid()
 
         # RESTFUL: Do Not Store (TODO or for security)
-        #reply_to_url = callback_url_prefix+"/reserve-commit-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)+"&connid"+connid_str
+        # reply_to_url = callback_url_prefix+"/reserve-commit-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)+"&connid"+connid_str
         # I get an error from SuPA: Unexpected character \'=\' (code 61); expected a semi-colon after the reference for entity \'globresuuid\'\n
-        reply_to_url = callback_url_prefix+"/provision-callback/"
+        reply_to_url = callback_url_prefix + "/provision-callback/"
 
-        provision_xml = generate_provision_xml(provision_templstr,correlation_uuid_py,reply_to_url,connid_str,provider_nsa_id)
+        provision_xml = generate_provision_xml(
+            provision_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id
+        )
 
-        print("PROVISION: Request XML",provision_xml)
+        print("PROVISION: Request XML", provision_xml)
 
         # TODO: send XML to Safnari
         print("PROVISION: CALLING ORCH")
-        soap_xml = nsi_util_post_soap(request_url,provision_xml)
+        soap_xml = nsi_util_post_soap(request_url, provision_xml)
 
-        print("PROVISION: GOT HTTP REPLY",soap_xml)
+        print("PROVISION: GOT HTTP REPLY", soap_xml)
 
         retdict = nsi_soap_parse_provison_reply(soap_xml)
-       
-        print("PROVISION: Got correlationId",retdict)
+
+        print("PROVISION: Got correlationId", retdict)
 
         # TODO: verify correlationId are the same
 
@@ -1138,33 +1122,33 @@ def nsi_provision(provision_templstr,request_url,callback_url_prefix:str, provid
         traceback.print_exc()
 
 
-
-def nsi_terminate(terminate_templstr,request_url,callback_url_prefix:str, provider_nsa_id:str, connid_str):
-    """
-    NSI TERMINATE(SOAP-template,)
+def nsi_terminate(terminate_templstr, request_url, callback_url_prefix: str, provider_nsa_id: str, connid_str):
+    """NSI TERMINATE(SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"globalReservationId","connectionId":connectionId] as strings
     """
     try:
         correlation_uuid_py = generate_uuid()
 
         # RESTFUL: Do Not Store (TODO or for security)
-        #reply_to_url = callback_url_prefix+"/reserve-commit-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)+"&connid"+connid_str
+        # reply_to_url = callback_url_prefix+"/reserve-commit-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)+"&connid"+connid_str
         # I get an error from SuPA: Unexpected character \'=\' (code 61); expected a semi-colon after the reference for entity \'globresuuid\'\n
-        reply_to_url = callback_url_prefix+"/terminate-callback/"
+        reply_to_url = callback_url_prefix + "/terminate-callback/"
 
-        terminate_xml = generate_terminate_xml(terminate_templstr,correlation_uuid_py,reply_to_url,connid_str,provider_nsa_id)
+        terminate_xml = generate_terminate_xml(
+            terminate_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id
+        )
 
-        print("TERMINATE: Request XML",terminate_xml)
+        print("TERMINATE: Request XML", terminate_xml)
 
         # TODO: send XML to Safnari
         print("TERMINATE: CALLING ORCH")
-        soap_xml = nsi_util_post_soap(request_url,terminate_xml)
+        soap_xml = nsi_util_post_soap(request_url, terminate_xml)
 
-        print("TERMINATE: GOT HTTP REPLY",soap_xml)
+        print("TERMINATE: GOT HTTP REPLY", soap_xml)
 
         retdict = nsi_soap_parse_terminate_reply(soap_xml)
-       
-        print("TERMINATE: Got fault ",retdict[S_FAULTSTRING_TAG],"correlationId",retdict[S_CORRELATION_ID_TAG])
+
+        print("TERMINATE: Got fault ", retdict[S_FAULTSTRING_TAG], "correlationId", retdict[S_CORRELATION_ID_TAG])
 
         # TODO: verify correlationId are the same
 
@@ -1174,34 +1158,33 @@ def nsi_terminate(terminate_templstr,request_url,callback_url_prefix:str, provid
         traceback.print_exc()
 
 
-
-
-def nsi_release(release_templstr,request_url,callback_url_prefix:str, provider_nsa_id:str, connid_str):
-    """
-    NSI RELEASE (SOAP-template,)
+def nsi_release(release_templstr, request_url, callback_url_prefix: str, provider_nsa_id: str, connid_str):
+    """NSI RELEASE (SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"globalReservationId","connectionId":connectionId] as strings
     """
     try:
         correlation_uuid_py = generate_uuid()
 
         # RESTFUL: Do Not Store (TODO or for security)
-        #reply_to_url = callback_url_prefix+"/reserve-commit-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)+"&connid"+connid_str
+        # reply_to_url = callback_url_prefix+"/reserve-commit-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)+"&connid"+connid_str
         # I get an error from SuPA: Unexpected character \'=\' (code 61); expected a semi-colon after the reference for entity \'globresuuid\'\n
-        reply_to_url = callback_url_prefix+"/terminate-callback/"
+        reply_to_url = callback_url_prefix + "/terminate-callback/"
 
-        release_xml = generate_release_xml(release_templstr,correlation_uuid_py,reply_to_url,connid_str,provider_nsa_id)
+        release_xml = generate_release_xml(
+            release_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id
+        )
 
-        print("RELEASE: Request XML",release_xml)
+        print("RELEASE: Request XML", release_xml)
 
         # TODO: send XML to Safnari
         print("RELEASE: CALLING ORCH")
-        soap_xml = nsi_util_post_soap(request_url,release_xml)
+        soap_xml = nsi_util_post_soap(request_url, release_xml)
 
-        print("RELEASE: GOT HTTP REPLY",soap_xml)
+        print("RELEASE: GOT HTTP REPLY", soap_xml)
 
         retdict = nsi_soap_parse_release_reply(soap_xml)
-       
-        print("RELEASE: Got fault ",retdict[S_FAULTSTRING_TAG],"correlationId",retdict[S_CORRELATION_ID_TAG])
+
+        print("RELEASE: Got fault ", retdict[S_FAULTSTRING_TAG], "correlationId", retdict[S_CORRELATION_ID_TAG])
 
         # TODO: verify correlationId are the same
 
@@ -1211,35 +1194,40 @@ def nsi_release(release_templstr,request_url,callback_url_prefix:str, provider_n
         traceback.print_exc()
 
 
-
-
-
-def nsi_reserve_timeout_ack(reserve_timeout_ack_templstr,request_url,callback_url_prefix:str, provider_nsa_id:str, connid_str):
-    """
-    NSI RESERVE-TIMEOUT-ACK(SOAP-template,)
+def nsi_reserve_timeout_ack(
+    reserve_timeout_ack_templstr, request_url, callback_url_prefix: str, provider_nsa_id: str, connid_str
+):
+    """NSI RESERVE-TIMEOUT-ACK(SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"globalReservationId","connectionId":connectionId] as strings
     """
     try:
         correlation_uuid_py = generate_uuid()
 
         # RESTFUL: Do Not Store (TODO or for security)
-        #reply_to_url = callback_url_prefix+"/reserve-commit-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)+"&connid"+connid_str
+        # reply_to_url = callback_url_prefix+"/reserve-commit-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)+"&connid"+connid_str
         # I get an error from SuPA: Unexpected character \'=\' (code 61); expected a semi-colon after the reference for entity \'globresuuid\'\n
-        reply_to_url = callback_url_prefix+"/terminate-callback/"
+        reply_to_url = callback_url_prefix + "/terminate-callback/"
 
-        reserve_timeout_ack_xml = generate_reserve_timeout_ack_xml(reserve_timeout_ack_templstr,correlation_uuid_py,reply_to_url,connid_str,provider_nsa_id)
+        reserve_timeout_ack_xml = generate_reserve_timeout_ack_xml(
+            reserve_timeout_ack_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id
+        )
 
-        print("RESERVE_TIMEOUT_ACK: Request XML",reserve_timeout_ack_xml)
+        print("RESERVE_TIMEOUT_ACK: Request XML", reserve_timeout_ack_xml)
 
         # TODO: send XML to Safnari
         print("RESERVE_TIMEOUT_ACK: CALLING ORCH")
-        soap_xml = nsi_util_post_soap(request_url,reserve_timeout_ack_xml)
+        soap_xml = nsi_util_post_soap(request_url, reserve_timeout_ack_xml)
 
-        print("RESERVE_TIMEOUT_ACK: GOT HTTP REPLY",soap_xml)
+        print("RESERVE_TIMEOUT_ACK: GOT HTTP REPLY", soap_xml)
 
         retdict = nsi_soap_parse_reserve_timeout_ack_reply(soap_xml)
-       
-        print("RESERVE_TIMEOUT_ACK: Got fault ",retdict[S_FAULTSTRING_TAG],"correlationId",retdict[S_CORRELATION_ID_TAG])
+
+        print(
+            "RESERVE_TIMEOUT_ACK: Got fault ",
+            retdict[S_FAULTSTRING_TAG],
+            "correlationId",
+            retdict[S_CORRELATION_ID_TAG],
+        )
 
         # TODO: verify correlationId are the same
 
@@ -1249,33 +1237,35 @@ def nsi_reserve_timeout_ack(reserve_timeout_ack_templstr,request_url,callback_ur
         traceback.print_exc()
 
 
-
-def nsi_query_recursive(query_recursive_templstr,request_url,orch_reply_to_url:str, provider_nsa_id:str, connid_str):
-    """
-    NSI QUERY RECURSIVE(SOAP-template,)
+def nsi_query_recursive(
+    query_recursive_templstr, request_url, orch_reply_to_url: str, provider_nsa_id: str, connid_str
+):
+    """NSI QUERY RECURSIVE(SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"globalReservationId","connectionId":connectionId] as strings
     """
     try:
         correlation_uuid_py = generate_uuid()
 
         # RESTFUL: Do Not Store (TODO or for security)
-        #reply_to_url = callback_url_prefix+"/reserve-commit-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)+"&connid"+connid_str
+        # reply_to_url = callback_url_prefix+"/reserve-commit-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)+"&connid"+connid_str
         # I get an error from SuPA: Unexpected character \'=\' (code 61); expected a semi-colon after the reference for entity \'globresuuid\'\n
         reply_to_url = orch_reply_to_url
 
-        query_recursive_xml = generate_query_recursive_xml(query_recursive_templstr,correlation_uuid_py,reply_to_url,connid_str,provider_nsa_id)
+        query_recursive_xml = generate_query_recursive_xml(
+            query_recursive_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id
+        )
 
-        print("QUERY_RECURSIVE: Request XML",query_recursive_xml)
+        print("QUERY_RECURSIVE: Request XML", query_recursive_xml)
 
         # TODO: send XML to Safnari
         print("QUERY_RECURSIVE: CALLING ORCH")
-        soap_xml = nsi_util_post_soap(request_url,query_recursive_xml)
+        soap_xml = nsi_util_post_soap(request_url, query_recursive_xml)
 
-        print("QUERY_RECURSIVE: GOT HTTP REPLY",soap_xml)
+        print("QUERY_RECURSIVE: GOT HTTP REPLY", soap_xml)
 
         retdict = nsi_soap_parse_query_recursive_reply(soap_xml)
-       
-        print("QUERY_RECURSIVE: Got fault ",retdict[S_FAULTSTRING_TAG],"correlationId",retdict[S_CORRELATION_ID_TAG])
+
+        print("QUERY_RECURSIVE: Got fault ", retdict[S_FAULTSTRING_TAG], "correlationId", retdict[S_CORRELATION_ID_TAG])
 
         # TODO: verify correlationId are the same
 
@@ -1285,37 +1275,33 @@ def nsi_query_recursive(query_recursive_templstr,request_url,orch_reply_to_url:s
         traceback.print_exc()
 
 
-
-
-def nsi_util_post_soap(url,soapreqmsg):
-    """
-    Does HTTP POST of soapreqmsg to URL
+def nsi_util_post_soap(url, soapreqmsg):
+    """Does HTTP POST of soapreqmsg to URL
     Returns: response.content, a SOAP reply
     """
-
     global perscert
 
-    #headers = {'content-type': 'application/soap+xml'}
-    headers = {'content-type': 'text/xml'}
+    # headers = {'content-type': 'application/soap+xml'}
+    headers = {"content-type": "text/xml"}
     body = soapreqmsg
 
     # 2024-11-08: SuPA moxy currently has self-signed certificate
-    response = requests.post(url,data=body,headers=headers,verify=False, cert=perscert)
+    response = requests.post(url, data=body, headers=headers, verify=False, cert=perscert)
     print(response.status_code)
-    print("#CONTENT TYPE#",response.headers['content-type'])
-    if response.headers['content-type'] == SOAP_HTTP_CONTENT_MIME_TYPE_AND_ENCODING or response.headers['content-type'] == SOAP_HTTP_CONTENT_MIME_TYPE_NO_ENCODING:
+    print("#CONTENT TYPE#", response.headers["content-type"])
+    if (
+        response.headers["content-type"] == SOAP_HTTP_CONTENT_MIME_TYPE_AND_ENCODING
+        or response.headers["content-type"] == SOAP_HTTP_CONTENT_MIME_TYPE_NO_ENCODING
+    ):
         return response.content
-    else:
-        raise Exception(url+" did not return XML")
-    #print(response.encoding)
-    #print(response.content)
+    raise Exception(url + " did not return XML")
+    # print(response.encoding)
+    # print(response.content)
     return response.content
 
- 
 
 def nsi_soap_parse_query_reply(soap_xml):
-    """
-    Parses SOAP QUERY reply
+    """Parses SOAP QUERY reply
     Returns: dictionary of Reservation tags, key ConnectionId, values interesting subset.
     """
     # Find all Reservation tags
@@ -1325,57 +1311,51 @@ def nsi_soap_parse_query_reply(soap_xml):
 
     #
     # Get all reservation tags and their content
-    # 
+    #
 
-    reservations = {} # indexed on connectionId
+    reservations = {}  # indexed on connectionId
 
     rescount = 1
-    for res in tree.findall(FIND_ANYWHERE_PREFIX+S_RESERVATION_TAG):
-        #logger.debug print(f"#FOUND Reservation {res.tag} - {res.text} --- {res.attrib}")
+    for res in tree.findall(FIND_ANYWHERE_PREFIX + S_RESERVATION_TAG):
+        # logger.debug print(f"#FOUND Reservation {res.tag} - {res.text} --- {res.attrib}")
 
-        reservation_dict = {FASTUID_ID_KEY:rescount}
+        reservation_dict = {FASTUID_ID_KEY: rescount}
         rescount += 1
         connection_uuidstr = None
         # TODO: convert to Python data types. Not to Model data-types, that should happen outside this function.
         # Not too much fastAPI dependencies
         for tag in S_QUERY_REPLY_TAGS:
-            for element in res.findall(FIND_ANYWHERE_PREFIX+tag):
+            for element in res.findall(FIND_ANYWHERE_PREFIX + tag):
                 if element.tag == S_RESERVATION_TAG:
                     continue  # code anomaly
-                elif element.tag == S_CONNECTION_ID_TAG:
+                if element.tag == S_CONNECTION_ID_TAG:
                     connection_uuidstr = element.text
                 elif element.tag == S_DESCRIPTION_TAG:
-                    reservation_dict[tag] = element.text            
+                    reservation_dict[tag] = element.text
                 elif element.tag == S_STARTTIME_TAG:
-                    reservation_dict[tag] = element.text            
+                    reservation_dict[tag] = element.text
                 elif element.tag == S_ENDTIME_TAG:
-                    reservation_dict[tag] = element.text            
+                    reservation_dict[tag] = element.text
                 elif element.tag == S_SOURCE_STP_TAG:
-                    reservation_dict[tag] = element.text            
+                    reservation_dict[tag] = element.text
                 elif element.tag == S_DEST_STP_TAG:
-                    reservation_dict[tag] = element.text            
+                    reservation_dict[tag] = element.text
                 elif element.tag == S_REQUESTER_NSA_TAG:
-                    reservation_dict[tag] = element.text            
+                    reservation_dict[tag] = element.text
                 elif element.tag == S_RESERVATION_STATE_TAG:
-                    reservation_dict[tag] = element.text            
+                    reservation_dict[tag] = element.text
                 elif element.tag == S_LIFECYCLE_STATE_TAG:
-                    reservation_dict[tag] = element.text            
+                    reservation_dict[tag] = element.text
                 elif element.tag == S_DATAPLANE_STATUS_TAG:
-                    element2 = element.find(FIND_ANYWHERE_PREFIX+S_DATAPLANE_STATUS_ACTIVE_TAG)
+                    element2 = element.find(FIND_ANYWHERE_PREFIX + S_DATAPLANE_STATUS_ACTIVE_TAG)
                     reservation_dict[tag] = element2.text
         reservations[connection_uuidstr] = reservation_dict
-
 
     return reservations
 
 
-
-
-
-
 def nsi_soap_parse_reserve_reply(soap_xml):
-    """
-    Parses SOAP RESERVE reply
+    """Parses SOAP RESERVE reply
     Returns: ConnectionId as string
     """
     # Parse XML
@@ -1387,20 +1367,20 @@ def nsi_soap_parse_reserve_reply(soap_xml):
     # Get connectionId
     #
     # TODO: check for error / faultstring
-    # 
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_CONNECTION_ID_TAG)
+    #
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_CONNECTION_ID_TAG)
     connection_id_str = tag.text
 
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_FAULTSTRING_TAG)
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_FAULTSTRING_TAG)
     if tag is None:
         faultstring = None
     else:
-        faultstring = tag.text 
+        faultstring = tag.text
 
-    print("SOAP PARSE REPLY FOR CONNECTIONID:",faultstring)
+    print("SOAP PARSE REPLY FOR CONNECTIONID:", faultstring)
 
     retdict = {}
-    retdict[S_FAULTSTRING_TAG] = faultstring 
+    retdict[S_FAULTSTRING_TAG] = faultstring
     retdict[S_CONNECTION_ID_TAG] = connection_id_str
     return retdict
 
@@ -1408,27 +1388,29 @@ def nsi_soap_parse_reserve_reply(soap_xml):
 def nsi_soap_parse_reserve_commit_reply(soap_xml):
     return nsi_soap_parse_correlationid_reply(soap_xml)
 
+
 def nsi_soap_parse_provison_reply(soap_xml):
     return nsi_soap_parse_correlationid_reply(soap_xml)
-       
+
+
 def nsi_soap_parse_terminate_reply(soap_xml):
     return nsi_soap_parse_correlationid_reply(soap_xml)
+
 
 def nsi_soap_parse_release_reply(soap_xml):
     return nsi_soap_parse_terminate_reply(soap_xml)
 
+
 def nsi_soap_parse_reserve_timeout_ack_reply(soap_xml):
     return nsi_soap_parse_terminate_reply(soap_xml)
+
 
 def nsi_soap_parse_query_recursive_reply(soap_xml):
     return nsi_soap_parse_correlationid_reply(soap_xml)
 
 
-
-
 def nsi_soap_parse_correlationid_reply(soap_xml):
-    """
-    Parses SOAP PROVISION reply
+    """Parses SOAP PROVISION reply
     Returns: dict with S_FAULTSTRING_TAG and S_CORRELATION_ID_TAG as keys, values string
     if S_FAULTSTRING_TAG is not None, there was a faulstring tag.
     """
@@ -1441,28 +1423,26 @@ def nsi_soap_parse_correlationid_reply(soap_xml):
 
     #
     # Get correlationId
-    # 
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_CORRELATION_ID_TAG)
+    #
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_CORRELATION_ID_TAG)
     correlation_id_str = tag.text
 
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_FAULTSTRING_TAG)
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_FAULTSTRING_TAG)
     if tag is None:
         faultstring = None
     else:
-        faultstring = tag.text 
+        faultstring = tag.text
 
-    print("SOAP PARSE REPLY FOR CORRELATIONID:",faultstring)
+    print("SOAP PARSE REPLY FOR CORRELATIONID:", faultstring)
 
     retdict = {}
-    retdict[S_FAULTSTRING_TAG] = faultstring 
+    retdict[S_FAULTSTRING_TAG] = faultstring
     retdict[S_CORRELATION_ID_TAG] = correlation_id_str
     return retdict
 
 
-
 def nsi_soap_parse_reserve_callback(soap_xml):
-    """
-    Parses SOAP RESERVE async callback
+    """Parses SOAP RESERVE async callback
     Returns: dictionary with relevant fields
     """
     # Parse XML
@@ -1473,66 +1453,59 @@ def nsi_soap_parse_reserve_callback(soap_xml):
     #
     # Get connectionId
     #
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_CONNECTION_ID_TAG)
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_CONNECTION_ID_TAG)
     connection_id_str = tag.text
 
     #
     # Get correlationId
-    # 
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_CORRELATION_ID_TAG)
+    #
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_CORRELATION_ID_TAG)
     correlation_id_str = tag.text
-
 
     #
     # Get state: reserveConfirmed, TODO: which others, cannot tell from State Diagram
-    # 
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_RESERVE_CONFIRMED_TAG)
-    callback_state_str = tag.tag 
+    #
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_RESERVE_CONFIRMED_TAG)
+    callback_state_str = tag.tag
 
-    #print("nsi_soap_parse_reserve_callback: Finding", tag)
-    #print("nsi_soap_parse_reserve_callback: Finding", tree.find(FIND_ANYWHERE_PREFIX+"nsi_ctypes:reserveConfirmed"))
-    #print("nsi_soap_parse_reserve_callback: Finding", tree.find(FIND_ANYWHERE_PREFIX+"reserveConfirmed"))
+    # print("nsi_soap_parse_reserve_callback: Finding", tag)
+    # print("nsi_soap_parse_reserve_callback: Finding", tree.find(FIND_ANYWHERE_PREFIX+"nsi_ctypes:reserveConfirmed"))
+    # print("nsi_soap_parse_reserve_callback: Finding", tree.find(FIND_ANYWHERE_PREFIX+"reserveConfirmed"))
 
     #
     # Get source STP
     #
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_SOURCE_STP_TAG)
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_SOURCE_STP_TAG)
     source_stp_str = tag.text
-
 
     #
     # Get dest STP
     #
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_SOURCE_STP_TAG)
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_SOURCE_STP_TAG)
     dest_stp_str = tag.text
 
-
     # Should not be a fault string, that should have been reported in the HTTP reply, not async
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_FAULTSTRING_TAG)
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_FAULTSTRING_TAG)
     if tag is None:
         faultstring = None
     else:
-        faultstring = tag.text 
+        faultstring = tag.text
 
-    print("nsi_soap_parse_reserve_callback: SOAP faultString:",faultstring)
+    print("nsi_soap_parse_reserve_callback: SOAP faultString:", faultstring)
 
     retdict = {}
-    retdict[S_FAULTSTRING_TAG] = faultstring 
+    retdict[S_FAULTSTRING_TAG] = faultstring
     retdict[S_CONNECTION_ID_TAG] = connection_id_str
     retdict[S_CORRELATION_ID_TAG] = correlation_id_str
     retdict[S_RESERVE_CONFIRMED_TAG] = callback_state_str
     retdict[S_SOURCE_STP_TAG] = source_stp_str
     retdict[S_DEST_STP_TAG] = dest_stp_str
-    
+
     return retdict
 
 
-
-
-
 def nsi_soap_parse_query_recursive_callback(soap_xml):
-    """
-    Parses SOAP QUERY-RECURSIVE async callback
+    """Parses SOAP QUERY-RECURSIVE async callback
     Returns: dictionary with relevant fields
     """
     # Parse XML
@@ -1543,7 +1516,7 @@ def nsi_soap_parse_query_recursive_callback(soap_xml):
     #
     # Get connectionId, not always present.
     #
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_CONNECTION_ID_TAG)
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_CONNECTION_ID_TAG)
     if tag is None:
         connection_id_str = "Unknown ConnectionId"
     else:
@@ -1551,90 +1524,83 @@ def nsi_soap_parse_query_recursive_callback(soap_xml):
 
     #
     # Get correlationId
-    # 
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_CORRELATION_ID_TAG)
+    #
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_CORRELATION_ID_TAG)
     correlation_id_str = tag.text
-
 
     #
     # Get state: reserveConfirmed, TODO: which others, cannot tell from State Diagram
-    # 
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_QUERY_RECURSIVE_CONFIRMED_TAG)
-    callback_state_str = tag.tag 
-
+    #
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_QUERY_RECURSIVE_CONFIRMED_TAG)
+    callback_state_str = tag.tag
 
     #
     # Find children of connection
     #
     children = {}
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_CHILDREN_TAG)
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_CHILDREN_TAG)
     if tag is None:
         print("nsi_soap_parse_query_recursive_callback: No children tag")
     else:
-        for tag2 in tag.iterfind(FIND_ANYWHERE_PREFIX+S_CHILD_TAG):
+        for tag2 in tag.iterfind(FIND_ANYWHERE_PREFIX + S_CHILD_TAG):
             print("nsi_soap_parse_query_recursive_callback: Found child", tag2)
             child_dict = {}
-            tag3 = tag2.find(FIND_ANYWHERE_PREFIX+S_CONNECTION_ID_TAG)
+            tag3 = tag2.find(FIND_ANYWHERE_PREFIX + S_CONNECTION_ID_TAG)
             child_connectionid_str = tag3.text
-            tag3 = tag2.find(FIND_ANYWHERE_PREFIX+S_SOURCE_STP_TAG)
+            tag3 = tag2.find(FIND_ANYWHERE_PREFIX + S_SOURCE_STP_TAG)
             source_stp_str = tag3.text
-            tag3 = tag2.find(FIND_ANYWHERE_PREFIX+S_DEST_STP_TAG)
+            tag3 = tag2.find(FIND_ANYWHERE_PREFIX + S_DEST_STP_TAG)
             dest_stp_str = tag3.text
             child_dict[S_SOURCE_STP_TAG] = source_stp_str
             child_dict[S_DEST_STP_TAG] = dest_stp_str
-            
+
             children[child_connectionid_str] = child_dict
-            
+
     #
     # Get source STP
     #
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_SOURCE_STP_TAG)
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_SOURCE_STP_TAG)
     if tag is None:
         source_stp_str = "Unknown source STP"
     else:
         source_stp_str = tag.text
 
-
     #
     # Get dest STP
     #
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_SOURCE_STP_TAG)
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_SOURCE_STP_TAG)
     if tag is None:
         dest_stp_str = "Unknown dest STP"
     else:
         dest_stp_str = tag.text
 
-
     # Should not be a fault string, that should have been reported in the HTTP reply, not async
-    tag = tree.find(FIND_ANYWHERE_PREFIX+S_FAULTSTRING_TAG)
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_FAULTSTRING_TAG)
     if tag is None:
         faultstring = None
     else:
-        faultstring = tag.text 
+        faultstring = tag.text
 
-    print("nsi_soap_parse_query_recursive_callback: SOAP PARSE CALLBACK FOR CONNECTIONID:",faultstring)
+    print("nsi_soap_parse_query_recursive_callback: SOAP PARSE CALLBACK FOR CONNECTIONID:", faultstring)
 
     retdict = {}
-    retdict[S_FAULTSTRING_TAG] = faultstring 
+    retdict[S_FAULTSTRING_TAG] = faultstring
     retdict[S_CONNECTION_ID_TAG] = connection_id_str
     retdict[S_CORRELATION_ID_TAG] = correlation_id_str
     retdict[S_QUERY_RECURSIVE_CONFIRMED_TAG] = callback_state_str
     retdict[S_SOURCE_STP_TAG] = source_stp_str
     retdict[S_DEST_STP_TAG] = dest_stp_str
     retdict[S_CHILDREN_TAG] = children
-    
-    print("nsi_soap_parse_query_recursive_callback: Found children",children)
-    
+
+    print("nsi_soap_parse_query_recursive_callback: Found children", children)
+
     return retdict
 
 
-
-
-
 if __name__ == "__main__":
-    #logger.debug print("START NSI COMM TEST")
+    # logger.debug print("START NSI COMM TEST")
 
-    nsi_comm_init(('arno-perscert-pub-2024.crt', 'DO-NOT-COMMIT-arno-priv-2024.pem'))
+    nsi_comm_init(("arno-perscert-pub-2024.crt", "DO-NOT-COMMIT-arno-priv-2024.pem"))
 
     """
     disc_meta = nsi_get_discovery('https://supa.moxy.ana.dlp.surfnet.nl:443/discovery')
@@ -1665,8 +1631,4 @@ if __name__ == "__main__":
     """
 
     dds_documents_dict = nsi_get_dds_documents("https://dds.ana.dlp.surfnet.nl/dds/documents/")
-    print("FINAL DOCS",dds_documents_dict)
-
-
-
-
+    print("FINAL DOCS", dds_documents_dict)

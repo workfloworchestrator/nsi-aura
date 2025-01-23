@@ -6,26 +6,26 @@ build-backend = "setuptools.build_meta"
 name = "nsi-aura"
 version = "0.0.1"
 dependencies = [
-  "fastui",
-  "lxml",
-  "requests",
-  "fastapi[standard]",
+    "fastui",
+    "lxml",
+    "requests",
+    "fastapi[standard]",
 ]
 requires-python = ">=3.12"
 authors = [
-  {name = "Arno Bakker"},
-  {name = "Hans Trompert"},
+    {name = "Arno Bakker"},
+    {name = "Hans Trompert"},
 ]
 maintainers = [
-  {name = "Arno Bakker"},
-  {name = "Hans Trompert"},
+    {name = "Arno Bakker"},
+    {name = "Hans Trompert"},
 ]
 description = "Network Service Interface (NSI) ultimate Requester Agent (uRA) for the Advanced North Atlantic (ANA) consortium"
 readme = "README.md"
 keywords = [
-  "ANA",
-  "NSI",
-  "Python",
+    "ANA",
+    "NSI",
+    "Python",
 ]
 classifiers = [
 ]
@@ -34,8 +34,11 @@ license = {file = "LICENSE.txt"}
 
 [project.optional-dependencies]
 dev = [
-  "ruff",
-  "mypy",
+    "ruff",
+    "mypy",
+    "isort",
+    "types-requests",
+    "lxml-stubs",
 ]
 
 [project.urls]
@@ -51,9 +54,39 @@ Repository = "https://github.com/workfloworchestrator/nsi-aura.git"
 
 [tool.ruff]
 line-length = 120
-select = ["B", "C", "D", "E", "F", "I", "N", "RET", "S", "T", "W"]
 target-version = "py313"
-ignore = [
+lint.select = [
+    "ANN",
+    "ARG",
+    "B",
+    "B",
+    "C",
+    "C",
+    "D",
+    "D",
+    "E",
+    "E",
+    "F",
+    "F",
+    "I",
+    "I",
+    "N",
+    "N",
+    "PGH",
+    "PTH",
+    "Q",
+    "RET",
+    "RET",
+    "RUF",
+    "S",
+    "S",
+    "T",
+    "T",
+    "W",
+    "W",
+]
+lint.ignore = [
+    "B905",
     "C417",
     "D100",
     "D101",
@@ -63,14 +96,39 @@ ignore = [
     "D105",
     "D106",
     "D107",
-    "D202",
     "E501",
-    "N806",
-    "B905",
-    "N805",
-    "B904",
-    "N803",
     "N801",
-    "N815",
     "N802",
+    "N803",
+    "N805",
+    "N806",
+    "N815",
 ]
+
+[tool.black]
+line-length = 120
+target-version = ["py313"]
+exclude = '''
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | venv
+    | src/supa/grpc_nsi
+    | build
+  )/
+)
+'''
+
+[tool.isort]
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 120
+forced_separate = "supa"
+skip = ["venv", "static"]
