@@ -26,7 +26,7 @@ pip install .
 And run nsi-aura:
 
 ```shell
-fastapi dev nsi_aura.py
+fastapi dev aura
 ```
 
 ## Development

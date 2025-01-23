@@ -29,6 +29,8 @@ from io import BytesIO
 import requests
 from urllib3.util.retry import Retry
 
+import aura.state
+
 try:
     from lxml import etree
 except ImportError:
@@ -984,7 +986,7 @@ def nsi_reserve(
         # TODO: generate correlation again here as before, reply_to_url does not have to contain it.
         # correlation_uuid_py = generate_uuid()
         connection_descr = NSI_RESERVE_XML_CONNECTION_PREFIX + " " + epnamea + " to " + epnamez + " over " + linkname
-        global_reservation_uuid_py = generate_uuid()
+        aura.state.global_reservation_uuid_py = generate_uuid()
         start_datetime_py = datetime.datetime.now(datetime.timezone.utc)
         end_datetime_py = start_datetime_py + duration_td
         source_stp_dict = {URN_STP_NAME: epnamea, URN_STP_VLAN: epvlana}
@@ -1001,7 +1003,7 @@ def nsi_reserve(
             correlation_uuid_py,
             reply_to_url,
             connection_descr,
-            global_reservation_uuid_py,
+            aura.state.global_reservation_uuid_py,
             start_datetime_py,
             end_datetime_py,
             source_stp_dict,
@@ -1039,7 +1041,7 @@ def nsi_reserve(
 
         print("RESERVE: Got connectionId", retdict)
         retdict["correlationId"] = str(correlation_uuid_py)
-        retdict["globalReservationId"] = str(global_reservation_uuid_py)
+        retdict["globalReservationId"] = str(aura.state.global_reservation_uuid_py)
         # ,"connectionId":connection_id_str}
         return retdict
 
@@ -1115,7 +1117,7 @@ def nsi_provision(provision_templstr, request_url, callback_url_prefix: str, pro
 
         # TODO: verify correlationId are the same
 
-        retdict["globalReservationId"] = str(global_reservation_uuid_py)
+        retdict["globalReservationId"] = str(aura.state.global_reservation_uuid_py)
         return retdict
 
     except:
