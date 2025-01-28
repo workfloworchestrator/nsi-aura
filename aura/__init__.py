@@ -24,3 +24,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # include routes
 app.include_router(router)
+
+# initialise NSI communications
+from aura.nsi_comm import nsi_comm_init
+
+nsi_comm_init()
