@@ -11,10 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import os
 import threading
 
-from aura.constant import DEFAULT_LINK_DOMAIN
 from aura.model import DUMMY_CONNECTION_ID_STR, Endpoint, NetworkLink, Reservation
 from aura.nsi_comm import (
     NSI_PROVISION_TEMPLATE_XMLFILE,
@@ -26,6 +26,7 @@ from aura.nsi_comm import (
     NSI_RESERVE_TIMEOUT_ACK_TEMPLATE_XMLFILE,
     NSI_TERMINATE_TEMPLATE_XMLFILE,
 )
+from aura.settings import settings
 
 #
 # State
@@ -49,16 +50,45 @@ global_endpoints = [
 # define some ANA links
 global_links = [
     NetworkLink(
-        id=1, name="MOXY EXA Atlantic North 100G", linkid=31, svlanid=190, evlanid=190, domain=DEFAULT_LINK_DOMAIN
+        id=1,
+        name="MOXY EXA Atlantic North 100G",
+        linkid=31,
+        svlanid=190,
+        evlanid=190,
+        domain=settings.DEFAULT_LINK_DOMAIN,
     ),
     NetworkLink(
-        id=2, name="Tata TGN-Atlantic South 100G", linkid=32, svlanid=190, evlanid=190, domain=DEFAULT_LINK_DOMAIN
+        id=2,
+        name="Tata TGN-Atlantic South 100G",
+        linkid=32,
+        svlanid=190,
+        evlanid=190,
+        domain=settings.DEFAULT_LINK_DOMAIN,
     ),
     NetworkLink(
-        id=3, name="AquaComms AEC-1 South 100G", linkid=33, svlanid=190, evlanid=190, domain=DEFAULT_LINK_DOMAIN
+        id=3,
+        name="AquaComms AEC-1 South 100G",
+        linkid=33,
+        svlanid=190,
+        evlanid=190,
+        domain=settings.DEFAULT_LINK_DOMAIN,
     ),
-    NetworkLink(id=3, name="EXA Express 100G", linkid=34, svlanid=190, evlanid=190, domain=DEFAULT_LINK_DOMAIN),
-    NetworkLink(id=5, name="Amitie 400G", linkid=35, svlanid=190, evlanid=190, domain=DEFAULT_LINK_DOMAIN),
+    NetworkLink(
+        id=3,
+        name="EXA Express 100G",
+        linkid=34,
+        svlanid=190,
+        evlanid=190,
+        domain=settings.DEFAULT_LINK_DOMAIN,
+    ),
+    NetworkLink(
+        id=5,
+        name="Amitie 400G",
+        linkid=35,
+        svlanid=190,
+        evlanid=190,
+        domain=settings.DEFAULT_LINK_DOMAIN,
+    ),
 ]
 
 # GUI polling for Orchestrator async reply using GET

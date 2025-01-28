@@ -11,9 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import asyncio
 import datetime
 import logging
+import os
 import traceback
 import uuid
 
@@ -25,13 +27,6 @@ from fastui import prebuilt_html
 from fastui.events import BackEvent, GoToEvent
 
 import aura.state
-from aura.constant import (
-    FASTAPI_MSGNAME_QUERY_RECURSIVE,
-    FASTAPI_MSGNAME_RESERVE,
-    SERVER_URL_PREFIX,
-    SITE_TITLE,
-    sample_qr_cbpath,
-)
 from aura.model import DUMMY_CONNECTION_ID_STR, DUMMY_CORRELATION_ID_STR, DUMMY_GLOBAL_RESERVATION_ID_STR
 from aura.nsi_aura import (
     SESSION_DB,
@@ -72,6 +67,20 @@ from aura.nsi_comm import (
     nsi_terminate,
     nsi_util_parse_xml,
 )
+from aura.settings import settings
+
+#
+# Constants
+#
+
+#
+# Used in polling and callbacks
+#
+FASTAPI_MSGNAME_RESERVE = "reserve"
+FASTAPI_MSGNAME_QUERY_RECURSIVE = "queryRecursive"
+
+# fake not ONLINE data
+sample_qr_cbpath = os.path.join("samples", "query-recursive-callback-example3.xml")
 
 #
 # Routes
@@ -97,9 +106,9 @@ def fastapi_landing_page(request: Request) -> list[AnyComponent]:
         orchestrator_name = aura.state.global_provider_nsa_id
 
     mailto_noc_url = "mailto:noc@netherlight.net"  # TODO: fix that is correct link in HTML
-    reload_topos_url = SERVER_URL_PREFIX + "/reload-topos/"
-    selecta_url = SERVER_URL_PREFIX + "/selecta/"
-    query_url = SERVER_URL_PREFIX + "/query/"
+    reload_topos_url = str(settings.SERVER_URL_PREFIX) + "reload-topos/"
+    selecta_url = str(settings.SERVER_URL_PREFIX) + "selecta/"
+    query_url = str(settings.SERVER_URL_PREFIX) + "query/"
 
     # Check if authorized
     auth_bool = get_auth_user(request)
@@ -113,7 +122,7 @@ def fastapi_landing_page(request: Request) -> list[AnyComponent]:
     return [
         c.Page(  # Page provides a basic container for components
             components=[
-                c.Heading(text=SITE_TITLE, level=2, class_name="+ text-danger"),
+                c.Heading(text=settings.SITE_TITLE, level=2, class_name="+ text-danger"),
                 c.Paragraph(text="Talking to " + orchestrator_name, class_name="+ text-success"),
                 c.Paragraph(text=auth_str, class_name="+ text-warning"),
                 c.Heading(text="Create New Connection", level=3),
@@ -147,7 +156,7 @@ def fastapi_landing_page(request: Request) -> list[AnyComponent]:
 @router.get("/api/reload-topos/", response_model=FastUI, response_model_exclude_none=True)
 def fastapi_reload_topos() -> list[AnyComponent]:
     """Reload topos from NSI-Orchestrator"""
-    click_url = SERVER_URL_PREFIX + "/"  # back to landing
+    click_url = str(settings.SERVER_URL_PREFIX) + ""  # back to landing
     try:
         # TODO, USE await example with data model from fastUI tutorial
 
@@ -183,7 +192,7 @@ def fastapi_reload_topos() -> list[AnyComponent]:
             disccount += 1
 
         # TODO: implement link details
-        root_url = SERVER_URL_PREFIX + "/"
+        root_url = str(settings.SERVER_URL_PREFIX) + ""
         clickurl = root_url
 
     except Exception:
@@ -231,7 +240,7 @@ def fastapi_endpoint_select_a() -> list[AnyComponent]:
 
         logger.debug("DEBUG: /api/selecta/ create complist")
 
-        query_url = SERVER_URL_PREFIX + "/query/"
+        query_url = str(settings.SERVER_URL_PREFIX) + "query/"
         # querycomp = c.Link(components=[c.Text(text='Query existing connections from NSI Aggregator')], on_click=GoToEvent(url=query_url))
         # complist.append(querycomp)
 
@@ -501,9 +510,9 @@ def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponen
         # FIXME: remove connectionId from callback, at least for RESERVE
         clean_connection_id_str = str(generate_uuid())
 
-        # orch_reply_to_url = SERVER_URL_PREFIX+"/callback/?corruuid="+clean_correlation_uuid_str+"&connid="+clean_connection_id_str
-        # orch_reply_to_url = SERVER_URL_PREFIX+"/callback/?corruuid="+clean_correlation_uuid_str
-        orch_reply_to_url = SERVER_URL_PREFIX + "/api/callback/"
+        # orch_reply_to_url = str(settings.SERVER_URL_PREFIX)+"/callback/?corruuid="+clean_correlation_uuid_str+"&connid="+clean_connection_id_str
+        # orch_reply_to_url = str(settings.SERVER_URL_PREFIX)+"/callback/?corruuid="+clean_correlation_uuid_str
+        orch_reply_to_url = str(settings.SERVER_URL_PREFIX) + "api/callback/"
 
         print("fastapi_nsi_reserve: Orch will reply via", orch_reply_to_url)
         print("aura.state.global_soap_provider_url:", aura.state.global_soap_provider_url)
@@ -553,13 +562,17 @@ def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponen
         # poll_url = "/poll/reserve/?corruuid="+corruuid+"&connid="+connid
         poll_url = generate_poll_url(FASTAPI_MSGNAME_RESERVE, clean_correlation_uuid_str, clean_connection_id_str)
 
-        root_url = SERVER_URL_PREFIX + "/"
+        root_url = str(settings.SERVER_URL_PREFIX) + ""
 
         # To inspect the spans that were stitched together
-        query_rec_url = SERVER_URL_PREFIX + "/query-recursive/?connid=" + reserve_reply_dict["connectionId"]
+        query_rec_url = (
+            str(settings.SERVER_URL_PREFIX) + "query-recursive/?connid=" + reserve_reply_dict["connectionId"]
+        )
 
         # For simulation, no /api
-        sim_reply_to_url = SERVER_URL_PREFIX + "/reserve-commit/?connid=" + reserve_reply_dict["connectionId"]
+        sim_reply_to_url = (
+            str(settings.SERVER_URL_PREFIX) + "reserve-commit/?connid=" + reserve_reply_dict["connectionId"]
+        )
 
     except Exception:
         traceback.print_exc()
@@ -625,7 +638,7 @@ def fastapi_nsi_reserve_commit(connid: str) -> list[AnyComponent]:
             reserve_commit_reply_dict = nsi_reserve_commit(
                 aura.state.reserve_commit_templstr,
                 aura.state.global_soap_provider_url,
-                SERVER_URL_PREFIX,
+                str(settings.SERVER_URL_PREFIX),
                 aura.state.global_provider_nsa_id,
                 clean_connection_id_str,
             )
@@ -633,8 +646,8 @@ def fastapi_nsi_reserve_commit(connid: str) -> list[AnyComponent]:
         # RESTFUL: Do Not Store (TODO or for security)
         # TODO NEWCALLBACK
         orch_reply_to_url = (
-            SERVER_URL_PREFIX
-            + "/reserve-commit-callback/?corruuid="
+            str(settings.SERVER_URL_PREFIX)
+            + "reserve-commit-callback/?corruuid="
             + reserve_commit_reply_dict["correlationId"]
             + "&globresuuid="
             + reserve_commit_reply_dict["globalReservationId"]
@@ -651,7 +664,7 @@ def fastapi_nsi_reserve_commit(connid: str) -> list[AnyComponent]:
             cssclassname = "+ text-warning"
             faultstring = reserve_commit_reply_dict[S_FAULTSTRING_TAG]
 
-        root_url = SERVER_URL_PREFIX + "/"
+        root_url = str(settings.SERVER_URL_PREFIX) + ""
 
     except Exception:
         traceback.print_exc()
@@ -712,7 +725,7 @@ def fastapi_nsi_reserve_commit_callback(corruuid: str, globresuuid: str, connid:
             provision_reply_dict = nsi_provision(
                 aura.state.provision_templstr,
                 aura.state.global_soap_provider_url,
-                SERVER_URL_PREFIX,
+                str(settings.SERVER_URL_PREFIX),
                 aura.state.global_provider_nsa_id,
                 expect_global_reservation_uuid_py,
                 clean_connection_id_str,
@@ -720,8 +733,8 @@ def fastapi_nsi_reserve_commit_callback(corruuid: str, globresuuid: str, connid:
 
         # RESTFUL: Do Not Store (TODO or for security)
         orch_reply_to_url = (
-            SERVER_URL_PREFIX
-            + "/provision-callback/?corruuid="
+            str(settings.SERVER_URL_PREFIX)
+            + "provision-callback/?corruuid="
             + provision_reply_dict["correlationId"]
             + "&globresuuid="
             + provision_reply_dict["globalReservationId"]
@@ -738,7 +751,7 @@ def fastapi_nsi_reserve_commit_callback(corruuid: str, globresuuid: str, connid:
             cssclassname = "+ text-warning"
             faultstring = provision_reply_dict[S_FAULTSTRING_TAG]
 
-        root_url = SERVER_URL_PREFIX + "/"
+        root_url = str(settings.SERVER_URL_PREFIX) + ""
 
     except Exception:
         traceback.print_exc()
@@ -775,8 +788,8 @@ def fastapi_nsi_provision_callback(corruuid: str, globresuuid: str) -> list[AnyC
         correlation_uuid_py = uuid.UUID(corruuid)
         aura.state.global_reservation_uuid_py = uuid.UUID(corruuid)
 
-        root_url = SERVER_URL_PREFIX + "/"
-        query_url = SERVER_URL_PREFIX + "/query/"
+        root_url = str(settings.SERVER_URL_PREFIX) + ""
+        query_url = str(settings.SERVER_URL_PREFIX) + "query/"
 
     except Exception:
         traceback.print_exc()
@@ -808,7 +821,7 @@ def fastapi_nsi_connections_query() -> list[AnyComponent]:
             resdictlist = nsi_connections_query(
                 aura.state.query_summary_sync_templstr,
                 aura.state.global_soap_provider_url,
-                SERVER_URL_PREFIX,
+                str(settings.SERVER_URL_PREFIX),
                 aura.state.global_provider_nsa_id,
             )
 
@@ -846,8 +859,8 @@ def fastapi_connections_query_callback(corruuid: str) -> list[AnyComponent]:
     try:
         correlation_uuid_py = uuid.UUID(corruuid)
 
-        root_url = SERVER_URL_PREFIX + "/"
-        query_url = SERVER_URL_PREFIX + "/query/"
+        root_url = str(settings.SERVER_URL_PREFIX) + ""
+        query_url = str(settings.SERVER_URL_PREFIX) + "query/"
 
     except Exception:
         traceback.print_exc()
@@ -904,7 +917,7 @@ def fastapi_nsi_terminate(connid: str) -> list[AnyComponent]:
             terminate_reply_dict = nsi_terminate(
                 aura.state.terminate_templstr,
                 aura.state.global_soap_provider_url,
-                SERVER_URL_PREFIX,
+                str(settings.SERVER_URL_PREFIX),
                 aura.state.global_provider_nsa_id,
                 clean_connection_id_str,
             )
@@ -919,8 +932,8 @@ def fastapi_nsi_terminate(connid: str) -> list[AnyComponent]:
 
         # RESTFUL: Do Not Store (TODO or for security)
         orch_reply_to_url = (
-            SERVER_URL_PREFIX
-            + "/terminate-callback/?corruuid="
+            str(settings.SERVER_URL_PREFIX)
+            + "terminate-callback/?corruuid="
             + terminate_reply_dict["correlationId"]
             + "&connid="
             + clean_connection_id_str
@@ -985,7 +998,7 @@ def fastapi_nsi_release(connid: str) -> list[AnyComponent]:
             release_reply_dict = nsi_release(
                 aura.state.release_templstr,
                 aura.state.global_soap_provider_url,
-                SERVER_URL_PREFIX,
+                str(settings.SERVER_URL_PREFIX),
                 aura.state.global_provider_nsa_id,
                 clean_connection_id_str,
             )
@@ -1000,8 +1013,8 @@ def fastapi_nsi_release(connid: str) -> list[AnyComponent]:
 
         # RESTFUL: Do Not Store (TODO or for security)
         orch_reply_to_url = (
-            SERVER_URL_PREFIX
-            + "/release-callback/?corruuid="
+            str(settings.SERVER_URL_PREFIX)
+            + "release-callback/?corruuid="
             + release_reply_dict["correlationId"]
             + "&connid="
             + clean_connection_id_str
@@ -1066,7 +1079,7 @@ def fastapi_nsi_reserve_timeout_ack(connid: str) -> list[AnyComponent]:
             reserve_timeout_ack_reply_dict = nsi_reserve_timeout_ack(
                 aura.state.reserve_timeout_ack_templstr,
                 aura.state.global_soap_provider_url,
-                SERVER_URL_PREFIX,
+                str(settings.SERVER_URL_PREFIX),
                 aura.state.global_provider_nsa_id,
                 clean_connection_id_str,
             )
@@ -1081,8 +1094,8 @@ def fastapi_nsi_reserve_timeout_ack(connid: str) -> list[AnyComponent]:
 
         # RESTFUL: Do Not Store (TODO or for security)
         orch_reply_to_url = (
-            SERVER_URL_PREFIX
-            + "/reserve_timeout_ack-callback/?corruuid="
+            str(settings.SERVER_URL_PREFIX)
+            + "reserve_timeout_ack-callback/?corruuid="
             + reserve_timeout_ack_reply_dict["correlationId"]
             + "&connid="
             + clean_connection_id_str
@@ -1151,7 +1164,7 @@ def fastapi_nsi_query_recursive(connid: str) -> list[AnyComponent]:
         query_recursive_reply_dict["globalReservationId"] = DUMMY_GLOBAL_RESERVATION_ID_STR
         query_recursive_reply_dict["connectionId"] = DUMMY_CONNECTION_ID_STR
 
-        orch_reply_to_url = SERVER_URL_PREFIX + "/api/callback/"
+        orch_reply_to_url = str(settings.SERVER_URL_PREFIX) + "api/callback/"
 
         print("fastapi_nsi_query_recursive: Orch will reply via", orch_reply_to_url)
 
@@ -1193,7 +1206,7 @@ def fastapi_nsi_query_recursive(connid: str) -> list[AnyComponent]:
         )
 
         # When coming from /reserve
-        next_step_url = SERVER_URL_PREFIX + "/reserve-commit/?connid=" + expect_connection_id_str
+        next_step_url = str(settings.SERVER_URL_PREFIX) + "reserve-commit/?connid=" + expect_connection_id_str
 
     except Exception:
         traceback.print_exc()
@@ -1273,10 +1286,12 @@ def fastapi_reservation_profile(id: int) -> list[AnyComponent]:
 
         headtext = "ConnectionId " + reservation.connectionId
 
-        terminate_url = SERVER_URL_PREFIX + "/terminate/?connid=" + reservation.connectionId
-        release_url = SERVER_URL_PREFIX + "/release/?connid=" + reservation.connectionId
-        reserve_timeout_ack_url = SERVER_URL_PREFIX + "/reserve-timeout-ack/?connid=" + reservation.connectionId
-        query_recursive_url = SERVER_URL_PREFIX + "/query-recursive/?connid=" + reservation.connectionId
+        terminate_url = str(settings.SERVER_URL_PREFIX) + "terminate/?connid=" + reservation.connectionId
+        release_url = str(settings.SERVER_URL_PREFIX) + "release/?connid=" + reservation.connectionId
+        reserve_timeout_ack_url = (
+            str(settings.SERVER_URL_PREFIX) + "reserve-timeout-ack/?connid=" + reservation.connectionId
+        )
+        query_recursive_url = str(settings.SERVER_URL_PREFIX) + "query-recursive/?connid=" + reservation.connectionId
 
     except Exception:
         traceback.print_exc()
@@ -1349,4 +1364,4 @@ async def session_logout(response: Response):
 @router.get("/{path:path}")
 async def html_landing() -> HTMLResponse:
     """Simple HTML page which serves the React app, comes last as it matches all paths."""
-    return HTMLResponse(prebuilt_html(title=SITE_TITLE))
+    return HTMLResponse(prebuilt_html(title=settings.SITE_TITLE))

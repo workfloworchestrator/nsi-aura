@@ -30,6 +30,7 @@ import requests
 from urllib3.util.retry import Retry
 
 import aura.state
+from aura.settings import settings
 
 try:
     from lxml import etree
@@ -993,7 +994,7 @@ def nsi_reserve(
         dest_stp_dict = {URN_STP_NAME: epnamez, URN_STP_VLAN: epvlanz}
 
         # RESTFUL: Do Not Store (TODO or for security)
-        # reply_to_url = SERVER_URL_PREFIX+"/reserve-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)
+        # reply_to_url = str(settings.SERVER_URL_PREFIX)+"/reserve-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)
         # I get an error from SuPA: Unexpected character \'=\' (code 61); expected a semi-colon after the reference for entity \'globresuuid\'\n
         # reply_to_url = callback_url_prefix+"/reserve-callback/"
         reply_to_url = orch_reply_to_url
@@ -1602,7 +1603,7 @@ def nsi_soap_parse_query_recursive_callback(soap_xml):
 if __name__ == "__main__":
     # logger.debug print("START NSI COMM TEST")
 
-    nsi_comm_init(("arno-perscert-pub-2024.crt", "DO-NOT-COMMIT-arno-priv-2024.pem"))
+    nsi_comm_init((settings.NSI_AURA_CERTIFICATE, settings.NSI_AURA_PRIVATE_KEY))
 
     """
     disc_meta = nsi_get_discovery('https://supa.moxy.ana.dlp.surfnet.nl:443/discovery')

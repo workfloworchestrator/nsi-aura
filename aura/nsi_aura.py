@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import copy
 import secrets
 
@@ -21,9 +22,9 @@ from fastui.components.display import DisplayLookup
 from fastui.events import BackEvent, GoToEvent
 
 import aura.state
-from aura.constant import ANAGRAM_DDS_URL, DEFAULT_LINK_DOMAIN, SERVER_URL_PREFIX, UPA_URN_PREFIX
 from aura.model import Discovery, Endpoint, NetworkLink, Reservation, Span
 from aura.nsi_comm import *
+from aura.settings import settings
 
 #
 # NSI-AuRA = NSI ANA ultimate Requester Agent
@@ -106,7 +107,7 @@ def nsi_load_dds_documents():
     - global_soap_provider_url
     returns dds_documents_dict for displaying summaries to the user
     """
-    dds_documents_dict = nsi_get_dds_documents(ANAGRAM_DDS_URL)
+    dds_documents_dict = nsi_get_dds_documents(str(settings.ANAGRAM_DDS_URL))
 
     # DDS knows all, so also who is our Orchestrator/Safnari
     orchestrator_dict = dds_documents_dict["local"]
@@ -170,7 +171,7 @@ def parse_vlan_range(vlanstr):
 def stpid2domain(stpid):
     """Abbreviates STP id to a simple domain name for display purposes"""
     urn = stpid
-    nopref = urn[len(UPA_URN_PREFIX) :]
+    nopref = urn[len(settings.UPA_URN_PREFIX) :]
     idx = nopref.find(":")
     domain = nopref[:idx]
     return domain
@@ -293,7 +294,7 @@ def nsi_reload_topology_into_links_model(sdps):
 
     for sdp in unique_sdps:
         name = sdp2name(sdp["inport"], sdp["outport"])
-        domain = DEFAULT_LINK_DOMAIN
+        domain = settings.DEFAULT_LINK_DOMAIN
         vlanstr = sdp["vlanranges"]  # can be int-int,int-int
 
         idx = vlanstr.find(",")
@@ -366,7 +367,7 @@ def nsi_load_parsed_soap_into_reservations_model(resdictlist):
 #
 # NSI COMM
 #
-nsi_comm_init(("arno-perscert-pub-2024.crt", "DO-NOT-COMMIT-arno-priv-2024.pem"))
+nsi_comm_init((settings.NSI_AURA_CERTIFICATE, settings.NSI_AURA_PRIVATE_KEY))
 
 
 try:
@@ -456,7 +457,7 @@ def add_links_table(heading, clickurl, local_links, level=2) -> list[AnyComponen
 
 def show_reservations_table(heading, clickurl, local_reservations) -> list[AnyComponent]:
     """Show a table of reservations"""
-    root_url = SERVER_URL_PREFIX + "/"  # back to landing
+    root_url = str(settings.SERVER_URL_PREFIX) + ""  # back to landing
 
     return [
         c.Page(  # Page provides a basic container for components

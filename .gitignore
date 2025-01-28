@@ -121,3 +121,11 @@ dmypy.json
 *.db
 *.db-shm
 *.db-wal
+
+# ignore main.py (only for debug purposes)
+/main.py
+
+# ignore certificate and private key file extensions
+*.crt
+*.pem
+*.key
