@@ -447,6 +447,7 @@ def generate_query_recursive_xml(message_templstr, correlation_uuid_py, reply_to
 # Library
 #
 
+
 def nsi_comm_init():
     """Initialise NSI communications."""
     # Getting Max Retry errors? Due to passphrase protected private key
@@ -1274,8 +1275,13 @@ def nsi_util_post_soap(url, soapreqmsg):
     body = soapreqmsg
 
     # 2024-11-08: SuPA moxy currently has self-signed certificate
-    response = requests.post(url, data=body, headers=headers, verify=False, cert=(settings.NSI_AURA_CERTIFICATE, settings.NSI_AURA_PRIVATE_KEY)
-)
+    response = requests.post(
+        url,
+        data=body,
+        headers=headers,
+        verify=False,
+        cert=(settings.NSI_AURA_CERTIFICATE, settings.NSI_AURA_PRIVATE_KEY),
+    )
     print(response.status_code)
     print("#CONTENT TYPE#", response.headers["content-type"])
     if (

@@ -364,7 +364,6 @@ def nsi_load_parsed_soap_into_reservations_model(resdictlist):
         aura.state.global_reservations.append(reservation)
 
 
-
 try:
     # DEMO: Turn topology loading off for now, so we can also demo with synthetic data,
     # which may be more comprehensible
