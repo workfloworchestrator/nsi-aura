@@ -14,6 +14,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from aura.nsi_comm import nsi_comm_init
 from aura.routes import router
 
 app = FastAPI()
@@ -24,3 +25,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # include routes
 app.include_router(router)
+
+# initialise NSI communications
+nsi_comm_init()
+
+

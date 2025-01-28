@@ -364,11 +364,6 @@ def nsi_load_parsed_soap_into_reservations_model(resdictlist):
         aura.state.global_reservations.append(reservation)
 
 
-#
-# NSI COMM
-#
-nsi_comm_init((settings.NSI_AURA_CERTIFICATE, settings.NSI_AURA_PRIVATE_KEY))
-
 
 try:
     # DEMO: Turn topology loading off for now, so we can also demo with synthetic data,

@@ -447,24 +447,13 @@ def generate_query_recursive_xml(message_templstr, correlation_uuid_py, reply_to
 # Library
 #
 
-perscert = None  # pair of pubkey and privkey filenames, in PEM
-
-
-def nsi_comm_init(cert):
-    global perscert
-    perscert = cert
-
-    session = requests.Session()
-
-    # requests can only work with passphrase-less private keys!
-    # session.cert = '../DO-NOT-COMMIT-arno-certs-2024.p12'
-    # No work, dunno why
-    # session.cert= ('../arno-perscert-pub-2024.crt', '../DO-NOT-COMMIT-arno-priv-2024.pem')
-
+def nsi_comm_init():
+    """Initialise NSI communications."""
     # Getting Max Retry errors? Due to passphrase protected private key
     # https://stackoverflow.com/questions/23013220/max-retries-exceeded-with-url-in-requests
     retry = Retry(connect=3, backoff_factor=0.5)
     adapter = requests.adapters.HTTPAdapter(max_retries=retry)
+    session = requests.Session()
     session.mount("http://", adapter)
     session.mount("https://", adapter)
 
@@ -477,12 +466,10 @@ def nsi_util_get_and_parse_xml(url):
 
 
 def nsi_util_get_xml(url):
-
-    global perscert
     # throws Exception to higher layer for display to user
     print("SENDING HTTP REQUEST FOR XML", url)
     # 2024-11-08: SuPA moxy currently has self-signed certificate
-    r = requests.get(url, verify=False, cert=perscert)
+    r = requests.get(url, verify=False, cert=(settings.NSI_AURA_CERTIFICATE, settings.NSI_AURA_PRIVATE_KEY))
     # logger.debug print(r.status_code)
     # logger.debug print(r.headers['content-type'])
     # logger.debug print(r.encoding)
@@ -1282,14 +1269,13 @@ def nsi_util_post_soap(url, soapreqmsg):
     """Does HTTP POST of soapreqmsg to URL
     Returns: response.content, a SOAP reply
     """
-    global perscert
-
     # headers = {'content-type': 'application/soap+xml'}
     headers = {"content-type": "text/xml"}
     body = soapreqmsg
 
     # 2024-11-08: SuPA moxy currently has self-signed certificate
-    response = requests.post(url, data=body, headers=headers, verify=False, cert=perscert)
+    response = requests.post(url, data=body, headers=headers, verify=False, cert=(settings.NSI_AURA_CERTIFICATE, settings.NSI_AURA_PRIVATE_KEY)
+)
     print(response.status_code)
     print("#CONTENT TYPE#", response.headers["content-type"])
     if (
@@ -1603,7 +1589,7 @@ def nsi_soap_parse_query_recursive_callback(soap_xml):
 if __name__ == "__main__":
     # logger.debug print("START NSI COMM TEST")
 
-    nsi_comm_init((settings.NSI_AURA_CERTIFICATE, settings.NSI_AURA_PRIVATE_KEY))
+    nsi_comm_init()
 
     """
     disc_meta = nsi_get_discovery('https://supa.moxy.ana.dlp.surfnet.nl:443/discovery')
