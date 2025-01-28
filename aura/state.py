@@ -15,7 +15,7 @@
 import os
 import threading
 
-from aura.model import DUMMY_CONNECTION_ID_STR, Endpoint, NetworkLink, Reservation
+from aura.models import DUMMY_CONNECTION_ID_STR, Endpoint, NetworkLink, Reservation
 from aura.nsi_comm import (
     NSI_PROVISION_TEMPLATE_XMLFILE,
     NSI_QUERY_RECURSIVE_TEMPLATE_XMLFILE,

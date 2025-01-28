@@ -14,7 +14,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from aura.route import router
+from aura.routes import router
 
 app = FastAPI()
 

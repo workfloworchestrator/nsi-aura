@@ -27,7 +27,7 @@ from fastui import prebuilt_html
 from fastui.events import BackEvent, GoToEvent
 
 import aura.state
-from aura.model import DUMMY_CONNECTION_ID_STR, DUMMY_CORRELATION_ID_STR, DUMMY_GLOBAL_RESERVATION_ID_STR
+from aura.models import DUMMY_CONNECTION_ID_STR, DUMMY_CORRELATION_ID_STR, DUMMY_GLOBAL_RESERVATION_ID_STR
 from aura.nsi_aura import (
     SESSION_DB,
     USER_CORRECT,

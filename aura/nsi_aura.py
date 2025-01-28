@@ -22,7 +22,7 @@ from fastui.components.display import DisplayLookup
 from fastui.events import BackEvent, GoToEvent
 
 import aura.state
-from aura.model import Discovery, Endpoint, NetworkLink, Reservation, Span
+from aura.models import Discovery, Endpoint, NetworkLink, Reservation, Span
 from aura.nsi_comm import *
 from aura.settings import settings
 
