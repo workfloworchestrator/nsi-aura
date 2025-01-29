@@ -136,3 +136,6 @@ use_parentheses = true
 line_length = 120
 forced_separate = "supa"
 skip = ["venv", "static"]
+
+[tool.mypy]
+plugins = ['pydantic.mypy']

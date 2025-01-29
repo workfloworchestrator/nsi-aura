@@ -32,10 +32,7 @@ from urllib3.util.retry import Retry
 import aura.state
 from aura.settings import settings
 
-try:
-    from lxml import etree
-except ImportError:
-    import xml.etree.ElementTree as etree
+from lxml import etree
 
 
 def prettyprint(element, **kwargs):

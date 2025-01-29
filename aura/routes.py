@@ -728,7 +728,6 @@ def fastapi_nsi_reserve_commit_callback(corruuid: str, globresuuid: str, connid:
                 str(settings.SERVER_URL_PREFIX),
                 aura.state.global_provider_nsa_id,
                 expect_global_reservation_uuid_py,
-                clean_connection_id_str,
             )
 
         # RESTFUL: Do Not Store (TODO or for security)
@@ -786,7 +785,7 @@ def fastapi_nsi_provision_callback(corruuid: str, globresuuid: str) -> list[AnyC
         print("fastapi_nsi_provision_callback: ENTER")
 
         correlation_uuid_py = uuid.UUID(corruuid)
-        aura.state.global_reservation_uuid_py = uuid.UUID(corruuid)
+        aura.state.global_reservation_uuid_py = str(uuid.UUID(corruuid))
 
         root_url = str(settings.SERVER_URL_PREFIX) + ""
         query_url = str(settings.SERVER_URL_PREFIX) + "query/"

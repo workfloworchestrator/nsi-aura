@@ -37,19 +37,19 @@ class Settings(BaseSettings):
 
     # DEMO_PROVIDER_NSA_ID='urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:nsa:supa'
 
-    ANAGRAM_DDS_URL: HttpUrl = "https://dds.ana.dlp.surfnet.nl/dds/"
+    ANAGRAM_DDS_URL: HttpUrl = HttpUrl("https://dds.ana.dlp.surfnet.nl/dds/")
 
     UPA_URN_PREFIX: str = "urn:ogf:network:"
 
     DEFAULT_LINK_DOMAIN: str = "ANA"
 
     # apparently cannot dynamically figure out?
-    SERVER_URL_PREFIX: HttpUrl = "http://127.0.0.1:8000"
+    SERVER_URL_PREFIX: HttpUrl = HttpUrl("http://127.0.0.1:8000")
     # str(str(settings.SERVER_URL_PREFIX))="http://145.100.104.178:8000"
 
     # certificate en key to authenticate against NSI control plane
-    NSI_AURA_CERTIFICATE: FilePath = "aura-certificate.pem"
-    NSI_AURA_PRIVATE_KEY: FilePath = "aura-private-key.pem"
+    NSI_AURA_CERTIFICATE: FilePath = FilePath("aura-certificate.pem")
+    NSI_AURA_PRIVATE_KEY: FilePath = FilePath("aura-private-key.pem")
 
 
 settings = Settings(_env_file="aura.env")

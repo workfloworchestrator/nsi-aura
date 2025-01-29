@@ -509,21 +509,3 @@ def add_discovery_table(heading, clickurl, local_discoveries, level) -> list[Any
         ),
         # create_footer(),
     ]
-
-
-def add_spans_table(heading, clickurl, local_spans) -> list[AnyComponent]:
-    """Return list of components for a table of Spans"""
-    return [
-        c.Heading(text=heading, level=3, class_name="+ text-success"),
-        c.Table(
-            data_model=Span,
-            data=local_spans,
-            # define columns for the table
-            columns=[
-                DisplayLookup(field="connectionId", on_click=GoToEvent(url=clickurl)),
-                DisplayLookup(field="sourceSTP"),
-                DisplayLookup(field="destSTP"),
-            ],
-        ),
-        create_footer(),
-    ]
