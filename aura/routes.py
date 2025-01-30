@@ -512,7 +512,7 @@ def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponen
 
         # orch_reply_to_url = str(settings.SERVER_URL_PREFIX)+"/callback/?corruuid="+clean_correlation_uuid_str+"&connid="+clean_connection_id_str
         # orch_reply_to_url = str(settings.SERVER_URL_PREFIX)+"/callback/?corruuid="+clean_correlation_uuid_str
-        orch_reply_to_url = str(settings.SERVER_URL_PREFIX) + "api/callback/"
+        orch_reply_to_url = str(settings.NSA_BASE_URL) + "/api/callback/"
 
         print("fastapi_nsi_reserve: Orch will reply via", orch_reply_to_url)
         print("aura.state.global_soap_provider_url:", aura.state.global_soap_provider_url)
@@ -646,13 +646,13 @@ def fastapi_nsi_reserve_commit(connid: str) -> list[AnyComponent]:
         # RESTFUL: Do Not Store (TODO or for security)
         # TODO NEWCALLBACK
         orch_reply_to_url = (
-            str(settings.SERVER_URL_PREFIX)
+            str(settings.NSA_BASE_URL)
             + "reserve-commit-callback/?corruuid="
             + reserve_commit_reply_dict["correlationId"]
-            + "&globresuuid="
-            + reserve_commit_reply_dict["globalReservationId"]
-            + "&connid="
-            + clean_connection_id_str
+            # + "&globresuuid="
+            # + reserve_commit_reply_dict["globalReservationId"]
+            # + "&connid="
+            # + clean_connection_id_str
         )
 
         # Check for errors
@@ -725,14 +725,14 @@ def fastapi_nsi_reserve_commit_callback(corruuid: str, globresuuid: str, connid:
             provision_reply_dict = nsi_provision(
                 aura.state.provision_templstr,
                 aura.state.global_soap_provider_url,
-                str(settings.SERVER_URL_PREFIX),
+                str(settings.NSA_BASE_URL),
                 aura.state.global_provider_nsa_id,
                 expect_global_reservation_uuid_py,
             )
 
         # RESTFUL: Do Not Store (TODO or for security)
         orch_reply_to_url = (
-            str(settings.SERVER_URL_PREFIX)
+            str(settings.NSA_BASE_URL)
             + "provision-callback/?corruuid="
             + provision_reply_dict["correlationId"]
             + "&globresuuid="
@@ -931,7 +931,7 @@ def fastapi_nsi_terminate(connid: str) -> list[AnyComponent]:
 
         # RESTFUL: Do Not Store (TODO or for security)
         orch_reply_to_url = (
-            str(settings.SERVER_URL_PREFIX)
+            str(settings.NSA_BASE_URL)
             + "terminate-callback/?corruuid="
             + terminate_reply_dict["correlationId"]
             + "&connid="
@@ -1012,7 +1012,7 @@ def fastapi_nsi_release(connid: str) -> list[AnyComponent]:
 
         # RESTFUL: Do Not Store (TODO or for security)
         orch_reply_to_url = (
-            str(settings.SERVER_URL_PREFIX)
+            str(settings.NSA_BASE_URL)
             + "release-callback/?corruuid="
             + release_reply_dict["correlationId"]
             + "&connid="
@@ -1093,7 +1093,7 @@ def fastapi_nsi_reserve_timeout_ack(connid: str) -> list[AnyComponent]:
 
         # RESTFUL: Do Not Store (TODO or for security)
         orch_reply_to_url = (
-            str(settings.SERVER_URL_PREFIX)
+            str(settings.NSA_BASE_URL)
             + "reserve_timeout_ack-callback/?corruuid="
             + reserve_timeout_ack_reply_dict["correlationId"]
             + "&connid="
@@ -1163,7 +1163,7 @@ def fastapi_nsi_query_recursive(connid: str) -> list[AnyComponent]:
         query_recursive_reply_dict["globalReservationId"] = DUMMY_GLOBAL_RESERVATION_ID_STR
         query_recursive_reply_dict["connectionId"] = DUMMY_CONNECTION_ID_STR
 
-        orch_reply_to_url = str(settings.SERVER_URL_PREFIX) + "api/callback/"
+        orch_reply_to_url = str(settings.NSA_BASE_URL) + "api/callback/"
 
         print("fastapi_nsi_query_recursive: Orch will reply via", orch_reply_to_url)
 

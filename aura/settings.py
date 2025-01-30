@@ -51,5 +51,16 @@ class Settings(BaseSettings):
     NSI_AURA_CERTIFICATE: FilePath = FilePath("aura-certificate.pem")
     NSI_AURA_PRIVATE_KEY: FilePath = FilePath("aura-private-key.pem")
 
+    # nsi-aura (external) URL (scheme, host, port, prefix)
+    NSA_SCHEME: str = "http"
+    NSA_HOST: str = "localhost"
+    NSA_PORT: str = "8080"
+    NSA_PATH_PREFIX: str = ""
+
+    @property
+    def NSA_BASE_URL(self):
+        """External base URL of this NSA."""
+        return f"{self.NSA_SCHEME}://{self.NSA_HOST}:{self.NSA_PORT}{self.NSA_PATH_PREFIX}"
+
 
 settings = Settings(_env_file="aura.env")
