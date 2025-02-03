@@ -6,11 +6,12 @@ build-backend = "setuptools.build_meta"
 name = "nsi-aura"
 version = "0.0.1"
 dependencies = [
+    "fastapi[standard]",
     "fastui",
     "lxml",
-    "requests",
-    "fastapi[standard]",
     "pydantic-settings",
+    "requests",
+    "sqlmodel",
 ]
 requires-python = ">=3.12"
 authors = [
@@ -38,11 +39,11 @@ packages = ["aura"]
 
 [project.optional-dependencies]
 dev = [
-    "ruff",
-    "mypy",
     "isort",
-    "types-requests",
     "lxml-stubs",
+    "mypy",
+    "ruff",
+    "types-requests",
 ]
 
 [project.urls]

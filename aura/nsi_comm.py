@@ -27,12 +27,11 @@ import zlib
 from io import BytesIO
 
 import requests
+from lxml import etree
 from urllib3.util.retry import Retry
 
 import aura.state
 from aura.settings import settings
-
-from lxml import etree
 
 
 def prettyprint(element, **kwargs):

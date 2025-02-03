@@ -15,6 +15,7 @@
 import copy
 import secrets
 
+import structlog
 from fastapi import HTTPException, Request
 from fastui import AnyComponent
 from fastui import components as c
@@ -22,7 +23,8 @@ from fastui.components.display import DisplayLookup
 from fastui.events import BackEvent, GoToEvent
 
 import aura.state
-from aura.models import Discovery, Endpoint, NetworkLink, Reservation, Span
+from aura.db import Session
+from aura.models import Discovery, Endpoint, NetworkLink, Reservation, ServiceTerminationPoint, Span
 from aura.nsi_comm import *
 from aura.settings import settings
 
@@ -45,6 +47,8 @@ from aura.settings import settings
 
 # pydantic suckx
 c.Link.model_rebuild()
+
+logger = structlog.get_logger(__name__)
 
 #
 # Security: Session cookies as per
@@ -141,8 +145,54 @@ def nsi_load_dds_documents():
     nsi_reload_topology_into_endpoints_model(worldwide_stps)
     nsi_reload_topology_into_links_model(worldwide_sdp_list)
 
+    # update ServiceTerminationPoint's in database
+    update_service_termination_points_from_dds(worldwide_stps)
+
     aura.state.ONLINE = True
     return dds_documents_dict
+
+
+def update_service_termination_points_from_dds(stps: dict[str : dict[str, str]]) -> None:
+    with Session.begin() as session:
+        for stp in stps.keys():
+            _, _, _, fqdn, date, *opaque_part = stp.split(":")
+            organisationId = fqdn + ":" + date
+            networkId = ":".join(opaque_part[:-1])
+            localId = opaque_part[-1]
+            existing_stp = (
+                session.query(ServiceTerminationPoint)
+                .filter(
+                    ServiceTerminationPoint.organisationId == organisationId,
+                    ServiceTerminationPoint.networkId == networkId,
+                    ServiceTerminationPoint.localId == localId,
+                )
+                .one_or_none()
+            )
+            if existing_stp is None:
+                logger.info(
+                    "add new STP",
+                    organisationId=organisationId,
+                    networkId=networkId,
+                    localId=localId,
+                    vlanRange=stps[stp]["vlanranges"],
+                )
+                session.add(
+                    ServiceTerminationPoint(
+                        organisationId=organisationId,
+                        networkId=networkId,
+                        localId=localId,
+                        vlanRange=stps[stp]["vlanranges"],
+                    )
+                )
+            else:
+                logger.info(
+                    "update existing STP",
+                    organisationId=organisationId,
+                    networkId=networkId,
+                    localId=localId,
+                    vlanRange=stps[stp]["vlanranges"],
+                )
+                existing_stp.vlanRange = stps[stp]["vlanranges"]
 
 
 def nsi_reload_topology_into_endpoints_model(stps):

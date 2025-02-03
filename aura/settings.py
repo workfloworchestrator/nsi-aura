@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pydantic import FilePath
+from pydantic import DirectoryPath, FilePath
 from pydantic.networks import HttpUrl
 from pydantic_settings import BaseSettings
 
@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     # certificate en key to authenticate against NSI control plane
     NSI_AURA_CERTIFICATE: FilePath = FilePath("aura-certificate.pem")
     NSI_AURA_PRIVATE_KEY: FilePath = FilePath("aura-private-key.pem")
+
+    # database directory, may be relative or absolute
+    DATABASE_DIRECTORY: DirectoryPath = DirectoryPath("db")
 
     # nsi-aura (external) URL (scheme, host, port, prefix)
     NSA_SCHEME: str = "http"

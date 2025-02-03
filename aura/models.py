@@ -11,7 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from pydantic import BaseModel
+from sqlmodel import Field, SQLModel
+
+# class Base(DeclarativeBase):
+#    """Base class for declarative class definitions."""
+#    pass
 
 #
 # Models
@@ -32,6 +38,15 @@ class Endpoint(BaseModel):
     domain: str  # domain for this endpoint
 
 
+class ServiceTerminationPoint(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    organisationId: str  # ORGID ":" DATE (see GFD.202)
+    networkId: str  # <STP identifier> ::= <networkId> “:” <localId> <label> (see GDF.237)
+    localId: str
+    vlanRange: str  # our labels are VLAN's
+    description: str | None
+
+
 # On some installs we get confusion between Link(DataModel) and the Link HTML component
 class NetworkLink(BaseModel):
     id: int
@@ -42,18 +57,20 @@ class NetworkLink(BaseModel):
     domain: str  # domain for this endpoint
 
 
-class Reservation(BaseModel):
-    id: int
-    connectionId: str
-    description: str
-    startTime: str
-    endTime: str
-    sourceSTP: str
-    destSTP: str
-    requesterNSA: str
-    reservationState: str
-    lifecycleState: str
-    dataPlaneStatus: str  # HACKED into value of <active>
+class Reservation(SQLModel, table=True):
+    # __tablename__ = "reservation"
+
+    id: int | None = Field(default=None, primary_key=True)
+    connectionId: str | None
+    description: str | None
+    startTime: str | None
+    endTime: str | None
+    sourceSTP: str | None
+    destSTP: str | None
+    requesterNSA: str | None
+    reservationState: str | None
+    lifecycleState: str | None
+    dataPlaneStatus: str | None
 
 
 # 1 dummy reservation

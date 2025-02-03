@@ -18,7 +18,7 @@ from collections import abc
 from functools import reduce, total_ordering
 from typing import AbstractSet, Any, Iterable, Iterator, List, Optional, Sequence, Tuple, Union, cast
 
-from supa.util.functional import expand_ranges, to_ranges
+from aura.functional import expand_ranges, to_ranges
 
 
 @total_ordering
@@ -55,6 +55,7 @@ class VlanRanges(abc.Set):
 
         Args:
             val: something that could be interpreted as one or more VLAN range (see: :class:`VlanRanges`)
+
         """
         # The idea is to bring all acceptable values to one canonical intermediate format:
         # the `Sequence[Sequence[int]]`.
@@ -78,7 +79,7 @@ class VlanRanges(abc.Set):
         if val is None:
             self._vlan_ranges = ()
             return
-        elif isinstance(val, str):
+        if isinstance(val, str):
             if val.strip() != "":
                 # This might look complex, but it does handle strings such as `"  3, 4, 6-9, 4, 8 - 10"`
                 try:
@@ -168,7 +169,7 @@ class VlanRanges(abc.Set):
             'VlanRanges([(1, 10)])'
 
         """
-        return f"{self.__class__.__name__}({str(self.to_list_of_tuples())})"
+        return f"{self.__class__.__name__}({self.to_list_of_tuples()!s})"
 
     def __eq__(self, o: object) -> bool:
         """Test for equality."""
@@ -193,8 +194,7 @@ class VlanRanges(abc.Set):
             new_set = set(self)
             new_set.remove(other)
             return VlanRanges(new_set)
-        else:
-            return VlanRanges(set(self) - set(other))
+        return VlanRanges(set(self) - set(other))
 
     def __and__(self, other: AbstractSet[Any]) -> VlanRanges:
         """Intersection of two VlanRanges objects.
