@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import base64
+import datetime
+
 #
 # NSI Communications functions
 # ============================
@@ -20,8 +23,6 @@
 # No fastAPI code allowed here
 #
 import os
-import base64
-import datetime
 import traceback
 import uuid
 import zlib
@@ -470,71 +471,62 @@ def nsi_comm_init(templ_absdir):
     #
     # Load SOAP templates
     #
-    
+
     # RESERVE
     reserve_templpath = os.path.join(templ_absdir, NSI_RESERVE_TEMPLATE_XMLFILE)
-    
+
     # Read Reserve template code
     with open(reserve_templpath) as reserve_templfile:
         reserve_templstr = reserve_templfile.read()
-    
+
     # RESERVE-COMMIT
     reserve_commit_templpath = os.path.join(templ_absdir, NSI_RESERVE_COMMIT_TEMPLATE_XMLFILE)
-    
+
     # Read Reserve Commit template code
     with open(reserve_commit_templpath) as reserve_commit_templfile:
         reserve_commit_templstr = reserve_commit_templfile.read()
-    
-    
+
     # PROVISION
     provision_templpath = os.path.join(templ_absdir, NSI_PROVISION_TEMPLATE_XMLFILE)
-    
+
     # Read Reserve template code
     with open(provision_templpath) as provision_templfile:
         provision_templstr = provision_templfile.read()
-    
-    
+
     # QUERY SUMMARY SYNC
     query_summary_sync_templpath = os.path.join(templ_absdir, NSI_QUERY_SUMMARY_SYNC_TEMPLATE_XMLFILE)
-    
+
     # Read Reserve template code
     with open(query_summary_sync_templpath) as query_summary_sync_templfile:
         query_summary_sync_templstr = query_summary_sync_templfile.read()
-    
-    
+
     # QUERY RECURSIVE to get path details
     query_recursive_templpath = os.path.join(templ_absdir, NSI_QUERY_RECURSIVE_TEMPLATE_XMLFILE)
-    
+
     # Read RESERVE_TIMEOUT_ACK template code
     with open(query_recursive_templpath) as query_recursive_templfile:
         query_recursive_templstr = query_recursive_templfile.read()
-    
-    
+
     # TERMINATE
     terminate_templpath = os.path.join(templ_absdir, NSI_TERMINATE_TEMPLATE_XMLFILE)
-    
+
     # Read TERMINATE template code
     with open(terminate_templpath) as terminate_templfile:
         terminate_templstr = terminate_templfile.read()
-    
-    
+
     # RELEASE
     release_templpath = os.path.join(templ_absdir, NSI_RELEASE_TEMPLATE_XMLFILE)
-    
+
     # Read RELEASE template code
     with open(release_templpath) as release_templfile:
         release_templstr = release_templfile.read()
-    
-    
+
     # RESERVE_TIMEOUT_ACK
     reserve_timeout_ack_templpath = os.path.join(templ_absdir, NSI_RESERVE_TIMEOUT_ACK_TEMPLATE_XMLFILE)
-    
+
     # Read RESERVE_TIMEOUT_ACK template code
     with open(reserve_timeout_ack_templpath) as reserve_timeout_ack_templfile:
         reserve_timeout_ack_templstr = reserve_timeout_ack_templfile.read()
-    
-
-
 
 
 def nsi_util_get_and_parse_xml(url):
@@ -923,7 +915,7 @@ def nsi_parse_topology_sdp_xml_tree(tree):
 
         print("nsi_parse_topology_sdp_xml_tree: DDSSTP", bidiport_id)
         # Prepare new dict
-        if (name_element := element.find("{http://schemas.ogf.org/nml/2013/05/base#}name")) is not None:
+        if (name_element := element.find(NAME_TAG)) is not None:
             name = name_element.text
         else:
             name = f"no name for {bidiport_id} in topology document"

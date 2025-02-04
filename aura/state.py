@@ -12,20 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import threading
 
 from aura.models import DUMMY_CONNECTION_ID_STR, Endpoint, NetworkLink, Reservation
-from aura.nsi_comm import (
-    NSI_PROVISION_TEMPLATE_XMLFILE,
-    NSI_QUERY_RECURSIVE_TEMPLATE_XMLFILE,
-    NSI_QUERY_SUMMARY_SYNC_TEMPLATE_XMLFILE,
-    NSI_RELEASE_TEMPLATE_XMLFILE,
-    NSI_RESERVE_COMMIT_TEMPLATE_XMLFILE,
-    NSI_RESERVE_TEMPLATE_XMLFILE,
-    NSI_RESERVE_TIMEOUT_ACK_TEMPLATE_XMLFILE,
-    NSI_TERMINATE_TEMPLATE_XMLFILE,
-)
 from aura.settings import settings
 
 #
