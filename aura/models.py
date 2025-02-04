@@ -11,13 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+from datetime import datetime
+from typing import Annotated
 
+from annotated_types import Ge, Gt, Le, doc
 from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
 
-# class Base(DeclarativeBase):
-#    """Base class for declarative class definitions."""
-#    pass
+#
+# Types
+#
+Vlan = Annotated[int, Ge(2), Le(4094), doc("VLAN ID.")]
+Bandwidth = Annotated[int, Gt(0)]
 
 #
 # Models
@@ -58,15 +64,16 @@ class NetworkLink(BaseModel):
 
 
 class Reservation(SQLModel, table=True):
-    # __tablename__ = "reservation"
-
     id: int | None = Field(default=None, primary_key=True)
     connectionId: str | None
-    description: str | None
-    startTime: str | None
-    endTime: str | None
-    sourceSTP: str | None
-    destSTP: str | None
+    description: str
+    startTime: datetime | None
+    endTime: datetime | None
+    sourceSTP: int
+    destSTP: int
+    sourceVlan: Vlan
+    destVlan: Vlan
+    bandwidth: Bandwidth
     requesterNSA: str | None
     reservationState: str | None
     lifecycleState: str | None

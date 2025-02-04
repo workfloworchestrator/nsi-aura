@@ -762,7 +762,8 @@ def nsi_parse_topology_xml_tree(tree):
     for element in tree.findall(FIND_ANYWHERE_PREFIX + BIDI_PORT_TAG):
         # logger.debug print(f"#FOUND PortGroup {element.tag} - {element.text} --- {element.attrib}")
         bidiport_id = element.attrib["id"]
-        bidiports[bidiport_id] = {FASTUID_ID_KEY: bidicount}  # id for fastui
+        name = next(name.text for name in element.iter("{http://schemas.ogf.org/nml/2013/05/base#}name"))
+        bidiports[bidiport_id] = {FASTUID_ID_KEY: bidicount, "name": name}  # id for fastui
         bidicount += 1
 
     # logger.debug print("#BIDIPORTS",bidiports)
@@ -840,7 +841,8 @@ def nsi_parse_topology_sdp_xml_tree(tree):
 
         print("nsi_parse_topology_sdp_xml_tree: DDSSTP", bidiport_id)
         # Prepare new dict
-        bidiports[bidiport_id] = {FASTUID_ID_KEY: bidicount}  # id for fastui
+        name = next(name.text for name in element.iter("{http://schemas.ogf.org/nml/2013/05/base#}name"))
+        bidiports[bidiport_id] = {FASTUID_ID_KEY: bidicount, "name": name}  # id for fastui
         bidicount += 1
 
     #    #logger.debug print("#BIDIPORTS",bidiports)

@@ -11,10 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from aura.routes import router
+from aura.forms import router as forms_router
+from aura.routes import router as routes_router
 
 app = FastAPI()
 
@@ -23,7 +25,8 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # include routes
-app.include_router(router)
+app.include_router(forms_router)
+app.include_router(routes_router)
 
 # initialise NSI communications
 from aura.nsi_comm import nsi_comm_init

@@ -11,13 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+#
 import asyncio
-import datetime
 import logging
 import os
 import traceback
 import uuid
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -117,6 +117,7 @@ def fastapi_landing_page(request: Request) -> list[AnyComponent]:
     selecta_url = str(settings.SERVER_URL_PREFIX) + "selecta/"
     query_url = str(settings.SERVER_URL_PREFIX) + "query/"
     database_url = str(settings.SERVER_URL_PREFIX) + "database/"
+    input_form_url = str(settings.SERVER_URL_PREFIX) + "forms/input_form/"
 
     # Check if authorized
     auth_bool = get_auth_user(request)
@@ -147,7 +148,12 @@ def fastapi_landing_page(request: Request) -> list[AnyComponent]:
                     on_click=GoToEvent(url=reload_topos_url),
                 ),
                 c.Link(
-                    components=[c.Paragraph(text="3. Select endpoints and link")], on_click=GoToEvent(url=selecta_url)
+                    components=[c.Paragraph(text="3. Select endpoints and link")],
+                    on_click=GoToEvent(url=selecta_url),
+                ),
+                c.Link(
+                    components=[c.Paragraph(text="3. (NEW) Select endpoints with input form")],
+                    on_click=GoToEvent(url=input_form_url),
                 ),
                 c.Heading(text="Overview", level=3),
                 c.Link(
@@ -503,8 +509,8 @@ def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponen
         endpointz = next(u for u in aura.state.global_endpoints if u.id == epidz)
         link = next(u for u in aura.state.global_links if u.id == linkid)
 
-        # duration_td = datetime.timedelta(days=30)
-        duration_td = datetime.timedelta(minutes=5)
+        # duration_td = timedelta(days=30)
+        duration_td = timedelta(minutes=5)
 
         correlation_uuid_py = generate_uuid()
 

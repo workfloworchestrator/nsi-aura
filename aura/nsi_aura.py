@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+#
 import copy
 import secrets
 
@@ -175,6 +175,7 @@ def update_service_termination_points_from_dds(stps: dict[str : dict[str, str]])
                     networkId=networkId,
                     localId=localId,
                     vlanRange=stps[stp]["vlanranges"],
+                    description=stps[stp]["name"],
                 )
                 session.add(
                     ServiceTerminationPoint(
@@ -182,6 +183,7 @@ def update_service_termination_points_from_dds(stps: dict[str : dict[str, str]])
                         networkId=networkId,
                         localId=localId,
                         vlanRange=stps[stp]["vlanranges"],
+                        description=stps[stp]["name"],
                     )
                 )
             else:
@@ -191,8 +193,10 @@ def update_service_termination_points_from_dds(stps: dict[str : dict[str, str]])
                     networkId=networkId,
                     localId=localId,
                     vlanRange=stps[stp]["vlanranges"],
+                    description=stps[stp]["name"],
                 )
                 existing_stp.vlanRange = stps[stp]["vlanranges"]
+                existing_stp.description = stps[stp]["name"]
 
 
 def nsi_reload_topology_into_endpoints_model(stps):
