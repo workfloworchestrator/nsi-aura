@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
+
 import copy
 import secrets
 
@@ -153,12 +153,20 @@ def nsi_load_dds_documents():
 
 
 def update_service_termination_points_from_dds(stps: dict[str : dict[str, str]]) -> None:
+    """Update ServiceTerminationPoint table with topology information from DDS."""
     with Session.begin() as session:
         for stp in stps.keys():
             _, _, _, fqdn, date, *opaque_part = stp.split(":")
             organisationId = fqdn + ":" + date
             networkId = ":".join(opaque_part[:-1])
             localId = opaque_part[-1]
+            log = logger.bind(
+                organisationId=organisationId,
+                networkId=networkId,
+                localId=localId,
+                vlanRange=stps[stp]["vlanranges"],
+                description=stps[stp]["name"],
+            )
             existing_stp = (
                 session.query(ServiceTerminationPoint)
                 .filter(
@@ -169,14 +177,7 @@ def update_service_termination_points_from_dds(stps: dict[str : dict[str, str]])
                 .one_or_none()
             )
             if existing_stp is None:
-                logger.info(
-                    "add new STP",
-                    organisationId=organisationId,
-                    networkId=networkId,
-                    localId=localId,
-                    vlanRange=stps[stp]["vlanranges"],
-                    description=stps[stp]["name"],
-                )
+                log.info("add new STP")
                 session.add(
                     ServiceTerminationPoint(
                         organisationId=organisationId,
@@ -187,14 +188,7 @@ def update_service_termination_points_from_dds(stps: dict[str : dict[str, str]])
                     )
                 )
             else:
-                logger.info(
-                    "update existing STP",
-                    organisationId=organisationId,
-                    networkId=networkId,
-                    localId=localId,
-                    vlanRange=stps[stp]["vlanranges"],
-                    description=stps[stp]["name"],
-                )
+                log.info("update existing STP")
                 existing_stp.vlanRange = stps[stp]["vlanranges"]
                 existing_stp.description = stps[stp]["name"]
 

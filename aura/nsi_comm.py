@@ -70,7 +70,6 @@ DOCUMENTS_TAG = "{http://schemas.ogf.org/nsi/2014/02/discovery/types}documents" 
 DOCUMENT_TAG = "{http://schemas.ogf.org/nsi/2014/02/discovery/types}document"  # aka ns2:document
 LOCAL_TAG = "{http://schemas.ogf.org/nsi/2014/02/discovery/types}local"  # aka ns2:local
 NSA_SHORT_TAG = "nsa"
-CONTENT_SHORT_TAG = "content"
 TYPE_SHORT_TAG = "type"
 CONTENT_SHORT_TAG = "content"
 DISCOVERY_POSTFIX_MIME_TYPE = "vnd.ogf.nsi.nsa.v1+xml"  # no group/ ?
@@ -102,6 +101,7 @@ SOAP_HTTP_CONTENT_MIME_TYPE_NO_ENCODING = "text/xml"
 #
 SWITCHING_SERVICE_TAG = "{http://schemas.ogf.org/nml/2013/05/base#}SwitchingService"
 BIDI_PORT_TAG = "{http://schemas.ogf.org/nml/2013/05/base#}BidirectionalPort"
+NAME_TAG = "{http://schemas.ogf.org/nml/2013/05/base#}name"
 RELATION_TAG = "{http://schemas.ogf.org/nml/2013/05/base#}Relation"
 LABEL_GROUP_TAG = "{http://schemas.ogf.org/nml/2013/05/base#}LabelGroup"
 
@@ -844,7 +844,7 @@ def nsi_parse_topology_xml_tree(tree):
     for element in tree.findall(FIND_ANYWHERE_PREFIX + BIDI_PORT_TAG):
         # logger.debug print(f"#FOUND PortGroup {element.tag} - {element.text} --- {element.attrib}")
         bidiport_id = element.attrib["id"]
-        name = next(name.text for name in element.iter("{http://schemas.ogf.org/nml/2013/05/base#}name"))
+        name = next(name.text for name in element.iter(NAME_TAG))
         bidiports[bidiport_id] = {FASTUID_ID_KEY: bidicount, "name": name}  # id for fastui
         bidicount += 1
 
@@ -923,8 +923,11 @@ def nsi_parse_topology_sdp_xml_tree(tree):
 
         print("nsi_parse_topology_sdp_xml_tree: DDSSTP", bidiport_id)
         # Prepare new dict
-        name = next(name.text for name in element.iter("{http://schemas.ogf.org/nml/2013/05/base#}name"))
-        bidiports[bidiport_id] = {FASTUID_ID_KEY: bidicount, "name": name}  # id for fastui
+        if (name_element := element.find("{http://schemas.ogf.org/nml/2013/05/base#}name")) is not None:
+            name = name_element.text
+        else:
+            name = f"no name for {bidiport_id} in topology document"
+        bidiports[bidiport_id] = {FASTUID_ID_KEY: bidicount, "name": name}  # id for fastui + name of bidiport
         bidicount += 1
 
     #    #logger.debug print("#BIDIPORTS",bidiports)
