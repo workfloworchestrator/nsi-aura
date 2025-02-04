@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     # database directory, may be relative or absolute
     DATABASE_DIRECTORY: DirectoryPath = DirectoryPath("db")
 
+    # directory containing static files, such as images and SOAP templates
+    # TODO: make sure all code uses this, see nsi_comm_init() kludge
+    STATIC_DIRECTORY: DirectoryPath = DirectoryPath("static")
+
     # nsi-aura (external) URL (scheme, host, port, prefix)
     NSA_SCHEME: str = "http"
     NSA_HOST: str = "localhost"

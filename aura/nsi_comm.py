@@ -19,6 +19,7 @@
 #
 # No fastAPI code allowed here
 #
+import os
 import base64
 import datetime
 import traceback
@@ -32,6 +33,18 @@ from urllib3.util.retry import Retry
 
 import aura.state
 from aura.settings import settings
+
+#
+# Module-only variables, set by nsi_comm_init()
+#
+reserve_templstr = None
+reserve_commit_templstr = None
+provision_templstr = None
+query_summary_sync_templstr = None
+query_recursive_templstr = None
+terminate_templstr = None
+release_templstr = None
+reserve_timeout_ack_templstr = None
 
 
 def prettyprint(element, **kwargs):
@@ -444,7 +457,7 @@ def generate_query_recursive_xml(message_templstr, correlation_uuid_py, reply_to
 #
 
 
-def nsi_comm_init():
+def nsi_comm_init(templ_absdir):
     """Initialise NSI communications."""
     # Getting Max Retry errors? Due to passphrase protected private key
     # https://stackoverflow.com/questions/23013220/max-retries-exceeded-with-url-in-requests
@@ -453,6 +466,75 @@ def nsi_comm_init():
     session = requests.Session()
     session.mount("http://", adapter)
     session.mount("https://", adapter)
+
+    #
+    # Load SOAP templates
+    #
+    
+    # RESERVE
+    reserve_templpath = os.path.join(templ_absdir, NSI_RESERVE_TEMPLATE_XMLFILE)
+    
+    # Read Reserve template code
+    with open(reserve_templpath) as reserve_templfile:
+        reserve_templstr = reserve_templfile.read()
+    
+    # RESERVE-COMMIT
+    reserve_commit_templpath = os.path.join(templ_absdir, NSI_RESERVE_COMMIT_TEMPLATE_XMLFILE)
+    
+    # Read Reserve Commit template code
+    with open(reserve_commit_templpath) as reserve_commit_templfile:
+        reserve_commit_templstr = reserve_commit_templfile.read()
+    
+    
+    # PROVISION
+    provision_templpath = os.path.join(templ_absdir, NSI_PROVISION_TEMPLATE_XMLFILE)
+    
+    # Read Reserve template code
+    with open(provision_templpath) as provision_templfile:
+        provision_templstr = provision_templfile.read()
+    
+    
+    # QUERY SUMMARY SYNC
+    query_summary_sync_templpath = os.path.join(templ_absdir, NSI_QUERY_SUMMARY_SYNC_TEMPLATE_XMLFILE)
+    
+    # Read Reserve template code
+    with open(query_summary_sync_templpath) as query_summary_sync_templfile:
+        query_summary_sync_templstr = query_summary_sync_templfile.read()
+    
+    
+    # QUERY RECURSIVE to get path details
+    query_recursive_templpath = os.path.join(templ_absdir, NSI_QUERY_RECURSIVE_TEMPLATE_XMLFILE)
+    
+    # Read RESERVE_TIMEOUT_ACK template code
+    with open(query_recursive_templpath) as query_recursive_templfile:
+        query_recursive_templstr = query_recursive_templfile.read()
+    
+    
+    # TERMINATE
+    terminate_templpath = os.path.join(templ_absdir, NSI_TERMINATE_TEMPLATE_XMLFILE)
+    
+    # Read TERMINATE template code
+    with open(terminate_templpath) as terminate_templfile:
+        terminate_templstr = terminate_templfile.read()
+    
+    
+    # RELEASE
+    release_templpath = os.path.join(templ_absdir, NSI_RELEASE_TEMPLATE_XMLFILE)
+    
+    # Read RELEASE template code
+    with open(release_templpath) as release_templfile:
+        release_templstr = release_templfile.read()
+    
+    
+    # RESERVE_TIMEOUT_ACK
+    reserve_timeout_ack_templpath = os.path.join(templ_absdir, NSI_RESERVE_TIMEOUT_ACK_TEMPLATE_XMLFILE)
+    
+    # Read RESERVE_TIMEOUT_ACK template code
+    with open(reserve_timeout_ack_templpath) as reserve_timeout_ack_templfile:
+        reserve_timeout_ack_templstr = reserve_timeout_ack_templfile.read()
+    
+
+
 
 
 def nsi_util_get_and_parse_xml(url):
@@ -1593,7 +1675,7 @@ def nsi_soap_parse_query_recursive_callback(soap_xml):
 if __name__ == "__main__":
     # logger.debug print("START NSI COMM TEST")
 
-    nsi_comm_init()
+    nsi_comm_init("static")
 
     """
     disc_meta = nsi_get_discovery('https://supa.moxy.ana.dlp.surfnet.nl:443/discovery')

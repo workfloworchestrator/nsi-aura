@@ -29,6 +29,8 @@ app.include_router(forms_router)
 app.include_router(routes_router)
 
 # initialise NSI communications
+import os
 from aura.nsi_comm import nsi_comm_init
 
-nsi_comm_init()
+# TODO: replace with Settings.STATIC_DIRECTORY, but need to fix import order first
+nsi_comm_init(os.path.join(os.getcwd(),"static"))
