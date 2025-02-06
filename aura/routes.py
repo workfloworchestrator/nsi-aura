@@ -545,7 +545,6 @@ def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponen
         # Call NSI, wait for sync HTTP reply
         if aura.state.ONLINE:
             reserve_reply_dict = nsi_reserve(
-                aura.state.reserve_templstr,
                 aura.state.global_soap_provider_url,
                 correlation_uuid_py,
                 orch_reply_to_url,
@@ -654,7 +653,6 @@ def fastapi_nsi_reserve_commit(connid: str) -> list[AnyComponent]:
 
         if aura.state.ONLINE:
             reserve_commit_reply_dict = nsi_reserve_commit(
-                aura.state.reserve_commit_templstr,
                 aura.state.global_soap_provider_url,
                 str(settings.SERVER_URL_PREFIX),
                 aura.state.global_provider_nsa_id,
@@ -741,7 +739,6 @@ def fastapi_nsi_reserve_commit_callback(corruuid: str, globresuuid: str, connid:
 
         if aura.state.ONLINE:
             provision_reply_dict = nsi_provision(
-                aura.state.provision_templstr,
                 aura.state.global_soap_provider_url,
                 str(settings.NSA_BASE_URL),
                 aura.state.global_provider_nsa_id,
@@ -836,7 +833,6 @@ def fastapi_nsi_connections_query() -> list[AnyComponent]:
     try:
         if aura.state.ONLINE:
             resdictlist = nsi_connections_query(
-                aura.state.query_summary_sync_templstr,
                 aura.state.global_soap_provider_url,
                 str(settings.SERVER_URL_PREFIX),
                 aura.state.global_provider_nsa_id,
@@ -932,7 +928,6 @@ def fastapi_nsi_terminate(connid: str) -> list[AnyComponent]:
 
         if aura.state.ONLINE:
             terminate_reply_dict = nsi_terminate(
-                aura.state.terminate_templstr,
                 aura.state.global_soap_provider_url,
                 str(settings.SERVER_URL_PREFIX),
                 aura.state.global_provider_nsa_id,
@@ -1013,7 +1008,6 @@ def fastapi_nsi_release(connid: str) -> list[AnyComponent]:
         #
         if aura.state.ONLINE:
             release_reply_dict = nsi_release(
-                aura.state.release_templstr,
                 aura.state.global_soap_provider_url,
                 str(settings.SERVER_URL_PREFIX),
                 aura.state.global_provider_nsa_id,
@@ -1094,7 +1088,6 @@ def fastapi_nsi_reserve_timeout_ack(connid: str) -> list[AnyComponent]:
         #
         if aura.state.ONLINE:
             reserve_timeout_ack_reply_dict = nsi_reserve_timeout_ack(
-                aura.state.reserve_timeout_ack_templstr,
                 aura.state.global_soap_provider_url,
                 str(settings.SERVER_URL_PREFIX),
                 aura.state.global_provider_nsa_id,
@@ -1187,7 +1180,6 @@ def fastapi_nsi_query_recursive(connid: str) -> list[AnyComponent]:
 
         if aura.state.ONLINE:
             query_recursive_reply_dict = nsi_query_recursive(
-                aura.state.query_recursive_templstr,
                 aura.state.global_soap_provider_url,
                 orch_reply_to_url,
                 aura.state.global_provider_nsa_id,
