@@ -18,7 +18,7 @@ from fastui import components as c
 from fastui.events import BackEvent, GoToEvent
 
 from aura.db import Session
-from aura.models import Reservation, ServiceTerminationPoint
+from aura.models import Reservation, STP
 from aura.nsi_aura import create_footer
 from aura.settings import settings
 
@@ -31,7 +31,7 @@ def fastapi_database_tables() -> list[AnyComponent]:
     root_url = str(settings.SERVER_URL_PREFIX) + ""  # back to landing
     heading = "Database tables"
     with Session() as session:
-        stps = session.query(ServiceTerminationPoint).all()
+        stps = session.query(STP).all()
         reservations = session.query(Reservation).all()
     return [
         c.Page(  # Page provides a basic container for components
@@ -41,7 +41,7 @@ def fastapi_database_tables() -> list[AnyComponent]:
                 c.Link(components=[c.Paragraph(text="To Landing Page")], on_click=GoToEvent(url=root_url)),
                 c.Heading(level=3, text="ServiceTerminationPoint"),
                 c.Table(
-                    data_model=ServiceTerminationPoint,
+                    data_model=STP,
                     data=stps,
                 ),
                 c.Heading(level=3, text="Reservation"),

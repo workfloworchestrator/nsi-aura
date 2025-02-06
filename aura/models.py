@@ -44,13 +44,22 @@ class Endpoint(BaseModel):
     domain: str  # domain for this endpoint
 
 
-class ServiceTerminationPoint(SQLModel, table=True):
+class STP(SQLModel, table=True):
+    """NSI Service Termination Point."""
     id: int | None = Field(default=None, primary_key=True)
     organisationId: str  # ORGID ":" DATE (see GFD.202)
     networkId: str  # <STP identifier> ::= <networkId> “:” <localId> <label> (see GDF.237)
     localId: str
     vlanRange: str  # our labels are VLAN's
     description: str | None
+
+    @property
+    def urn_base(self):
+        return f"urn:ogf:network:{self.organisationId}:{self.networkId}:{self.localId}"
+
+    @property
+    def urn(self):
+        return f"{self.urn_base}?vlan={self.vlanRange}"
 
 
 # On some installs we get confusion between Link(DataModel) and the Link HTML component
@@ -64,6 +73,8 @@ class NetworkLink(BaseModel):
 
 
 class Reservation(SQLModel, table=True):
+    """TODO: class should be renamed to `Connection`."""
+
     id: int | None = Field(default=None, primary_key=True)
     connectionId: str | None
     description: str
@@ -78,6 +89,9 @@ class Reservation(SQLModel, table=True):
     reservationState: str | None
     lifecycleState: str | None
     dataPlaneStatus: str | None
+    connectionStatus: str  # TODO: this should replace other state's
+    #     default=ConnectionStateMachine.ConnectionNew.value
+    # )
 
 
 # 1 dummy reservation
@@ -99,7 +113,7 @@ class Span(BaseModel):
 
 
 #
-# Discovery, i.e. NSI meta data information on a uPA such as version and expires
+# Discovery, i.e. NSI metadata information on a uPA such as version and expires
 #
 class Discovery(BaseModel):
     id: int

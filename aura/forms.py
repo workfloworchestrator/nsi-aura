@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated
 
 import structlog
@@ -25,7 +25,8 @@ from fastui.forms import SelectSearchResponse, fastui_form
 from pydantic import BaseModel, Field
 
 from aura.db import Session
-from aura.models import Bandwidth, Reservation, ServiceTerminationPoint, Vlan
+from aura.fsm import ConnectionStateMachine
+from aura.models import Bandwidth, Reservation, STP, Vlan
 from aura.settings import settings
 
 router = APIRouter()
@@ -75,7 +76,7 @@ class InputForm(BaseModel):
 async def search_view() -> SelectSearchResponse:
     """Get list of endpoints from database suitable for input form drop down."""
     with Session() as session:
-        stps = session.query(ServiceTerminationPoint).all()
+        stps = session.query(STP).all()
     endpoints = defaultdict(list)
     for stp in stps:
         endpoints[stp.description].append({"value": str(stp.id), "label": stp.localId})
@@ -86,19 +87,23 @@ async def search_view() -> SelectSearchResponse:
 @router.post("/api/forms/post_form/", response_model=FastUI, response_model_exclude_none=True)
 async def post_form(form: Annotated[InputForm, fastui_form(InputForm)]):
     """Store values from input form in reservation database."""
+    reservation = Reservation(
+        description=form.description,
+        sourceSTP=int(form.sourceSTP),
+        destSTP=int(form.destSTP),
+        sourceVlan=Vlan(form.sourceVlan),
+        destVlan=Vlan(form.destVlan),
+        bandwidth=form.bandwidth,
+        startTime=form.startTime,
+        endTime=form.endTime,
+        connectionStatus=ConnectionStateMachine.ConnectionNew.value
+    )
     with Session.begin() as session:
-        session.add(
-            Reservation(
-                description=form.description,
-                sourceSTP=int(form.sourceSTP),
-                destSTP=int(form.destSTP),
-                sourceVlan=Vlan(form.sourceVlan),
-                destVlan=Vlan(form.destVlan),
-                bandwidth=form.bandwidth,
-                startTime=form.startTime,
-                endTime=form.endTime,
-            )
-        )
+        session.add(reservation)
+        session.flush()
+        csm = ConnectionStateMachine(reservation, state_field="connectionStatus")
+        csm.nsi_send_reserve()  # TODO: move this action behind a button on the reservation overview page
+
     return [c.FireEvent(event=GoToEvent(url="/"))]
 
 

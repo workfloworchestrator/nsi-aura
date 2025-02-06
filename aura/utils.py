@@ -15,7 +15,7 @@
 import structlog
 
 from aura.db import Session
-from aura.models import ServiceTerminationPoint
+from aura.models import STP
 
 logger = structlog.get_logger(__name__)
 
@@ -36,18 +36,18 @@ def update_service_termination_points_from_dds(stps: dict[str : dict[str, str]])
                 description=stps[stp]["name"],
             )
             existing_stp = (
-                session.query(ServiceTerminationPoint)
+                session.query(STP)
                 .filter(
-                    ServiceTerminationPoint.organisationId == organisationId,
-                    ServiceTerminationPoint.networkId == networkId,
-                    ServiceTerminationPoint.localId == localId,
+                    STP.organisationId == organisationId,
+                    STP.networkId == networkId,
+                    STP.localId == localId,
                 )
                 .one_or_none()
             )
             if existing_stp is None:
                 log.info("add new STP")
                 session.add(
-                    ServiceTerminationPoint(
+                    STP(
                         organisationId=organisationId,
                         networkId=networkId,
                         localId=localId,

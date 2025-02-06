@@ -10,12 +10,21 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+import os
+from datetime import datetime, timedelta, timezone
 from typing import Any
+from uuid import uuid4
 
 import structlog
+
+from aura import state
 from statemachine import State, StateMachine
 from structlog.stdlib import BoundLogger
+
+from aura.models import STP
+from aura.nsi_comm import generate_reserve_xml, URN_STP_NAME, URN_STP_VLAN, nsi_util_post_soap, \
+    nsi_soap_parse_reserve_reply, NSI_RESERVE_TEMPLATE_XMLFILE
+from aura.settings import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -36,7 +45,7 @@ class AuraStateMachine(StateMachine):
             self.log.info(
                 "State transition",
                 to_state=state.id,
-                connection_id=str(self.model.connection_id),  # type: ignore[union-attr]
+                connectionId=str(self.model.connectionId),  # type: ignore[union-attr]
             )
 
 
@@ -94,6 +103,45 @@ class ConnectionStateMachine(AuraStateMachine):
         | ConnectionReserveTimeout.to(ConnectionReserveAborting)
     )
     # fmt: on
+
+    @nsi_send_reserve.on
+    def nsi_send_reserve(self):
+        from aura.db import Session
+        logger.info("this executes on the nsi send reserve transition")
+        reserve_templpath = os.path.join(os.path.join(os.getcwd(), "static"), NSI_RESERVE_TEMPLATE_XMLFILE)
+        with open(reserve_templpath) as reserve_templfile:
+            reserve_templstr = reserve_templfile.read()
+        with Session() as session:
+            source_stp = session.query(STP).filter(STP.id == self.model.sourceSTP).one()
+            dest_stp = session.query(STP).filter(STP.id == self.model.destSTP).one()
+        correlation_id = uuid4()
+        reserve_xml = generate_reserve_xml(
+            reserve_templstr,  # SOAP reserve template
+            correlation_id,  # correlation id
+            str(settings.NSA_BASE_URL) + "/api/nsi/callback/",  # reply-to url
+            self.model.description,  # reservation description
+            uuid4(),  # TODO: global reservation id should be stored on reservation/connection in database
+            self.model.startTime.replace(tzinfo=timezone.utc) if self.model.startTime else datetime.now(timezone.utc),  # start time, TODO: proper timezone handling
+            self.model.endTime.replace(tzinfo=timezone.utc) if self.model.endTime else datetime.now(timezone.utc) + timedelta(weeks=1040),  # end time
+            {URN_STP_NAME: source_stp.urn_base, URN_STP_VLAN: self.model.sourceVlan},  # source stp dict
+            {URN_STP_NAME: dest_stp.urn_base, URN_STP_VLAN: self.model.destVlan},   # destination stp dict
+            state.global_provider_nsa_id,   # provider nsa id
+        )
+
+
+        print("RESERVE: Request XML", reserve_xml)
+
+        print("RESERVE: CALLING ORCH")
+        soap_xml = nsi_util_post_soap(state.global_soap_provider_url, reserve_xml)
+
+        print("RESERVE: GOT HTTP REPLY", soap_xml)
+
+        retdict = nsi_soap_parse_reserve_reply(soap_xml)
+
+        print("RESERVE: Got connectionId", retdict)
+        retdict["correlationId"] = str(correlation_id)
+        retdict["globalReservationId"] = str(state.global_reservation_uuid_py)
+        # ,"connectionId":connection_id_str}
 
 
 if __name__ == "__main__":
