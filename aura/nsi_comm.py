@@ -472,6 +472,14 @@ def nsi_comm_init(templ_absdir):
     #
     # Load SOAP templates
     #
+    global reserve_templstr
+    global reserve_commit_templstr
+    global provision_templstr
+    global query_summary_sync_templstr
+    global query_recursive_templstr
+    global terminate_templstr
+    global release_templstr
+    global reserve_timeout_ack_templstr
 
     # RESERVE
     reserve_templpath = os.path.join(templ_absdir, NSI_RESERVE_TEMPLATE_XMLFILE)
