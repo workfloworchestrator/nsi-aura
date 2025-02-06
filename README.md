@@ -37,6 +37,28 @@ Editable install with development tools:
 pip install '.[dev]'
 ```
 
+### Create statemachine image(s)
+
+Besides the Python packages from `dev`, also Graphviz needs to be installed and available
+in your `PATH`. Depending on the platform being used for development, use something like the following
+to install Graphviz:
+
+```shell
+brew install graphviz
+```
+
+or
+
+```shell
+apt install graphviz
+```
+
+And then (re)generate the image(s) in the `images` folder:
+
+```shell
+python aura/fsm.py
+```
+
 ## Authors
 Arno Bakker (SURF)  
 Hans Trompert (SURF)

@@ -10,6 +10,7 @@ dependencies = [
     "fastui",
     "lxml",
     "pydantic-settings",
+    "python-statemachine",
     "requests",
     "sqlmodel",
     "structlog",
@@ -44,6 +45,7 @@ dev = [
     "isort",
     "lxml-stubs",
     "mypy",
+    "python-statemachine[diagrams]",
     "ruff",
     "types-requests",
 ]
