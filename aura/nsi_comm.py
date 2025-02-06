@@ -14,7 +14,6 @@
 
 import base64
 import datetime
-
 #
 # NSI Communications functions
 # ============================

@@ -23,10 +23,10 @@ from fastui.components.display import DisplayLookup
 from fastui.events import BackEvent, GoToEvent
 
 import aura.state
-from aura.db import Session
-from aura.models import Discovery, Endpoint, NetworkLink, Reservation, ServiceTerminationPoint, Span
+from aura.models import Discovery, Endpoint, NetworkLink, Reservation, Span
 from aura.nsi_comm import *
 from aura.settings import settings
+from aura.utils import update_service_termination_points_from_dds
 
 #
 # NSI-AuRA = NSI ANA ultimate Requester Agent
@@ -150,47 +150,6 @@ def nsi_load_dds_documents():
 
     aura.state.ONLINE = True
     return dds_documents_dict
-
-
-def update_service_termination_points_from_dds(stps: dict[str : dict[str, str]]) -> None:
-    """Update ServiceTerminationPoint table with topology information from DDS."""
-    with Session.begin() as session:
-        for stp in stps.keys():
-            _, _, _, fqdn, date, *opaque_part = stp.split(":")
-            organisationId = fqdn + ":" + date
-            networkId = ":".join(opaque_part[:-1])
-            localId = opaque_part[-1]
-            log = logger.bind(
-                organisationId=organisationId,
-                networkId=networkId,
-                localId=localId,
-                vlanRange=stps[stp]["vlanranges"],
-                description=stps[stp]["name"],
-            )
-            existing_stp = (
-                session.query(ServiceTerminationPoint)
-                .filter(
-                    ServiceTerminationPoint.organisationId == organisationId,
-                    ServiceTerminationPoint.networkId == networkId,
-                    ServiceTerminationPoint.localId == localId,
-                )
-                .one_or_none()
-            )
-            if existing_stp is None:
-                log.info("add new STP")
-                session.add(
-                    ServiceTerminationPoint(
-                        organisationId=organisationId,
-                        networkId=networkId,
-                        localId=localId,
-                        vlanRange=stps[stp]["vlanranges"],
-                        description=stps[stp]["name"],
-                    )
-                )
-            else:
-                log.info("update existing STP")
-                existing_stp.vlanRange = stps[stp]["vlanranges"]
-                existing_stp.description = stps[stp]["name"]
 
 
 def nsi_reload_topology_into_endpoints_model(stps):
