@@ -16,8 +16,8 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from aura.forms import router as forms_router
-from aura.routes import router as routes_router
 from aura.frontend import router as frontend_router
+from aura.routes import router as routes_router
 
 app = FastAPI()
 

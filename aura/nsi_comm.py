@@ -487,8 +487,7 @@ def nsi_comm_init(templ_absdir):
     with open(reserve_templpath) as reserve_templfile:
         reserve_templstr = reserve_templfile.read()
 
-    print("NSI-COMM-INIT: template is",reserve_templstr)
-
+    print("NSI-COMM-INIT: template is", reserve_templstr)
 
     # RESERVE-COMMIT
     reserve_commit_templpath = os.path.join(templ_absdir, NSI_RESERVE_COMMIT_TEMPLATE_XMLFILE)
@@ -1072,7 +1071,7 @@ def nsi_reserve(
         # reply_to_url = callback_url_prefix+"/reserve-callback/"
         reply_to_url = orch_reply_to_url
 
-        print("NSI-RESERVE: BEFORE CREATE",reserve_templstr)
+        print("NSI-RESERVE: BEFORE CREATE", reserve_templstr)
         reserve_xml = generate_reserve_xml(
             reserve_templstr,
             correlation_uuid_py,
@@ -1124,9 +1123,7 @@ def nsi_reserve(
         traceback.print_exc()
 
 
-def nsi_reserve_commit(
-    request_url, callback_url_prefix: str, provider_nsa_id: str, connid_str
-):
+def nsi_reserve_commit(request_url, callback_url_prefix: str, provider_nsa_id: str, connid_str):
     """NSI RESERVE_COMMIT(SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"connectionId":connectionId] as strings
     """
@@ -1271,9 +1268,7 @@ def nsi_release(request_url, callback_url_prefix: str, provider_nsa_id: str, con
         traceback.print_exc()
 
 
-def nsi_reserve_timeout_ack(
-    request_url, callback_url_prefix: str, provider_nsa_id: str, connid_str
-):
+def nsi_reserve_timeout_ack(request_url, callback_url_prefix: str, provider_nsa_id: str, connid_str):
     """NSI RESERVE-TIMEOUT-ACK(SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"globalReservationId","connectionId":connectionId] as strings
     """
@@ -1314,9 +1309,7 @@ def nsi_reserve_timeout_ack(
         traceback.print_exc()
 
 
-def nsi_query_recursive(
-    request_url, orch_reply_to_url: str, provider_nsa_id: str, connid_str
-):
+def nsi_query_recursive(request_url, orch_reply_to_url: str, provider_nsa_id: str, connid_str):
     """NSI QUERY RECURSIVE(SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"globalReservationId","connectionId":connectionId] as strings
     """
@@ -1681,7 +1674,7 @@ def nsi_soap_parse_query_recursive_callback(soap_xml):
 if __name__ == "__main__":
     # logger.debug print("START NSI COMM TEST")
 
-    #nsi_comm_init("static")
+    # nsi_comm_init("static")
 
     """
     disc_meta = nsi_get_discovery('https://supa.moxy.ana.dlp.surfnet.nl:443/discovery')
@@ -1690,7 +1683,7 @@ if __name__ == "__main__":
 
     #bidiports = nsi_get_topology(services[TOPOLOGY_SERVICE_MIME_TYPE])
     #topo_dict = nsi_get_topology_sdp("file:samples/dds-document-topology.xml")
-    
+
     with open(os.path.join("samples","dds-document-topology.xml"),mode="rb") as topo_file:
         xml = topo_file.read()
     topo_file.close()
