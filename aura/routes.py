@@ -27,14 +27,7 @@ from fastui import prebuilt_html
 from fastui.events import BackEvent, GoToEvent
 
 import aura.state
-from aura.db import Session
-from aura.models import (
-    DUMMY_CONNECTION_ID_STR,
-    DUMMY_CORRELATION_ID_STR,
-    DUMMY_GLOBAL_RESERVATION_ID_STR,
-    Reservation,
-    ServiceTerminationPoint,
-)
+from aura.models import DUMMY_CONNECTION_ID_STR, DUMMY_CORRELATION_ID_STR, DUMMY_GLOBAL_RESERVATION_ID_STR
 from aura.nsi_aura import (
     SESSION_DB,
     USER_CORRECT,
@@ -1321,41 +1314,6 @@ def fastapi_reservation_profile(id: int) -> list[AnyComponent]:
                     components=[c.Paragraph(text="Query Recursive Connection")],
                     on_click=GoToEvent(url=query_recursive_url),
                 ),
-            ]
-        ),
-    ]
-
-
-#
-# database
-#
-
-
-@router.get("/api/database/", response_model=FastUI, response_model_exclude_none=True)
-def fastapi_database_tables() -> list[AnyComponent]:
-    """Display all database tables and their contents."""
-    root_url = str(settings.SERVER_URL_PREFIX) + ""  # back to landing
-    heading = "Database tables"
-    with Session() as session:
-        stps = session.query(ServiceTerminationPoint).all()
-        reservations = session.query(Reservation).all()
-    return [
-        c.Page(  # Page provides a basic container for components
-            components=[
-                c.Heading(text=heading, level=2, class_name="+ text-danger"),
-                c.Link(components=[c.Paragraph(text="Back")], on_click=BackEvent()),
-                c.Link(components=[c.Paragraph(text="To Landing Page")], on_click=GoToEvent(url=root_url)),
-                c.Heading(level=3, text="ServiceTerminationPoint"),
-                c.Table(
-                    data_model=ServiceTerminationPoint,
-                    data=stps,
-                ),
-                c.Heading(level=3, text="Reservation"),
-                c.Table(
-                    data_model=Reservation,
-                    data=reservations,
-                ),
-                create_footer(),
             ]
         ),
     ]
