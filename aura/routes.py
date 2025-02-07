@@ -65,7 +65,7 @@ from aura.nsi_comm import (
     nsi_soap_parse_query_recursive_callback,
     nsi_soap_parse_reserve_callback,
     nsi_terminate,
-    nsi_util_parse_xml,
+    nsi_util_parse_xml, content_type_is_valid_soap, nsi_soap_parse_callback,
 )
 from aura.settings import settings
 
@@ -324,8 +324,9 @@ async def fastapi_general_poll(msg: str, corruuid: uuid.UUID, connid: uuid.UUID)
 
         # We got poll from GUI, now process it
         # SECURITY: fastAPI has made sure these are UUIDs
-        clean_connection_id_str = str(connid)
         clean_correlation_uuid_str = str(corruuid)
+        # currently not used, could use for sanity checking
+        clean_connection_id_str = str(connid)
 
         print("poll: Polling for", clean_correlation_uuid_str)
 
@@ -452,31 +453,10 @@ async def orchestrator_general_callback(request: Request):
     # body = request.body()
     print("CALLBACK: Got body", body)
 
-    #
-    # TODO: move XML handling to nsicomm.py
-    # TODO: properly parse cotent-type
-    #
     content_type = request.headers["content-type"]
-    content_type = content_type.lower()
-    if (
-        content_type == "application/xml"
-        or content_type == "text/xml"
-        or content_type == "text/xml;charset=utf-8"
-        or content_type == "text/xml; charset=UTF-8"
-        or content_type.startswith("text/xml")
-    ):
+    if content_type_is_valid_soap(content_type):
         try:
-            tree = nsi_util_parse_xml(body)
-            tag = tree.find(FIND_ANYWHERE_PREFIX + S_CORRELATION_ID_TAG)
-            if tag is not None:
-                print("CALLBACK: Found correlationId", tag.text)
-                correlation_urn = tag.text
-            else:
-                print("CALLBACK: Could not find correlationId", body)
-                return []
-
-            correlation_uuid_str = correlation_urn[len(URN_UUID_PREFIX) :]
-
+            correlation_uuid_str = nsi_soap_parse_callback(body)
             with aura.state.global_orch_async_replies_lock:
                 print("CALLBACK: Got lock")
                 aura.state.global_orch_async_replies_dict[correlation_uuid_str] = body
@@ -1350,9 +1330,9 @@ async def session_login(username: str, password: str):
 
 # @router.post("/logout")
 @router.get("/api/logout/")
-async def session_logout(response: Response):
+async def session_logout(request: Request):
     session_id = request.cookies.get("Authorization")
-    response.delete_cookie(key="Authorization")
+    request.delete_cookie(key="Authorization")
     SESSION_DB.pop(session_id, None)
     return {"status": "logged out"}
 

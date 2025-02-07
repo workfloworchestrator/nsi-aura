@@ -93,8 +93,6 @@ HREF_IN_INTERFACE_TAG = "href"
 TOPOLOGY_SERVICE_MIME_TYPE = "application/vnd.ogf.nsi.topology.v2+xml"
 SOAP_PROVIDER_MIME_TYPE = "application/vnd.ogf.nsi.cs.v2.provider+soap"
 
-SOAP_HTTP_CONTENT_MIME_TYPE_AND_ENCODING = "text/xml;charset=utf-8"
-SOAP_HTTP_CONTENT_MIME_TYPE_NO_ENCODING = "text/xml"
 
 #
 # /topology XML from SuPA
@@ -1344,6 +1342,32 @@ def nsi_query_recursive(request_url, orch_reply_to_url: str, provider_nsa_id: st
     except:
         traceback.print_exc()
 
+def nsi_soap_parse_callback(body):
+    """ Extracts correlationID from Aggregator async callback.
+    @return UUID as str"""
+    tree = nsi_util_parse_xml(body)
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_CORRELATION_ID_TAG)
+    if tag is not None:
+        print("CALLBACK: Found correlationId", tag.text)
+        correlation_urn = tag.text
+        # Checks input format
+        correlation_uuid = uuid.UUID(correlation_urn)
+        return str(correlation_uuid)
+    else:
+        print("CALLBACK: Could not find correlationId", body)
+        raise Exception("correlationId not found in callback")
+
+
+def content_type_is_valid_soap(content_type):
+    """ Returns True if HTTP Content-Type indicates SOAP """
+    ct = content_type.lower()
+    return (
+            ct == "application/xml"
+            or ct == "text/xml"
+            or ct == "text/xml;charset=utf-8"
+            or ct == "text/xml; charset=UTF-8"
+            or ct.startswith("text/xml")
+    )
 
 def nsi_util_post_soap(url, soapreqmsg):
     """Does HTTP POST of soapreqmsg to URL
@@ -1363,15 +1387,11 @@ def nsi_util_post_soap(url, soapreqmsg):
     )
     print(response.status_code)
     print("#CONTENT TYPE#", response.headers["content-type"])
-    if (
-        response.headers["content-type"] == SOAP_HTTP_CONTENT_MIME_TYPE_AND_ENCODING
-        or response.headers["content-type"] == SOAP_HTTP_CONTENT_MIME_TYPE_NO_ENCODING
-    ):
+    if content_type_is_valid_soap(response.headers["content-type"]):
         return response.content
-    raise Exception(url + " did not return XML")
     # print(response.encoding)
     # print(response.content)
-    return response.content
+    raise Exception(url + " did not return XML, but" + response.headers["content-type"])
 
 
 def nsi_soap_parse_query_reply(soap_xml):
@@ -1671,38 +1691,9 @@ def nsi_soap_parse_query_recursive_callback(soap_xml):
     return retdict
 
 
-if __name__ == "__main__":
-    # logger.debug print("START NSI COMM TEST")
+#if __name__ == "__main__":
 
     # nsi_comm_init("static")
 
-    """
-    disc_meta = nsi_get_discovery('https://supa.moxy.ana.dlp.surfnet.nl:443/discovery')
-
-    print("Got services",disc_meta)
-
-    #bidiports = nsi_get_topology(services[TOPOLOGY_SERVICE_MIME_TYPE])
-    #topo_dict = nsi_get_topology_sdp("file:samples/dds-document-topology.xml")
-
-    with open(os.path.join("samples","dds-document-topology.xml"),mode="rb") as topo_file:
-        xml = topo_file.read()
-    topo_file.close()
-
-    print("XML",xml)
-
-
-    tree = nsi_util_parse_xml(xml)
-    # throws Exception to higher level
-
-    topo_dict = nsi_parse_topology_sdp_xml_tree(tree)
-
-    stps = topo_dict["stps"]
-    sdps = topo_dict["sdps"]
-
-    print("Got STPs",stps)
-    print("Got SDPs",sdps)
-
-    """
-
-    dds_documents_dict = nsi_get_dds_documents("https://dds.ana.dlp.surfnet.nl/dds/documents/")
-    print("FINAL DOCS", dds_documents_dict)
+    #dds_documents_dict = nsi_get_dds_documents("https://dds.ana.dlp.surfnet.nl/dds/documents/")
+    #print("FINAL DOCS", dds_documents_dict)
