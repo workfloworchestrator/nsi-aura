@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     DEFAULT_LINK_DOMAIN: str = "ANA"
 
     # apparently cannot dynamically figure out?
+    # NOTE: HttpUrl class will automatically add trailing / when converting to str
     SERVER_URL_PREFIX: HttpUrl = HttpUrl("http://127.0.0.1:8000")
     # str(str(settings.SERVER_URL_PREFIX))="http://145.100.104.178:8000"
 
@@ -64,10 +65,11 @@ class Settings(BaseSettings):
     NSA_PORT: str = "8080"
     NSA_PATH_PREFIX: str = ""
 
+    # NOTE: HttpUrl class will automatically add trailing / when converting to str
     @property
     def NSA_BASE_URL(self):
         """External base URL of this NSA."""
-        return f"{self.NSA_SCHEME}://{self.NSA_HOST}:{self.NSA_PORT}{self.NSA_PATH_PREFIX}"
+        return HttpUrl(f"{self.NSA_SCHEME}://{self.NSA_HOST}:{self.NSA_PORT}{self.NSA_PATH_PREFIX}")
 
 
 settings = Settings(_env_file="aura.env")

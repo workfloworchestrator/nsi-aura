@@ -118,7 +118,7 @@ class ConnectionStateMachine(AuraStateMachine):
         reserve_xml = generate_reserve_xml(
             reserve_templstr,  # SOAP reserve template
             correlation_id,  # correlation id
-            str(settings.NSA_BASE_URL) + "/api/nsi/callback/",  # reply-to url
+            str(settings.NSA_BASE_URL) + "api/nsi/callback/",  # reply-to url
             self.model.description,  # reservation description
             uuid4(),  # TODO: global reservation id should be stored on reservation/connection in database
             self.model.startTime.replace(tzinfo=timezone.utc) if self.model.startTime else datetime.now(timezone.utc),  # start time, TODO: proper timezone handling

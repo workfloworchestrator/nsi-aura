@@ -584,6 +584,8 @@ def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponen
             str(settings.SERVER_URL_PREFIX) + "reserve-commit/?connid=" + reserve_reply_dict["connectionId"]
         )
 
+        print("ARNO: fastapi_nsi_reserve: URLS", root_url, query_rec_url, sim_reply_to_url)
+
     except Exception:
         traceback.print_exc()
         raise HTTPException(status_code=404, detail="Endpoint or link not found")
