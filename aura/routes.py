@@ -305,7 +305,6 @@ def fastapi_endpoint_select_link(epida: int, epidz: int) -> list[AnyComponent]:
 def generate_poll_url(msgname, clean_correlation_uuid_str, clean_connection_id_str):
     return "/poll/?msg=" + msgname + "&corruuid=" + clean_correlation_uuid_str + "&connid=" + clean_connection_id_str
 
-
 @router.get("/api/poll/", response_model=FastUI, response_model_exclude_none=True)
 async def fastapi_general_poll(msg: str, corruuid: uuid.UUID, connid: uuid.UUID) -> list[AnyComponent]:
     """FastUI page polls for a Orchestrator async response, aka callback
@@ -440,6 +439,8 @@ def children2spans(children):
 #  Orchestrator sending async reply, got all NSI message types
 #
 #
+def generate_callback_url(correlation_uuid_py):
+    return str(settings.NSA_BASE_URL) + "api/callback/?corruuid="+str(correlation_uuid_py)
 
 
 @router.post("/api/callback/")
@@ -449,6 +450,16 @@ async def orchestrator_general_callback(request: Request):
     Returns nothing
     """
     print("CALLBACK: ENTER")
+
+    # Check if callback if for the correlationId we sent
+    query_correlationid_uuid_py = None
+    # Check if Pydantic type checking can be done here
+    if "corruuid" in request.query_params:
+        supposed_uuid_str = request.query_params["corruuid"]
+        # Throws exception if not properly formatted
+        query_correlationid_uuid_py = uuid.UUID(supposed_uuid_str)
+
+    # Retrieve body
     body = await request.body()
     # body = request.body()
     print("CALLBACK: Got body", body)
@@ -456,10 +467,14 @@ async def orchestrator_general_callback(request: Request):
     content_type = request.headers["content-type"]
     if content_type_is_valid_soap(content_type):
         try:
-            correlation_uuid_str = nsi_soap_parse_callback(body)
+            body_correlation_uuid_py = nsi_soap_parse_callback(body)
+            if query_correlationid_uuid_py is not None and query_correlationid_uuid_py != body_correlation_uuid_py:
+                print("CALLBACK: Orchestrator called back with different UUID in URL than in body",str(query_correlationid_uuid_py),str(body_correlation_uuid_py))
+                return
+            body_correlation_uuid_str = str(body_correlation_uuid_py)
             with aura.state.global_orch_async_replies_lock:
                 print("CALLBACK: Got lock")
-                aura.state.global_orch_async_replies_dict[correlation_uuid_str] = body
+                aura.state.global_orch_async_replies_dict[body_correlation_uuid_str] = body
         except:
             traceback.print_exc()
     else:
@@ -485,24 +500,19 @@ def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponen
         # duration_td = timedelta(days=30)
         duration_td = timedelta(minutes=5)
 
-        correlation_uuid_py = generate_uuid()
+        # To correlate requests and replies
+        expected_correlation_uuid_py = generate_uuid()
 
         # Create URL
         # For async Orchestrator reply
         # TEST
-        # clean_correlation_uuid_str = 'b23efb40-9ce5-11ef-8a24-fa163e074abf'
+        # test_correlation_uuid_str = 'b23efb40-9ce5-11ef-8a24-fa163e074abf'
         # From static/orch-callback-reply-soap.xml
-        # clean_correlation_uuid_str = '8d8e76aa-854e-45e7-ae10-c7fd856fdbad'
-        clean_correlation_uuid_str = str(correlation_uuid_py)
+        # test_correlation_uuid_str = '8d8e76aa-854e-45e7-ae10-c7fd856fdbad'
+        #expected_correlation_uuid_py = uuid.UUID(test_correlation_uuid_str)
+        print("fastapi_nsi_reserve: TEST WITH", expected_correlation_uuid_py)
 
-        print("fastapi_nsi_reserve: TEST WITH", clean_correlation_uuid_str)
-
-        # FIXME: remove connectionId from callback, at least for RESERVE
-        clean_connection_id_str = str(generate_uuid())
-
-        # orch_reply_to_url = str(settings.SERVER_URL_PREFIX)+"/callback/?corruuid="+clean_correlation_uuid_str+"&connid="+clean_connection_id_str
-        # orch_reply_to_url = str(settings.SERVER_URL_PREFIX)+"/callback/?corruuid="+clean_correlation_uuid_str
-        orch_reply_to_url = str(settings.NSA_BASE_URL) + "/api/callback/"
+        orch_reply_to_url = generate_callback_url(expected_correlation_uuid_py)
 
         print("fastapi_nsi_reserve: Orch will reply via", orch_reply_to_url)
         print("aura.state.global_soap_provider_url:", aura.state.global_soap_provider_url)
@@ -510,15 +520,14 @@ def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponen
         # Fake data for off-line, to be overwritten
         reserve_reply_dict = {}
         reserve_reply_dict[S_FAULTSTRING_TAG] = "Agent unreachable, demo mode"
-        reserve_reply_dict["correlationId"] = clean_correlation_uuid_str  # DUMMY_CORRELATION_ID_STR
-        reserve_reply_dict["globalReservationId"] = DUMMY_GLOBAL_RESERVATION_ID_STR
-        reserve_reply_dict["connectionId"] = DUMMY_CONNECTION_ID_STR
+        reserve_reply_dict["correlationId"] = str(expected_correlation_uuid_py)
+        reserve_reply_dict["connectionId"] = DUMMY_CONNECTION_ID_STR # not yet known
 
         # Call NSI, wait for sync HTTP reply
         if aura.state.ONLINE:
             reserve_reply_dict = nsi_reserve(
                 aura.state.global_soap_provider_url,
-                correlation_uuid_py,
+                expected_correlation_uuid_py,
                 orch_reply_to_url,
                 aura.state.global_provider_nsa_id,
                 endpointa.name,

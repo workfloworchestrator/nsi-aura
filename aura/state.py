@@ -89,7 +89,6 @@ pollcount = 481
 #
 global_orch_async_replies_lock = threading.Lock()
 global_orch_async_replies_dict = {}  # indexed on CorrelationId
-global_reservation_uuid_py = ""
 global_soap_provider_url = ""
 
 #

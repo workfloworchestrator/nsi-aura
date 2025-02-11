@@ -1038,7 +1038,7 @@ def nsi_connections_query(request_url, callback_url_prefix, provider_nsa_id):
 
 def nsi_reserve(
     request_url,
-    correlation_uuid_py,
+    expect_correlation_uuid_py: uuid.UUID,
     orch_reply_to_url: str,
     provider_nsa_id: str,
     epnamea: str,
@@ -1050,31 +1050,24 @@ def nsi_reserve(
     duration_td: datetime.timedelta,
 ):
     """NSI RESERVE(SOAP-template,)
-    Returns: dict with ["correlationId":correlationId,"globalReservationId", "connectionId":connectionId] as strings
+    Normally, the nsi_ code can generate the correlationID. For testing I sometimes need to
+    pass a given correlationId, hence the parameter.
+    Returns: dict with ["correlationId":correlationId,"connectionId":connectionId] as strings
     """
     try:
-        # TODO: generate correlation again here as before, reply_to_url does not have to contain it.
-        # correlation_uuid_py = generate_uuid()
         connection_descr = NSI_RESERVE_XML_CONNECTION_PREFIX + " " + epnamea + " to " + epnamez + " over " + linkname
-        aura.state.global_reservation_uuid_py = generate_uuid()
         start_datetime_py = datetime.datetime.now(datetime.timezone.utc)
         end_datetime_py = start_datetime_py + duration_td
         source_stp_dict = {URN_STP_NAME: epnamea, URN_STP_VLAN: epvlana}
         dest_stp_dict = {URN_STP_NAME: epnamez, URN_STP_VLAN: epvlanz}
-
-        # RESTFUL: Do Not Store (TODO or for security)
-        # reply_to_url = str(settings.SERVER_URL_PREFIX)+"/reserve-callback/?corruuid="+str(correlation_uuid_py)+"&globresuuid="+str(global_reservation_uuid_py)
-        # I get an error from SuPA: Unexpected character \'=\' (code 61); expected a semi-colon after the reference for entity \'globresuuid\'\n
-        # reply_to_url = callback_url_prefix+"/reserve-callback/"
         reply_to_url = orch_reply_to_url
 
-        print("NSI-RESERVE: BEFORE CREATE", reserve_templstr)
         reserve_xml = generate_reserve_xml(
             reserve_templstr,
-            correlation_uuid_py,
+            expect_correlation_uuid_py,
             reply_to_url,
             connection_descr,
-            aura.state.global_reservation_uuid_py,
+            generate_uuid(),  # uPA allows for this param, Aggregator does not. Currently Not used
             start_datetime_py,
             end_datetime_py,
             source_stp_dict,
@@ -1082,42 +1075,26 @@ def nsi_reserve(
             provider_nsa_id,
         )
 
-        # h4xor Unknown provider NSA ID error:
-        # reserve_xml = reserve_xml.replace('urn:ogf:network:anaeng.global:2024:nsa:nsi-aura','urn:ogf:network:surf.nl:2020:onsaclient')
-
-        # reserve_xml = reserve_xml.replace("urn:ogf:network:example.domain:2001:nsa:supa","urn:ogf:network:anaeng.global:2024:nsa:nsi-aura")
-        # reserve_xml = reserve_xml.replace("urn:ogf:network:example.domain:2001:nsa:supa",'urn:ogf:network:surf.nl:2020:onsaclient')
-
-        # reserve_xml = reserve_xml.replace("urn:ogf:network:example.domain:2001:nsa:supa",'urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:ana-moxy')
-        # WORKS
-        # reserve_xml = reserve_xml.replace("urn:ogf:network:example.domain:2001:nsa:supa","urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:nsa:supa")
-
-        ## TODO REFACTOR
-        ##reserve_xml = reserve_xml.replace("urn:ogf:network:example.domain:2001:nsa:supa",provider_nsa_id)
-
-        # TODO: send XML to Safnari
-        # via Python requests lib, synchronously via POST.
-        # Wait here for HTTP reply, which must have given CorrelationId
-        # extract ConnectionId, pass on. TODO: how? UI needs to wait
-
+        # Send XML to Aggregator
+        # Wait here for HTTP reply synchronously, which must have given CorrelationId
         print("RESERVE: Request XML", reserve_xml)
-
-        # TODO: send XML to Safnari
-        print("RESERVE: CALLING ORCH")
         soap_xml = nsi_util_post_soap(request_url, reserve_xml)
 
         print("RESERVE: GOT HTTP REPLY", soap_xml)
-
         retdict = nsi_soap_parse_reserve_reply(soap_xml)
 
         print("RESERVE: Got connectionId", retdict)
+        got_correlation_uuid_py = uuid.UUID(retdict["correlationId"])
+        if got_correlation_uuid_py != expect_correlation_uuid_py:
+            raise Exception("correlationId received in reply does not match the one sent in request.")
+
         retdict["correlationId"] = str(correlation_uuid_py)
-        retdict["globalReservationId"] = str(aura.state.global_reservation_uuid_py)
-        # ,"connectionId":connection_id_str}
         return retdict
 
-    except:
+    except Exception as e:
         traceback.print_exc()
+        retdict[S_FAULTSTRING_TAG] = str(e)
+        return retdict
 
 
 def nsi_reserve_commit(request_url, callback_url_prefix: str, provider_nsa_id: str, connid_str):
@@ -1343,7 +1320,7 @@ def nsi_query_recursive(request_url, orch_reply_to_url: str, provider_nsa_id: st
 
 def nsi_soap_parse_callback(body):
     """ Extracts correlationID from Aggregator async callback.
-    @return UUID as str"""
+    @return UUID as UUID class"""
     tree = nsi_util_parse_xml(body)
     tag = tree.find(FIND_ANYWHERE_PREFIX + S_CORRELATION_ID_TAG)
     if tag is not None:
@@ -1351,7 +1328,7 @@ def nsi_soap_parse_callback(body):
         correlation_urn = tag.text
         # Checks input format
         correlation_uuid = uuid.UUID(correlation_urn)
-        return str(correlation_uuid)
+        return correlation_uuid
     else:
         print("CALLBACK: Could not find correlationId", body)
         raise Exception("correlationId not found in callback")
@@ -1389,6 +1366,9 @@ def nsi_util_post_soap(url, soapreqmsg):
     # print(response.content)
     raise Exception(url + " did not return XML, but" + response.headers["content-type"])
 
+#
+# TODO: do type checking on UUIDs here? I'd say yes.
+#
 
 def nsi_soap_parse_query_reply(soap_xml):
     """Parses SOAP QUERY reply
@@ -1454,6 +1434,12 @@ def nsi_soap_parse_reserve_reply(soap_xml):
     tree = etree.parse(soap_file)
 
     #
+    # Get correlationId
+    #
+    tag = tree.find(FIND_ANYWHERE_PREFIX + S_CORRELATION_ID_TAG)
+    correlation_id_str = tag.text
+
+    #
     # Get connectionId
     #
     # TODO: check for error / faultstring
@@ -1467,10 +1453,11 @@ def nsi_soap_parse_reserve_reply(soap_xml):
     else:
         faultstring = tag.text
 
-    print("SOAP PARSE REPLY FOR CONNECTIONID:", faultstring)
+    print("nsi_soap_parse_reserve_reply: Got error?", faultstring)
 
     retdict = {}
     retdict[S_FAULTSTRING_TAG] = faultstring
+    retdict[S_CORRELATION_ID_TAG] = correlation_id_str
     retdict[S_CONNECTION_ID_TAG] = connection_id_str
     return retdict
 
@@ -1509,8 +1496,6 @@ def nsi_soap_parse_correlationid_reply(soap_xml):
     soap_file = BytesIO(soap_xml)
     tree = etree.parse(soap_file)
 
-    print("SOAP PARSE REPLY FOR CORRELATIONID: ENTER")
-
     #
     # Get correlationId
     #
@@ -1523,7 +1508,7 @@ def nsi_soap_parse_correlationid_reply(soap_xml):
     else:
         faultstring = tag.text
 
-    print("SOAP PARSE REPLY FOR CORRELATIONID:", faultstring)
+    print("nsi_soap_parse_correlationid_reply: Got error?", faultstring)
 
     retdict = {}
     retdict[S_FAULTSTRING_TAG] = faultstring
