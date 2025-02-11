@@ -496,7 +496,6 @@ def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponen
         clean_correlation_uuid_str = str(correlation_uuid_py)
 
         print("fastapi_nsi_reserve: TEST WITH", clean_correlation_uuid_str)
-        print("fastapi_nsi_reserve: TEST WITH2", correlation_uuid_py)
 
         # FIXME: remove connectionId from callback, at least for RESERVE
         clean_connection_id_str = str(generate_uuid())

@@ -465,6 +465,7 @@ def nsi_comm_init(templ_absdir):
     session.mount("http://", adapter)
     session.mount("https://", adapter)
 
+    # TODO: this is currently called from aura/__init__.py which causes it to be called twice.
     print("NSI-COMM-INIT: loading templates")
     #
     # Load SOAP templates
@@ -484,8 +485,6 @@ def nsi_comm_init(templ_absdir):
     # Read Reserve template code
     with open(reserve_templpath) as reserve_templfile:
         reserve_templstr = reserve_templfile.read()
-
-    print("NSI-COMM-INIT: template is", reserve_templstr)
 
     # RESERVE-COMMIT
     reserve_commit_templpath = os.path.join(templ_absdir, NSI_RESERVE_COMMIT_TEMPLATE_XMLFILE)
@@ -1363,10 +1362,7 @@ def content_type_is_valid_soap(content_type):
     ct = content_type.lower()
     return (
             ct == "application/xml"
-            or ct == "text/xml"
-            or ct == "text/xml;charset=utf-8"
-            or ct == "text/xml; charset=UTF-8"
-            or ct.startswith("text/xml")
+            or ct.startswith("text/xml")  # "text/xml;charset=utf-8" "text/xml; charset=UTF-8"
     )
 
 def nsi_util_post_soap(url, soapreqmsg):

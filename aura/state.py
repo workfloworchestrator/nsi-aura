@@ -20,7 +20,7 @@ from aura.settings import settings
 #
 # State
 #
-ONLINE = True
+ONLINE = False
 global_provider_nsa_id = ""
 
 # define some endpoints
