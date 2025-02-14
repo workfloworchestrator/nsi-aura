@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     # nsi-aura (external) URL (scheme, host, port, prefix)
     NSA_SCHEME: str = "http"
     NSA_HOST: str = "localhost"
-    NSA_PORT: str = "8080"
+    NSA_PORT: str = "8000"
     NSA_PATH_PREFIX: str = ""
 
     # NOTE: HttpUrl class will automatically add trailing / when converting to str

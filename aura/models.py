@@ -95,9 +95,8 @@ class Reservation(SQLModel, table=True):
 
 
 # 1 dummy reservation
-DUMMY_CONNECTION_ID_STR = "d940e5b1-ed22-4c1a-ae09-10f20e4bd267"
-DUMMY_GLOBAL_RESERVATION_ID_STR = "urn:uuid:c46b7412-2263-46c6-b497-54f52e9f9ff4"
-DUMMY_CORRELATION_ID_STR = "urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c"  # TODO URN?
+DUMMY_CONNECTION_ID_STR = "d940e5b1-ed22-4c1a-ae09-10f20e4bd267"   # without urn:uuid: prefix.
+DUMMY_CORRELATION_ID_STR = "a3eb6740-7227-473b-af6f-6705d489407c"  # without urn:uuid: prefix.
 
 
 #
