@@ -1084,11 +1084,12 @@ def nsi_reserve(
         retdict = nsi_soap_parse_reserve_reply(soap_xml)
 
         print("RESERVE: Got connectionId", retdict)
+        # TODO: do type checking inside nsi_soap_parse()
         got_correlation_uuid_py = uuid.UUID(retdict["correlationId"])
         if got_correlation_uuid_py != expect_correlation_uuid_py:
             raise Exception("correlationId received in reply does not match the one sent in request.")
 
-        retdict["correlationId"] = str(correlation_uuid_py)
+        retdict["correlationId"] = str(got_correlation_uuid_py)
         return retdict
 
     except Exception as e:

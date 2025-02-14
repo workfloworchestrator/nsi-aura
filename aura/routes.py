@@ -469,8 +469,8 @@ async def orchestrator_general_callback(request: Request):
         try:
             body_correlation_uuid_py = nsi_soap_parse_callback(body)
             if query_correlationid_uuid_py is not None and query_correlationid_uuid_py != body_correlation_uuid_py:
+                # Log an error: Orchestrator acting weird.
                 print("CALLBACK: Orchestrator called back with different UUID in URL than in body",str(query_correlationid_uuid_py),str(body_correlation_uuid_py))
-                return
             body_correlation_uuid_str = str(body_correlation_uuid_py)
             with aura.state.global_orch_async_replies_lock:
                 print("CALLBACK: Got lock")
@@ -548,7 +548,7 @@ def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponen
             cssclassname = "+ text-warning"
             faultstring = reserve_reply_dict[S_FAULTSTRING_TAG]
 
-        # If we do not trust Orchestrator, sanitize these because they are displayed in HTML
+        # TODO: hard type checking: If we do not trust Orchestrator, sanitize these because they are displayed in HTML
         clean_correlation_uuid_str = reserve_reply_dict["correlationId"]
         clean_connection_id_str = reserve_reply_dict["connectionId"]
 
