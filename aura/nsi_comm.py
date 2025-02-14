@@ -1098,7 +1098,7 @@ def nsi_reserve(
         return retdict
 
 
-def nsi_reserve_commit(request_url, callback_url_prefix: str, provider_nsa_id: str, connid_str):
+def nsi_reserve_commit(request_url, provider_nsa_id: str, connid_str):
     """NSI RESERVE_COMMIT(SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"connectionId":connectionId] as strings
     """
@@ -1136,7 +1136,7 @@ def nsi_reserve_commit(request_url, callback_url_prefix: str, provider_nsa_id: s
 
 def nsi_provision(request_url, callback_url_prefix: str, provider_nsa_id: str, connid_str):
     """NSI PROVISION(SOAP-template,)
-    Returns: dict with ["correlationId":correlationId,"globalReservationId","connectionId":connectionId] as strings
+    Returns: dict with ["correlationId":correlationId,"connectionId":connectionId] as strings
     """
     try:
         correlation_uuid_py = generate_uuid()
@@ -1161,10 +1161,8 @@ def nsi_provision(request_url, callback_url_prefix: str, provider_nsa_id: str, c
         retdict = nsi_soap_parse_provison_reply(soap_xml)
 
         print("PROVISION: Got correlationId", retdict)
+        # TODO: verify correlationId in reply are the same as in request
 
-        # TODO: verify correlationId are the same
-
-        retdict["globalReservationId"] = str(aura.state.global_reservation_uuid_py)
         return retdict
 
     except:
@@ -1173,7 +1171,7 @@ def nsi_provision(request_url, callback_url_prefix: str, provider_nsa_id: str, c
 
 def nsi_terminate(request_url, callback_url_prefix: str, provider_nsa_id: str, connid_str):
     """NSI TERMINATE(SOAP-template,)
-    Returns: dict with ["correlationId":correlationId,"globalReservationId","connectionId":connectionId] as strings
+    Returns: dict with ["correlationId":correlationId,"connectionId":connectionId] as strings
     """
     try:
         correlation_uuid_py = generate_uuid()
@@ -1209,7 +1207,7 @@ def nsi_terminate(request_url, callback_url_prefix: str, provider_nsa_id: str, c
 
 def nsi_release(request_url, callback_url_prefix: str, provider_nsa_id: str, connid_str):
     """NSI RELEASE (SOAP-template,)
-    Returns: dict with ["correlationId":correlationId,"globalReservationId","connectionId":connectionId] as strings
+    Returns: dict with ["correlationId":correlationId,"connectionId":connectionId] as strings
     """
     try:
         correlation_uuid_py = generate_uuid()
@@ -1245,7 +1243,7 @@ def nsi_release(request_url, callback_url_prefix: str, provider_nsa_id: str, con
 
 def nsi_reserve_timeout_ack(request_url, callback_url_prefix: str, provider_nsa_id: str, connid_str):
     """NSI RESERVE-TIMEOUT-ACK(SOAP-template,)
-    Returns: dict with ["correlationId":correlationId,"globalReservationId","connectionId":connectionId] as strings
+    Returns: dict with ["correlationId":correlationId,"connectionId":connectionId] as strings
     """
     try:
         correlation_uuid_py = generate_uuid()
@@ -1286,7 +1284,7 @@ def nsi_reserve_timeout_ack(request_url, callback_url_prefix: str, provider_nsa_
 
 def nsi_query_recursive(request_url, orch_reply_to_url: str, provider_nsa_id: str, connid_str):
     """NSI QUERY RECURSIVE(SOAP-template,)
-    Returns: dict with ["correlationId":correlationId,"globalReservationId","connectionId":connectionId] as strings
+    Returns: dict with ["correlationId":correlationId,"connectionId":connectionId] as strings
     """
     try:
         correlation_uuid_py = generate_uuid()

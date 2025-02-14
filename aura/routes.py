@@ -622,7 +622,6 @@ def fastapi_nsi_reserve_commit(connid: uuid.UUID) -> list[AnyComponent]:
 
         if aura.state.ONLINE:
             reserve_commit_reply_dict = nsi_reserve_commit(
-                aura.state.global_soap_provider_url,
                 str(settings.SERVER_URL_PREFIX),   # TODO: proper orch_reply_to_url
                 aura.state.global_provider_nsa_id,
                 expect_connectionid_str,

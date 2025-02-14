@@ -140,7 +140,6 @@ class ConnectionStateMachine(AuraStateMachine):
 
         print("RESERVE: Got connectionId", retdict)
         retdict["correlationId"] = str(correlation_id)
-        retdict["globalReservationId"] = str(state.global_reservation_uuid_py)
         # ,"connectionId":connection_id_str}
 
 
