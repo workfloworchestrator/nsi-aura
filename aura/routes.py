@@ -19,7 +19,7 @@ import traceback
 import uuid
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastui import AnyComponent, FastUI
 from fastui import components as c
@@ -46,14 +46,12 @@ from aura.nsi_aura import (
     show_reservations_table,
 )
 from aura.nsi_comm import (
-    FIND_ANYWHERE_PREFIX,
     S_CHILDREN_TAG,
-    S_CORRELATION_ID_TAG,
     S_DEST_STP_TAG,
     S_FAULTSTRING_TAG,
     S_RESERVE_CONFIRMED_TAG,
     S_SOURCE_STP_TAG,
-    URN_UUID_PREFIX,
+    content_type_is_valid_soap,
     generate_uuid,
     nsi_connections_query,
     nsi_provision,
@@ -62,10 +60,10 @@ from aura.nsi_comm import (
     nsi_reserve,
     nsi_reserve_commit,
     nsi_reserve_timeout_ack,
+    nsi_soap_parse_callback,
     nsi_soap_parse_query_recursive_callback,
     nsi_soap_parse_reserve_callback,
     nsi_terminate,
-    nsi_util_parse_xml, content_type_is_valid_soap, nsi_soap_parse_callback,
 )
 from aura.settings import settings
 
@@ -305,6 +303,7 @@ def fastapi_endpoint_select_link(epida: int, epidz: int) -> list[AnyComponent]:
 def generate_poll_url(msgname, clean_correlationid_str, clean_connectionid_str):
     return "/poll/?msg=" + msgname + "&corrid=" + clean_correlationid_str + "&connid=" + clean_connectionid_str
 
+
 @router.get("/api/poll/", response_model=FastUI, response_model_exclude_none=True)
 async def fastapi_general_poll(msg: str, corrid: uuid.UUID, connid: uuid.UUID) -> list[AnyComponent]:
     """FastUI page polls for a Orchestrator async response, aka callback
@@ -440,7 +439,7 @@ def children2spans(children):
 #
 #
 def generate_callback_url(correlationid_py):
-    return str(settings.NSA_BASE_URL) + "api/callback/?corrid="+str(correlationid_py)
+    return str(settings.NSA_BASE_URL) + "api/callback/?corrid=" + str(correlationid_py)
 
 
 @router.post("/api/callback/")
@@ -470,7 +469,11 @@ async def orchestrator_general_callback(request: Request):
             body_correlationid_py = nsi_soap_parse_callback(body)
             if query_correlationid_py is not None and query_correlationid_py != body_correlationid_py:
                 # Log an error: Orchestrator acting weird.
-                print("CALLBACK: Orchestrator called back with different UUID in URL than in body",str(query_correlationid_py),str(body_correlationid_py))
+                print(
+                    "CALLBACK: Orchestrator called back with different UUID in URL than in body",
+                    str(query_correlationid_py),
+                    str(body_correlationid_py),
+                )
             body_correlationid_str = str(body_correlationid_py)
             with aura.state.global_orch_async_replies_lock:
                 print("CALLBACK: Got lock")
@@ -509,7 +512,7 @@ def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponen
         # test_correlationid_str = 'b23efb40-9ce5-11ef-8a24-fa163e074abf'
         # From static/orch-callback-reply-soap.xml
         # test_correlationid_str = '8d8e76aa-854e-45e7-ae10-c7fd856fdbad'
-        #expected_correlationid_py = uuid.UUID(test_correlationid_str)
+        # expected_correlationid_py = uuid.UUID(test_correlationid_str)
         print("fastapi_nsi_reserve: TEST WITH", expected_correlationid_py)
 
         orch_reply_to_url = generate_callback_url(expected_correlationid_py)
@@ -521,7 +524,7 @@ def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponen
         reserve_reply_dict = {}
         reserve_reply_dict[S_FAULTSTRING_TAG] = "Agent unreachable, demo mode"
         reserve_reply_dict["correlationId"] = str(expected_correlationid_py)
-        reserve_reply_dict["connectionId"] = DUMMY_CONNECTION_ID_STR # not yet known
+        reserve_reply_dict["connectionId"] = DUMMY_CONNECTION_ID_STR  # not yet known
 
         # Call NSI, wait for sync HTTP reply
         if aura.state.ONLINE:
@@ -622,7 +625,7 @@ def fastapi_nsi_reserve_commit(connid: uuid.UUID) -> list[AnyComponent]:
 
         if aura.state.ONLINE:
             reserve_commit_reply_dict = nsi_reserve_commit(
-                str(settings.SERVER_URL_PREFIX),   # TODO: proper orch_reply_to_url
+                str(settings.SERVER_URL_PREFIX),  # TODO: proper orch_reply_to_url
                 aura.state.global_provider_nsa_id,
                 expect_connectionid_str,
             )
@@ -698,7 +701,7 @@ def fastapi_nsi_reserve_commit_callback(corrid: uuid.UUID, connid: uuid.UUID) ->
                 aura.state.global_soap_provider_url,
                 str(settings.NSA_BASE_URL),
                 aura.state.global_provider_nsa_id,
-                expect_connectionid_str
+                expect_connectionid_str,
             )
 
         # RESTFUL: Do Not Store (TODO or for security)
@@ -745,8 +748,7 @@ def fastapi_nsi_reserve_commit_callback(corrid: uuid.UUID, connid: uuid.UUID) ->
 # Will be: Provisioned link overview
 @router.get("/api/provision-callback/", response_model=FastUI, response_model_exclude_none=True)
 def fastapi_nsi_provision_callback(corrid: uuid.UUID, connid: uuid.UUID) -> list[AnyComponent]:
-    """NSI PROVISION callback, Go Back to Start, or Show List
-    """
+    """NSI PROVISION callback, Go Back to Start, or Show List"""
     try:
         # TODO: We got async reply from NSI-Orchestrator, now process it
         # We expect the following ids in the
@@ -1162,9 +1164,7 @@ def fastapi_nsi_query_recursive(connid: str) -> list[AnyComponent]:
         # For GUI to poll on (relative URL)
         # poll_url = '/poll/reserve/'
         # poll_url = "/poll/reserve/?corrid="+corrid+"&connid="+connid
-        poll_url = generate_poll_url(
-            FASTAPI_MSGNAME_QUERY_RECURSIVE, clean_correlationid_str, clean_connectionid_str
-        )
+        poll_url = generate_poll_url(FASTAPI_MSGNAME_QUERY_RECURSIVE, clean_correlationid_str, clean_connectionid_str)
 
         # When coming from /reserve
         next_step_url = str(settings.SERVER_URL_PREFIX) + "reserve-commit/?connid=" + expect_connectionid_str

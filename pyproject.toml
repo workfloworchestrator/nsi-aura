@@ -6,11 +6,13 @@ build-backend = "setuptools.build_meta"
 name = "nsi-aura"
 version = "0.0.1"
 dependencies = [
+    "apscheduler",
     "fastapi[standard]",
     "fastui",
     "lxml",
     "pydantic-settings",
     "python-statemachine",
+    "pytz",
     "requests",
     "sqlmodel",
     "structlog",

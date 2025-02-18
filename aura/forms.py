@@ -13,8 +13,9 @@
 # limitations under the License.
 
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Annotated
+from uuid import uuid4
 
 import structlog
 from fastapi import APIRouter
@@ -26,7 +27,8 @@ from pydantic import BaseModel, Field
 
 from aura.db import Session
 from aura.fsm import ConnectionStateMachine
-from aura.models import Bandwidth, Reservation, STP, Vlan
+from aura.job import nsi_send_reserve_job, scheduler
+from aura.models import STP, Bandwidth, Reservation, Vlan
 from aura.settings import settings
 
 router = APIRouter()
@@ -73,7 +75,7 @@ class InputForm(BaseModel):
 
 
 @router.get("/api/forms/search_endpoints", response_model=SelectSearchResponse)
-async def search_view() -> SelectSearchResponse:
+def search_view() -> SelectSearchResponse:
     """Get list of endpoints from database suitable for input form drop down."""
     with Session() as session:
         stps = session.query(STP).all()
@@ -85,9 +87,11 @@ async def search_view() -> SelectSearchResponse:
 
 
 @router.post("/api/forms/post_form/", response_model=FastUI, response_model_exclude_none=True)
-async def post_form(form: Annotated[InputForm, fastui_form(InputForm)]):
+def post_form(form: Annotated[InputForm, fastui_form(InputForm)]):
     """Store values from input form in reservation database."""
     reservation = Reservation(
+        globalReservationId=uuid4(),
+        correlationId=uuid4(),
         description=form.description,
         sourceSTP=int(form.sourceSTP),
         destSTP=int(form.destSTP),
@@ -96,19 +100,21 @@ async def post_form(form: Annotated[InputForm, fastui_form(InputForm)]):
         bandwidth=form.bandwidth,
         startTime=form.startTime,
         endTime=form.endTime,
-        connectionStatus=ConnectionStateMachine.ConnectionNew.value
+        connectionStatus=ConnectionStateMachine.ConnectionNew.value,
     )
     with Session.begin() as session:
         session.add(reservation)
         session.flush()
+        reservation_id = reservation.id
         csm = ConnectionStateMachine(reservation, state_field="connectionStatus")
         csm.nsi_send_reserve()  # TODO: move this action behind a button on the reservation overview page
+    scheduler.add_job(nsi_send_reserve_job, args=[reservation_id])
 
     return [c.FireEvent(event=GoToEvent(url="/"))]
 
 
 @router.get("/api/forms/input_form/", response_model=FastUI, response_model_exclude_none=True)
-async def input_form() -> list[AnyComponent]:
+def input_form() -> list[AnyComponent]:
     """Render input form."""
     submit_url = str(settings.SERVER_URL_PREFIX) + "api/forms/post_form/"
     return [

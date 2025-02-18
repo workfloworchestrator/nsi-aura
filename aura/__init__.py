@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+#
+# FastAPI
 #
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -30,10 +33,12 @@ app.include_router(forms_router)
 app.include_router(frontend_router)
 app.include_router(routes_router)
 
+#
 # initialise NSI communications
-import os
+#
+from os import getcwd, path
 
 from aura.nsi_comm import nsi_comm_init
 
 # TODO: replace with Settings.STATIC_DIRECTORY, but need to fix import order first
-nsi_comm_init(os.path.join(os.getcwd(), "static"))
+nsi_comm_init(path.join(getcwd(), "static"))

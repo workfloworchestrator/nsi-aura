@@ -14,6 +14,7 @@
 
 from datetime import datetime
 from typing import Annotated
+from uuid import UUID
 
 from annotated_types import Ge, Gt, Le, doc
 from pydantic import BaseModel
@@ -46,6 +47,7 @@ class Endpoint(BaseModel):
 
 class STP(SQLModel, table=True):
     """NSI Service Termination Point."""
+
     id: int | None = Field(default=None, primary_key=True)
     organisationId: str  # ORGID ":" DATE (see GFD.202)
     networkId: str  # <STP identifier> ::= <networkId> “:” <localId> <label> (see GDF.237)
@@ -77,6 +79,8 @@ class Reservation(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     connectionId: str | None
+    globalReservationId: UUID | None
+    correlationId: UUID | None
     description: str
     startTime: datetime | None
     endTime: datetime | None
@@ -85,7 +89,6 @@ class Reservation(SQLModel, table=True):
     sourceVlan: Vlan
     destVlan: Vlan
     bandwidth: Bandwidth
-    requesterNSA: str | None
     reservationState: str | None
     lifecycleState: str | None
     dataPlaneStatus: str | None
@@ -95,7 +98,7 @@ class Reservation(SQLModel, table=True):
 
 
 # 1 dummy reservation
-DUMMY_CONNECTION_ID_STR = "d940e5b1-ed22-4c1a-ae09-10f20e4bd267"   # without urn:uuid: prefix.
+DUMMY_CONNECTION_ID_STR = "d940e5b1-ed22-4c1a-ae09-10f20e4bd267"  # without urn:uuid: prefix.
 DUMMY_CORRELATION_ID_STR = "a3eb6740-7227-473b-af6f-6705d489407c"  # without urn:uuid: prefix.
 
 

@@ -18,7 +18,7 @@ from fastui import components as c
 from fastui.events import BackEvent, GoToEvent
 
 from aura.db import Session
-from aura.models import Reservation, STP
+from aura.models import STP, Reservation
 from aura.nsi_aura import create_footer
 from aura.settings import settings
 

@@ -14,6 +14,7 @@
 
 import base64
 import datetime
+
 #
 # NSI Communications functions
 # ============================
@@ -31,7 +32,6 @@ import requests
 from lxml import etree
 from urllib3.util.retry import Retry
 
-import aura.state
 from aura.settings import settings
 
 #
@@ -1317,9 +1317,11 @@ def nsi_query_recursive(request_url, orch_reply_to_url: str, provider_nsa_id: st
     except:
         traceback.print_exc()
 
+
 def nsi_soap_parse_callback(body):
-    """ Extracts correlationID from Aggregator async callback.
-    @return UUID as UUID class"""
+    """Extracts correlationID from Aggregator async callback.
+    @return UUID as UUID class
+    """
     tree = nsi_util_parse_xml(body)
     tag = tree.find(FIND_ANYWHERE_PREFIX + S_CORRELATION_ID_TAG)
     if tag is not None:
@@ -1328,18 +1330,15 @@ def nsi_soap_parse_callback(body):
         # Checks input format
         correlation_uuid = uuid.UUID(correlation_urn)
         return correlation_uuid
-    else:
-        print("CALLBACK: Could not find correlationId", body)
-        raise Exception("correlationId not found in callback")
+    print("CALLBACK: Could not find correlationId", body)
+    raise Exception("correlationId not found in callback")
 
 
 def content_type_is_valid_soap(content_type):
-    """ Returns True if HTTP Content-Type indicates SOAP """
+    """Returns True if HTTP Content-Type indicates SOAP"""
     ct = content_type.lower()
-    return (
-            ct == "application/xml"
-            or ct.startswith("text/xml")  # "text/xml;charset=utf-8" "text/xml; charset=UTF-8"
-    )
+    return ct == "application/xml" or ct.startswith("text/xml")  # "text/xml;charset=utf-8" "text/xml; charset=UTF-8"
+
 
 def nsi_util_post_soap(url, soapreqmsg):
     """Does HTTP POST of soapreqmsg to URL
@@ -1365,9 +1364,11 @@ def nsi_util_post_soap(url, soapreqmsg):
     # print(response.content)
     raise Exception(url + " did not return XML, but" + response.headers["content-type"])
 
+
 #
 # TODO: do type checking on UUIDs here? I'd say yes.
 #
+
 
 def nsi_soap_parse_query_reply(soap_xml):
     """Parses SOAP QUERY reply
@@ -1671,9 +1672,9 @@ def nsi_soap_parse_query_recursive_callback(soap_xml):
     return retdict
 
 
-#if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    # nsi_comm_init("static")
+# nsi_comm_init("static")
 
-    #dds_documents_dict = nsi_get_dds_documents("https://dds.ana.dlp.surfnet.nl/dds/documents/")
-    #print("FINAL DOCS", dds_documents_dict)
+# dds_documents_dict = nsi_get_dds_documents("https://dds.ana.dlp.surfnet.nl/dds/documents/")
+# print("FINAL DOCS", dds_documents_dict)
