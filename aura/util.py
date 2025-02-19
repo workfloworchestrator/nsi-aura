@@ -15,7 +15,7 @@
 import structlog
 
 from aura.db import Session
-from aura.models import STP
+from aura.model import STP
 
 logger = structlog.get_logger(__name__)
 

@@ -27,7 +27,7 @@ from pydantic import BaseModel, Field
 
 from aura.db import Session
 from aura.fsm import ConnectionStateMachine
-from aura.models import STP, Bandwidth, Reservation, Vlan
+from aura.model import STP, Bandwidth, Reservation, Vlan
 from aura.settings import settings
 
 router = APIRouter()

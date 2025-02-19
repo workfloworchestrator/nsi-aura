@@ -14,7 +14,7 @@
 
 import threading
 
-from aura.models import Endpoint, NetworkLink, Reservation
+from aura.model import Endpoint, NetworkLink, Reservation
 from aura.settings import settings
 
 #

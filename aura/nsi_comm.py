@@ -36,7 +36,7 @@ from lxml import etree
 from urllib3.util.retry import Retry
 
 from aura import state
-from aura.models import STP, Reservation
+from aura.model import STP, Reservation
 from aura.settings import settings
 
 #

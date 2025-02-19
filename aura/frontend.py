@@ -20,7 +20,7 @@ from fastui.events import BackEvent, GoToEvent
 
 from aura.db import Session
 from aura.fsm import ConnectionStateMachine
-from aura.models import STP, Reservation
+from aura.model import STP, Reservation
 from aura.nsi_aura import create_footer
 from aura.nsi_comm import nsi_soap_parse_callback
 from aura.settings import settings

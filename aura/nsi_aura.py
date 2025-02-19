@@ -23,10 +23,10 @@ from fastui.components.display import DisplayLookup
 from fastui.events import BackEvent, GoToEvent
 
 import aura.state
-from aura.models import Discovery, Endpoint, NetworkLink, Reservation, Span
+from aura.model import Discovery, Endpoint, NetworkLink, Reservation, Span
 from aura.nsi_comm import *
 from aura.settings import settings
-from aura.utils import update_service_termination_points_from_dds
+from aura.util import update_service_termination_points_from_dds
 
 #
 # NSI-AuRA = NSI ANA ultimate Requester Agent

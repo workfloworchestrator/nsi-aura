@@ -15,7 +15,7 @@
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import create_engine
 
-from aura.models import SQLModel
+from aura.model import SQLModel
 from aura.settings import settings
 
 engine = create_engine(f"sqlite:///{settings.DATABASE_DIRECTORY}/aura.db", echo=True)

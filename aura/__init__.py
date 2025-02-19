@@ -18,9 +18,9 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from aura.forms import router as forms_router
+from aura.form import router as form_router
 from aura.frontend import router as frontend_router
-from aura.routes import router as routes_router
+from aura.route import router as route_router
 
 app = FastAPI()
 
@@ -29,9 +29,9 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # include routes
-app.include_router(forms_router)
+app.include_router(form_router)
 app.include_router(frontend_router)
-app.include_router(routes_router)
+app.include_router(route_router)
 
 #
 # initialise NSI communications

@@ -17,7 +17,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from pytz import utc
 
 from aura.db import Session
-from aura.models import STP, Reservation
+from aura.model import STP, Reservation
 from aura.nsi_comm import nsi_send_provision, nsi_send_reserve, nsi_send_reserve_commit
 
 # Advanced Python Scheduler
