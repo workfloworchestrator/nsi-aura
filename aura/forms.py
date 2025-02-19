@@ -104,6 +104,10 @@ def post_form(form: Annotated[InputForm, fastui_form(InputForm)]):
     with Session.begin() as session:
         session.add(reservation)
         session.flush()
+        reservation_id = reservation.id
+    # make sure that the reservation is committed before triggering the action on nsi_send_reserve event below
+    with Session.begin() as session:
+        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
         csm = ConnectionStateMachine(reservation)
         csm.nsi_send_reserve()  # TODO: move this action behind a button on the reservation overview page
 
