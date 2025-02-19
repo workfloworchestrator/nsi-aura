@@ -1025,10 +1025,8 @@ def nsi_send_reserve(reservation: Reservation, source_stp: STP, dest_stp: STP) -
         correlationId=reservation.correlationId,
     )
     log.info("send reserve")
-    with open(Path.cwd() / "static" / NSI_RESERVE_TEMPLATE_XMLFILE) as template_file:
-        template = template_file.read()
     reserve_xml = generate_reserve_xml(
-        template,
+        reserve_templstr,
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         reservation.description,
@@ -1060,10 +1058,8 @@ def nsi_send_reserve_commit(reservation: Reservation) -> dict[str, str]:
         connectionId=reservation.connectionId,
     )
     log.info("send reserve commit")
-    with open(Path.cwd() / "static" / NSI_RESERVE_COMMIT_TEMPLATE_XMLFILE) as template_file:
-        template = template_file.read()
     soap_xml = generate_reserve_commit_xml(
-        template,
+        reserve_commit_templstr,
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         reservation.connectionId,
@@ -1085,10 +1081,8 @@ def nsi_send_provision(reservation: Reservation) -> dict[str, str]:
         connectionId=reservation.connectionId,
     )
     log.info("send provision")
-    with open(Path.cwd() / "static" / NSI_PROVISION_TEMPLATE_XMLFILE) as template_file:
-        template = template_file.read()
     soap_xml = generate_provision_xml(
-        template,
+        provision_templstr,
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         reservation.connectionId,
