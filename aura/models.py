@@ -94,8 +94,6 @@ class Reservation(SQLModel, table=True):
     dataPlaneStatus: str | None
     state: str  # Statemachine default state field name # TODO: this should replace other state's
     # state: str = Field(default=ConnectionStateMachine.ConnectionNew.value) # need to fix circular imports to use this
-    #     default=ConnectionStateMachine.ConnectionNew.value
-    # )
 
 
 #

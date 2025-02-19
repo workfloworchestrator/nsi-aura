@@ -1016,26 +1016,17 @@ def nsi_parse_topology_sdp_xml_tree(tree):
 logger = structlog.get_logger()
 
 
-def new_correlation_id_on_reservation(reservation_id: int) -> None:
-    from aura.db import Session
-
-    with Session.begin() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
-        reservation.correlationId = uuid4()
-
-
-def nsi_send_reserve(reservation_id: int) -> dict[str, str]:
-    from aura.db import Session
-
-    log = logger.bind(module=__name__, job=nsi_send_reserve.__name__, reservation_id=reservation_id)
+def nsi_send_reserve(reservation: Reservation, source_stp: STP, dest_stp: STP) -> dict[str, str]:
+    log = logger.bind(
+        module=__name__,
+        job=nsi_send_reserve.__name__,
+        reservation_id=reservation.id,
+        globalReservationId=reservation.globalReservationId,
+        correlationId=reservation.correlationId,
+    )
     log.info("send reserve")
     with open(Path.cwd() / "static" / NSI_RESERVE_TEMPLATE_XMLFILE) as template_file:
         template = template_file.read()
-    with Session() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
-        source_stp = session.query(STP).filter(STP.id == reservation.sourceSTP).one()  # TODO: replace with relation
-        dest_stp = session.query(STP).filter(STP.id == reservation.destSTP).one()  # TODO: replace with relation
-    log = log.bind(globalReservationId=reservation.globalReservationId, correlationId=reservation.correlationId)
     reserve_xml = generate_reserve_xml(
         template,
         reservation.correlationId,
@@ -1059,21 +1050,18 @@ def nsi_send_reserve(reservation_id: int) -> dict[str, str]:
     return retdict
 
 
-def nsi_send_reserve_commit(reservation_id: int) -> dict[str, str]:
-    from aura.db import Session
-
-    log = logger.bind(module=__name__, job=nsi_send_reserve_commit.__name__, reservation_id=reservation_id)
-    log.info("send reserve commit")
-    with open(Path.cwd() / "static" / NSI_RESERVE_COMMIT_TEMPLATE_XMLFILE) as template_file:
-        template = template_file.read()
-    new_correlation_id_on_reservation(reservation_id)
-    with Session() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
-    log = log.bind(
+def nsi_send_reserve_commit(reservation: Reservation) -> dict[str, str]:
+    log = logger.bind(
+        module=__name__,
+        job=nsi_send_reserve_commit.__name__,
+        reservation_id=reservation.id,
         reservationId=reservation.id,
         correlationId=str(reservation.correlationId),
         connectionId=reservation.connectionId,
     )
+    log.info("send reserve commit")
+    with open(Path.cwd() / "static" / NSI_RESERVE_COMMIT_TEMPLATE_XMLFILE) as template_file:
+        template = template_file.read()
     soap_xml = generate_reserve_commit_xml(
         template,
         reservation.correlationId,
@@ -1087,21 +1075,18 @@ def nsi_send_reserve_commit(reservation_id: int) -> dict[str, str]:
     return retdict
 
 
-def nsi_send_provision(reservation_id: int) -> dict[str, str]:
-    from aura.db import Session
-
-    log = logger.bind(module=__name__, job=nsi_send_provision.__name__, reservation_id=reservation_id)
-    log.info("send provision")
-    with open(Path.cwd() / "static" / NSI_PROVISION_TEMPLATE_XMLFILE) as template_file:
-        template = template_file.read()
-    new_correlation_id_on_reservation(reservation_id)
-    with Session() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
-    log = log.bind(
+def nsi_send_provision(reservation: Reservation) -> dict[str, str]:
+    log = logger.bind(
+        module=__name__,
+        job=nsi_send_provision.__name__,
+        reservation_id=reservation.id,
         reservationId=reservation.id,
         correlationId=str(reservation.correlationId),
         connectionId=reservation.connectionId,
     )
+    log.info("send provision")
+    with open(Path.cwd() / "static" / NSI_PROVISION_TEMPLATE_XMLFILE) as template_file:
+        template = template_file.read()
     soap_xml = generate_provision_xml(
         template,
         reservation.correlationId,
