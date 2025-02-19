@@ -11,67 +11,31 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import os
-from datetime import datetime, timedelta, timezone
 
-import structlog
 from apscheduler.schedulers.background import BackgroundScheduler
 from pytz import utc
 
-from aura import state
-from aura.models import STP, Reservation
-from aura.nsi_comm import (
-    NSI_RESERVE_TEMPLATE_XMLFILE,
-    URN_STP_NAME,
-    URN_STP_VLAN,
-    generate_reserve_xml,
-    nsi_soap_parse_reserve_reply,
-    nsi_util_post_soap,
-)
-from aura.settings import settings
+from aura.models import Reservation
+from aura.nsi_comm import nsi_send_provision, nsi_send_reserve, nsi_send_reserve_commit
 
 # Advanced Python Scheduler
 # scheduler = AsyncIOScheduler(event_loop=asyncio.get_running_loop(), timezone=utc)
 scheduler = BackgroundScheduler(timezone=utc)
 scheduler.start()
 
-logger = structlog.get_logger()
-
 
 def nsi_send_reserve_job(reservation_id: int) -> None:
     from aura.db import Session
 
-    log = logger.bind(module=__name__, job=nsi_send_reserve_job.__name__, reservation_id=reservation_id)
-    log.info("start nsi send reserve")
-    reserve_templpath = os.path.join(os.path.join(os.getcwd(), "static"), NSI_RESERVE_TEMPLATE_XMLFILE)
-    with open(reserve_templpath) as reserve_templfile:
-        reserve_templstr = reserve_templfile.read()
-    with Session() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
-        source_stp = session.query(STP).filter(STP.id == reservation.sourceSTP).one()  # TODO: replace with relation
-        dest_stp = session.query(STP).filter(STP.id == reservation.destSTP).one()  # TODO: replace with relation
-    # correlation_id = uuid4()
-    log = log.bind(globalReservationId=reservation.globalReservationId, correlationId=reservation.correlationId)
-    reserve_xml = generate_reserve_xml(
-        reserve_templstr,  # SOAP reserve template
-        reservation.correlationId,  # correlation id
-        str(settings.NSA_BASE_URL) + "api/nsi/callback/",  # reply-to url
-        reservation.description,  # reservation description
-        reservation.globalReservationId,  # global reservation id
-        reservation.startTime.replace(tzinfo=timezone.utc) if reservation.startTime else datetime.now(timezone.utc),
-        # start time, TODO: proper timezone handling
-        (
-            reservation.endTime.replace(tzinfo=timezone.utc)
-            if reservation.endTime
-            else datetime.now(timezone.utc) + timedelta(weeks=1040)
-        ),  # end time
-        {URN_STP_NAME: source_stp.urn_base, URN_STP_VLAN: reservation.sourceVlan},  # source stp dict
-        {URN_STP_NAME: dest_stp.urn_base, URN_STP_VLAN: reservation.destVlan},  # destination stp dict
-        state.global_provider_nsa_id,  # provider nsa id
-    )
-    soap_xml = nsi_util_post_soap(state.global_soap_provider_url, reserve_xml)
-    retdict = nsi_soap_parse_reserve_reply(soap_xml)
+    retdict = nsi_send_reserve(reservation_id)  # TODO: need error handling post soap failure
     with Session.begin() as session:
         reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
         reservation.connectionId = retdict["connectionId"]
-    log.info("nsi reserve successful", connectionId=retdict["connectionId"])
+
+
+def nsi_send_reserve_commit_job(reservation_id: int) -> None:
+    retdict = nsi_send_reserve_commit(reservation_id)  # TODO: need error handling on failed post soap
+
+
+def nsi_send_provision_job(reservation_id: int) -> None:
+    retdict = nsi_send_provision(reservation_id)  # TODO: need error handling on failed post soap

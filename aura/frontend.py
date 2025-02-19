@@ -71,12 +71,25 @@ async def nsi_callback(request: Request):
     with Session.begin() as session:
         reservation = session.query(Reservation).filter(Reservation.correlationId == correlationId).one()
         log = log.bind(
-            reservationId=reservation.id, correlationId=reservation.correlationId, connectionId=reservation.connectionId
+            reservationId=reservation.id,
+            correlationId=str(reservation.correlationId),
+            connectionId=reservation.connectionId,
         )
         csm = ConnectionStateMachine(reservation)
         match request.headers["soapaction"]:
             case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveFailed"':
                 log.warning("reserve failed")
                 csm.nsi_receive_reserve_failed()
+            case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveConfirmed"':
+                log.info("reserve confirmed")
+                csm.nsi_receive_reserve_confirmed()
+                csm.nsi_send_reserve_commit()  # TODO: decide if we want to auto commit or not
+            case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveCommitConfirmed"':
+                log.info("reserve commit confirmed")
+                csm.nsi_receive_reserve_commit_confirmed()
+                csm.nsi_send_provision()  # TODO: decide if we want to auto provision or not
+            case '"http://schemas.ogf.org/nsi/2013/12/connection/service/provisionConfirmed"':
+                log.info("provision confirmed")
+                csm.nsi_receive_provision_confirmed()
             case _:
                 log.error("no matching soap action")

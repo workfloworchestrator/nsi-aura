@@ -17,7 +17,7 @@ import structlog
 from statemachine import State, StateMachine
 from structlog.stdlib import BoundLogger
 
-from aura.job import nsi_send_reserve_job, scheduler
+from aura.job import nsi_send_provision_job, nsi_send_reserve_commit_job, nsi_send_reserve_job, scheduler
 
 logger = structlog.get_logger(__name__)
 
@@ -97,9 +97,14 @@ class ConnectionStateMachine(AuraStateMachine):
     )
     # fmt: on
 
-    # @nsi_send_reserve.after
     def on_nsi_send_reserve(self):
         scheduler.add_job(nsi_send_reserve_job, args=[self.model.id])
+
+    def on_nsi_send_reserve_commit(self):
+        scheduler.add_job(nsi_send_reserve_commit_job, args=[self.model.id])
+
+    def on_nsi_send_provision(self):
+        scheduler.add_job(nsi_send_provision_job, args=[self.model.id])
 
 
 if __name__ == "__main__":

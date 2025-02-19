@@ -24,14 +24,19 @@ import datetime
 #
 import os
 import traceback
-import uuid
 import zlib
+from datetime import datetime, timedelta, timezone
 from io import BytesIO
+from pathlib import Path
+from uuid import UUID, uuid4
 
 import requests
+import structlog
 from lxml import etree
 from urllib3.util.retry import Retry
 
+from aura import state
+from aura.models import STP, Reservation
 from aura.settings import settings
 
 #
@@ -176,8 +181,7 @@ S_CHILD_TAG = "child"
 
 
 def generate_uuid():
-    myuuid = uuid.uuid4()
-    return myuuid
+    return uuid4().urn
 
 
 URN_UUID_PREFIX = "urn:uuid:"
@@ -1007,6 +1011,111 @@ def nsi_parse_topology_sdp_xml_tree(tree):
 
 
 #
+# new NSI SAOP request interface
+#
+logger = structlog.get_logger()
+
+
+def new_correlation_id_on_reservation(reservation_id: int) -> None:
+    from aura.db import Session
+
+    with Session.begin() as session:
+        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
+        reservation.correlationId = uuid4()
+
+
+def nsi_send_reserve(reservation_id: int) -> dict[str, str]:
+    from aura.db import Session
+
+    log = logger.bind(module=__name__, job=nsi_send_reserve.__name__, reservation_id=reservation_id)
+    log.info("send reserve")
+    with open(Path.cwd() / "static" / NSI_RESERVE_TEMPLATE_XMLFILE) as template_file:
+        template = template_file.read()
+    with Session() as session:
+        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
+        source_stp = session.query(STP).filter(STP.id == reservation.sourceSTP).one()  # TODO: replace with relation
+        dest_stp = session.query(STP).filter(STP.id == reservation.destSTP).one()  # TODO: replace with relation
+    log = log.bind(globalReservationId=reservation.globalReservationId, correlationId=reservation.correlationId)
+    reserve_xml = generate_reserve_xml(
+        template,
+        reservation.correlationId,
+        str(settings.NSA_BASE_URL) + "api/nsi/callback/",
+        reservation.description,
+        reservation.globalReservationId.urn,
+        reservation.startTime.replace(tzinfo=timezone.utc) if reservation.startTime else datetime.now(timezone.utc),
+        # start time, TODO: proper timezone handling
+        (
+            reservation.endTime.replace(tzinfo=timezone.utc)
+            if reservation.endTime
+            else datetime.now(timezone.utc) + timedelta(weeks=1040)
+        ),  # end time
+        {URN_STP_NAME: source_stp.urn_base, URN_STP_VLAN: reservation.sourceVlan},
+        {URN_STP_NAME: dest_stp.urn_base, URN_STP_VLAN: reservation.destVlan},
+        state.global_provider_nsa_id,
+    )
+    soap_xml = nsi_util_post_soap(state.global_soap_provider_url, reserve_xml)
+    retdict = nsi_soap_parse_reserve_reply(soap_xml)  # TODO: need error handling post soap failure
+    log.info("reserve successful", connectionId=retdict["connectionId"])
+    return retdict
+
+
+def nsi_send_reserve_commit(reservation_id: int) -> dict[str, str]:
+    from aura.db import Session
+
+    log = logger.bind(module=__name__, job=nsi_send_reserve_commit.__name__, reservation_id=reservation_id)
+    log.info("send reserve commit")
+    with open(Path.cwd() / "static" / NSI_RESERVE_COMMIT_TEMPLATE_XMLFILE) as template_file:
+        template = template_file.read()
+    new_correlation_id_on_reservation(reservation_id)
+    with Session() as session:
+        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
+    log = log.bind(
+        reservationId=reservation.id,
+        correlationId=str(reservation.correlationId),
+        connectionId=reservation.connectionId,
+    )
+    soap_xml = generate_reserve_commit_xml(
+        template,
+        reservation.correlationId,
+        str(settings.NSA_BASE_URL) + "api/nsi/callback/",
+        reservation.connectionId,
+        state.global_provider_nsa_id,
+    )
+    soap_xml = nsi_util_post_soap(state.global_soap_provider_url, soap_xml)
+    retdict = nsi_soap_parse_reserve_commit_reply(soap_xml)  # TODO: need error handling on failed post soap
+    log.info("reserve commit successful")
+    return retdict
+
+
+def nsi_send_provision(reservation_id: int) -> dict[str, str]:
+    from aura.db import Session
+
+    log = logger.bind(module=__name__, job=nsi_send_provision.__name__, reservation_id=reservation_id)
+    log.info("send provision")
+    with open(Path.cwd() / "static" / NSI_PROVISION_TEMPLATE_XMLFILE) as template_file:
+        template = template_file.read()
+    new_correlation_id_on_reservation(reservation_id)
+    with Session() as session:
+        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
+    log = log.bind(
+        reservationId=reservation.id,
+        correlationId=str(reservation.correlationId),
+        connectionId=reservation.connectionId,
+    )
+    soap_xml = generate_provision_xml(
+        template,
+        reservation.correlationId,
+        str(settings.NSA_BASE_URL) + "api/nsi/callback/",
+        reservation.connectionId,
+        state.global_provider_nsa_id,
+    )
+    soap_xml = nsi_util_post_soap(state.global_soap_provider_url, soap_xml)
+    retdict = nsi_soap_parse_provision_reply(soap_xml)  # TODO: need error handling on failed post soap
+    log.info("provision successful")
+    return retdict
+
+
+#
 # SOAP functions
 #
 def nsi_connections_query(request_url, callback_url_prefix, provider_nsa_id):
@@ -1038,7 +1147,7 @@ def nsi_connections_query(request_url, callback_url_prefix, provider_nsa_id):
 
 def nsi_reserve(
     request_url,
-    expect_correlation_uuid_py: uuid.UUID,
+    expect_correlation_uuid_py: UUID,
     orch_reply_to_url: str,
     provider_nsa_id: str,
     epnamea: str,
@@ -1047,7 +1156,7 @@ def nsi_reserve(
     epvlanz: int,
     linkname: str,
     linkid: int,
-    duration_td: datetime.timedelta,
+    duration_td: timedelta,
 ):
     """NSI RESERVE(SOAP-template,)
     Normally, the nsi_ code can generate the correlationID. For testing I sometimes need to
@@ -1085,7 +1194,7 @@ def nsi_reserve(
 
         print("RESERVE: Got connectionId", retdict)
         # TODO: do type checking inside nsi_soap_parse()
-        got_correlation_uuid_py = uuid.UUID(retdict["correlationId"])
+        got_correlation_uuid_py = UUID(retdict["correlationId"])
         if got_correlation_uuid_py != expect_correlation_uuid_py:
             raise Exception("correlationId received in reply does not match the one sent in request.")
 
@@ -1158,7 +1267,7 @@ def nsi_provision(request_url, callback_url_prefix: str, provider_nsa_id: str, c
 
         print("PROVISION: GOT HTTP REPLY", soap_xml)
 
-        retdict = nsi_soap_parse_provison_reply(soap_xml)
+        retdict = nsi_soap_parse_provision_reply(soap_xml)
 
         print("PROVISION: Got correlationId", retdict)
         # TODO: verify correlationId in reply are the same as in request
@@ -1328,7 +1437,7 @@ def nsi_soap_parse_callback(body):
         print("CALLBACK: Found correlationId", tag.text)
         correlation_urn = tag.text
         # Checks input format
-        correlation_uuid = uuid.UUID(correlation_urn)
+        correlation_uuid = UUID(correlation_urn)
         return correlation_uuid
     print("CALLBACK: Could not find correlationId", body)
     raise Exception("correlationId not found in callback")
@@ -1466,7 +1575,7 @@ def nsi_soap_parse_reserve_commit_reply(soap_xml):
     return nsi_soap_parse_correlationid_reply(soap_xml)
 
 
-def nsi_soap_parse_provison_reply(soap_xml):
+def nsi_soap_parse_provision_reply(soap_xml):
     return nsi_soap_parse_correlationid_reply(soap_xml)
 
 
