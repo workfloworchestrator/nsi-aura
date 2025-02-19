@@ -12,17 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from fastapi import APIRouter
+import structlog
+from fastapi import APIRouter, Request
 from fastui import AnyComponent, FastUI
 from fastui import components as c
 from fastui.events import BackEvent, GoToEvent
 
 from aura.db import Session
+from aura.fsm import ConnectionStateMachine
 from aura.models import STP, Reservation
 from aura.nsi_aura import create_footer
+from aura.nsi_comm import nsi_soap_parse_callback
 from aura.settings import settings
 
 router = APIRouter()
+
+logger = structlog.get_logger()
 
 
 @router.get("/api/database/", response_model=FastUI, response_model_exclude_none=True)
@@ -53,3 +58,25 @@ def fastapi_database_tables() -> list[AnyComponent]:
             ]
         ),
     ]
+
+
+@router.post("/api/nsi/callback/")
+async def nsi_callback(request: Request):
+    """Receive and process NSI async callback."""
+    from aura.db import Session
+
+    log = logger.bind(module=__name__, job=nsi_callback.__name__)
+    body = await request.body()
+    correlationId = nsi_soap_parse_callback(body)
+    with Session.begin() as session:
+        reservation = session.query(Reservation).filter(Reservation.correlationId == correlationId).one()
+        log = log.bind(
+            reservationId=reservation.id, correlationId=reservation.correlationId, connectionId=reservation.connectionId
+        )
+        csm = ConnectionStateMachine(reservation)
+        match request.headers["soapaction"]:
+            case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveFailed"':
+                log.warning("reserve failed")
+                csm.nsi_receive_reserve_failed()
+            case _:
+                log.error("no matching soap action")
