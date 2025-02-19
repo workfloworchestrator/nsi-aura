@@ -92,21 +92,15 @@ class Reservation(SQLModel, table=True):
     reservationState: str | None
     lifecycleState: str | None
     dataPlaneStatus: str | None
-    connectionStatus: str  # TODO: this should replace other state's
+    state: str  # Statemachine default state field name # TODO: this should replace other state's
+    # state: str = Field(default=ConnectionStateMachine.ConnectionNew.value) # need to fix circular imports to use this
     #     default=ConnectionStateMachine.ConnectionNew.value
     # )
-
-
-# 1 dummy reservation
-DUMMY_CONNECTION_ID_STR = "d940e5b1-ed22-4c1a-ae09-10f20e4bd267"  # without urn:uuid: prefix.
-DUMMY_CORRELATION_ID_STR = "a3eb6740-7227-473b-af6f-6705d489407c"  # without urn:uuid: prefix.
 
 
 #
 # Span i.e. a Connection i,e., two STPs that are connected, e.g. for showing a path
 #
-
-
 class Span(BaseModel):
     id: int
     connectionId: str  # connectionId UUID

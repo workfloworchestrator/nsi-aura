@@ -27,7 +27,6 @@ from pydantic import BaseModel, Field
 
 from aura.db import Session
 from aura.fsm import ConnectionStateMachine
-from aura.job import nsi_send_reserve_job, scheduler
 from aura.models import STP, Bandwidth, Reservation, Vlan
 from aura.settings import settings
 
@@ -100,15 +99,13 @@ def post_form(form: Annotated[InputForm, fastui_form(InputForm)]):
         bandwidth=form.bandwidth,
         startTime=form.startTime,
         endTime=form.endTime,
-        connectionStatus=ConnectionStateMachine.ConnectionNew.value,
+        state=ConnectionStateMachine.ConnectionNew.value,
     )
     with Session.begin() as session:
         session.add(reservation)
         session.flush()
-        reservation_id = reservation.id
-        csm = ConnectionStateMachine(reservation, state_field="connectionStatus")
+        csm = ConnectionStateMachine(reservation)
         csm.nsi_send_reserve()  # TODO: move this action behind a button on the reservation overview page
-    scheduler.add_job(nsi_send_reserve_job, args=[reservation_id])
 
     return [c.FireEvent(event=GoToEvent(url="/"))]
 

@@ -14,7 +14,7 @@
 
 import threading
 
-from aura.models import DUMMY_CONNECTION_ID_STR, Endpoint, NetworkLink, Reservation
+from aura.models import Endpoint, NetworkLink, Reservation
 from aura.settings import settings
 
 #
@@ -22,6 +22,10 @@ from aura.settings import settings
 #
 ONLINE = False
 global_provider_nsa_id = ""
+
+# 1 dummy reservation
+DUMMY_CONNECTION_ID_STR = "d940e5b1-ed22-4c1a-ae09-10f20e4bd267"  # without urn:uuid: prefix.
+DUMMY_CORRELATION_ID_STR = "a3eb6740-7227-473b-af6f-6705d489407c"  # without urn:uuid: prefix.
 
 # define some endpoints
 global_endpoints = [
