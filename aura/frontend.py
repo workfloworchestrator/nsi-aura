@@ -20,6 +20,7 @@ from fastui.events import BackEvent, GoToEvent
 
 from aura.db import Session
 from aura.fsm import ConnectionStateMachine
+from aura.job import nsi_send_provision_job, nsi_send_reserve_commit_job, scheduler
 from aura.model import STP, Reservation
 from aura.nsi_aura import create_footer
 from aura.nsi_comm import nsi_soap_parse_callback
@@ -75,6 +76,7 @@ async def nsi_callback(request: Request):
             correlationId=str(reservation.correlationId),
             connectionId=reservation.connectionId,
         )
+        # update connection state machine
         csm = ConnectionStateMachine(reservation)
         match request.headers["soapaction"]:
             case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveFailed"':
@@ -93,3 +95,10 @@ async def nsi_callback(request: Request):
                 csm.nsi_receive_provision_confirmed()
             case _:
                 log.error("no matching soap action")
+        reservation_id = reservation.id
+    # start job that corresponds with above state transition # TODO decide if we want to auto commit/provision or not
+    match request.headers["soapaction"]:
+        case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveConfirmed"':
+            scheduler.add_job(nsi_send_reserve_commit_job, args=[reservation_id])
+        case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveCommitConfirmed"':
+            scheduler.add_job(nsi_send_provision_job, args=[reservation_id])

@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 
 from aura.db import Session
 from aura.fsm import ConnectionStateMachine
+from aura.job import nsi_send_reserve_job, scheduler
 from aura.model import STP, Bandwidth, Reservation, Vlan
 from aura.settings import settings
 
@@ -87,7 +88,7 @@ def search_view() -> SelectSearchResponse:
 
 @router.post("/api/forms/post_form/", response_model=FastUI, response_model_exclude_none=True)
 def post_form(form: Annotated[InputForm, fastui_form(InputForm)]):
-    """Store values from input form in reservation database."""
+    """Store values from input form in reservation database and start NSI reserve job."""
     reservation = Reservation(
         globalReservationId=uuid4(),
         correlationId=uuid4(),
@@ -105,11 +106,9 @@ def post_form(form: Annotated[InputForm, fastui_form(InputForm)]):
         session.add(reservation)
         session.flush()
         reservation_id = reservation.id
-    # make sure that the reservation is committed before triggering the action on nsi_send_reserve event below
-    with Session.begin() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
         csm = ConnectionStateMachine(reservation)
         csm.nsi_send_reserve()  # TODO: move this action behind a button on the reservation overview page
+    scheduler.add_job(nsi_send_reserve_job, args=[reservation_id])
 
     return [c.FireEvent(event=GoToEvent(url="/"))]
 
