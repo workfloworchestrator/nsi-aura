@@ -162,6 +162,7 @@ NSI_RESERVATION_TIMEOUT_STATE = "ReserveTimeout"
 #
 S_CORRELATION_ID_TAG = "correlationId"
 
+S_SERVICE_EXCEPTION_TAG = "serviceException"
 
 S_FAULTSTRING_TAG = "faultstring"
 
@@ -1054,14 +1055,14 @@ def nsi_send_reserve_commit(reservation: Reservation) -> dict[str, str]:
         reservation_id=reservation.id,
         reservationId=reservation.id,
         correlationId=str(reservation.correlationId),
-        connectionId=reservation.connectionId,
+        connectionId=str(reservation.connectionId),
     )
     log.info("send reserve commit")
     soap_xml = generate_reserve_commit_xml(
         reserve_commit_templstr,
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
-        reservation.connectionId,
+        str(reservation.connectionId),
         state.global_provider_nsa_id,
     )
     soap_xml = nsi_util_post_soap(state.global_soap_provider_url, soap_xml)
@@ -1077,14 +1078,14 @@ def nsi_send_provision(reservation: Reservation) -> dict[str, str]:
         reservation_id=reservation.id,
         reservationId=reservation.id,
         correlationId=str(reservation.correlationId),
-        connectionId=reservation.connectionId,
+        connectionId=str(reservation.connectionId),
     )
     log.info("send provision")
     soap_xml = generate_provision_xml(
         provision_templstr,
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
-        reservation.connectionId,
+        str(reservation.connectionId),
         state.global_provider_nsa_id,
     )
     soap_xml = nsi_util_post_soap(state.global_soap_provider_url, soap_xml)
@@ -1419,6 +1420,23 @@ def nsi_soap_parse_callback(body):
         return correlation_uuid
     print("CALLBACK: Could not find correlationId", body)
     raise Exception("correlationId not found in callback")
+
+
+def nsi_soap_parse_error_event(body):
+    """Extracts connectionId and serviceException from Aggregator async errorEvent.
+    @return UUID as UUID class
+    """
+    tree = nsi_util_parse_xml(body)
+    element = tree.find(FIND_ANYWHERE_PREFIX + S_CONNECTION_ID_TAG)
+    if element is not None:
+        print("CALLBACK: Found connectionId", element.text)
+        connectionId = UUID(element.text)
+        element = tree.find(FIND_ANYWHERE_PREFIX + S_SERVICE_EXCEPTION_TAG)
+        if element is not None:
+            print("CALLBACK: Found serviceException")
+            return connectionId, {element.tag: element.text for element in element.iter()}
+    print("CALLBACK: Could not find connectionId and/or serviceException in errorEvent", body)
+    raise Exception("errorEvent not found in callback")
 
 
 def content_type_is_valid_soap(content_type):

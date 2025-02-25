@@ -11,7 +11,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from pytz import utc
@@ -40,7 +40,7 @@ def nsi_send_reserve_job(reservation_id: int) -> None:
     retdict = nsi_send_reserve(reservation, source_stp, dest_stp)  # TODO: need error handling post soap failure
     with Session.begin() as session:
         reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
-        reservation.connectionId = retdict["connectionId"]
+        reservation.connectionId = UUID(retdict["connectionId"])  # TODO: make nsi_comm return a UUID
 
 
 def nsi_send_reserve_commit_job(reservation_id: int) -> None:

@@ -78,7 +78,7 @@ class Reservation(SQLModel, table=True):
     """TODO: class should be renamed to `Connection`."""
 
     id: int | None = Field(default=None, primary_key=True)
-    connectionId: str | None
+    connectionId: UUID | None
     globalReservationId: UUID | None
     correlationId: UUID | None
     description: str

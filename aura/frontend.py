@@ -23,7 +23,7 @@ from aura.fsm import ConnectionStateMachine
 from aura.job import nsi_send_provision_job, nsi_send_reserve_commit_job, scheduler
 from aura.model import STP, Reservation
 from aura.nsi_aura import create_footer
-from aura.nsi_comm import nsi_soap_parse_callback
+from aura.nsi_comm import nsi_soap_parse_callback, nsi_soap_parse_error_event
 from aura.settings import settings
 
 router = APIRouter()
@@ -68,13 +68,17 @@ async def nsi_callback(request: Request):
 
     log = logger.bind(module=__name__, job=nsi_callback.__name__)
     body = await request.body()
-    correlationId = nsi_soap_parse_callback(body)
     with Session.begin() as session:
-        reservation = session.query(Reservation).filter(Reservation.correlationId == correlationId).one()
+        if request.headers["soapaction"] == '"http://schemas.ogf.org/nsi/2013/12/connection/service/errorEvent"':
+            connectionId, error_event_dict = nsi_soap_parse_error_event(body)
+            reservation = session.query(Reservation).filter(Reservation.connectionId == connectionId).one()
+        else:
+            correlationId = nsi_soap_parse_callback(body)
+            reservation = session.query(Reservation).filter(Reservation.correlationId == correlationId).one()
         log = log.bind(
             reservationId=reservation.id,
             correlationId=str(reservation.correlationId),
-            connectionId=reservation.connectionId,
+            connectionId=str(reservation.connectionId),
         )
         # update connection state machine
         csm = ConnectionStateMachine(reservation)
@@ -93,6 +97,9 @@ async def nsi_callback(request: Request):
             case '"http://schemas.ogf.org/nsi/2013/12/connection/service/provisionConfirmed"':
                 log.info("provision confirmed")
                 csm.nsi_receive_provision_confirmed()
+            case '"http://schemas.ogf.org/nsi/2013/12/connection/service/errorEvent"':
+                log.info("error event", text=error_event_dict["text"], body=body)
+                csm.nsi_receive_error_event()
             case _:
                 log.error("no matching soap action")
         reservation_id = reservation.id
