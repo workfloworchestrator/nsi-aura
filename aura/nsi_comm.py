@@ -27,6 +27,7 @@ import traceback
 import zlib
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
+from typing import Any
 from uuid import UUID, uuid4
 
 import requests
@@ -579,6 +580,99 @@ def nsi_util_parse_xml(xml):
     xml_file = BytesIO(xml)
     tree = etree.parse(xml_file)
     return tree
+
+
+#
+# Example dicts
+#
+# {'Header': {'nsiHeader': {'correlationId': UUID('4f0a4f6b-1187-4670-b451-bb8005105ba5'),
+#                           'pathTrace': {'connectionId': UUID('1153d8ed-f97b-4f01-b529-af8080980ea9'),
+#                                         'id': 'urn:ogf:network:ana.dlp.surfnet.nl:2024:nsa:safnari',
+#                                         'path': {'segment': {'connectionId': UUID('60a998cd-4295-4253-b8b8-4f5c8edd9891'),
+#                                                              'id': 'urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:nsa:supa',
+#                                                              'order': '0'}}},
+#                           'protocolVersion': 'application/vnd.ogf.nsi.cs.v2.requester+soap',
+#                           'providerNSA': 'urn:ogf:network:ana.dlp.surfnet.nl:2024:nsa:safnari',
+#                           'requesterNSA': 'urn:ogf:network:anaeng.global:2024:nsa:nsi-aura'}},
+#  'Body': {'reserveConfirmed': {'connectionId': UUID('1153d8ed-f97b-4f01-b529-af8080980ea9'),
+#                                'criteria': {'p2ps': {'capacity': '1000',
+#                                                      'destSTP': 'urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:ana-moxy:research-1?vlan=147',
+#                                                      'directionality': 'Bidirectional',
+#                                                      'sourceSTP': 'urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:ana-moxy:hpc-1?vlan=3762',
+#                                                      'symmetricPath': 'true'},
+#                                             'schedule': {'endTime': datetime.datetime(2025, 2, 26, 11, 1, tzinfo=datetime.timezone.utc),
+#                                                          'startTime': datetime.datetime(2025, 2, 26, 10, 59, tzinfo=datetime.timezone.utc)},
+#                                             'serviceType': 'http://services.ogf.org/nsi/2013/12/descriptions/EVTS.A-GOLE',
+#                                             'version': '1'}}}}
+#
+#
+# {'Header': {'nsiHeader': {'correlationId': UUID('4ab41cb2-8b04-4ba9-9c68-e736b9091b2e'),
+#                           'protocolVersion': 'application/vnd.ogf.nsi.cs.v2.requester+soap',
+#                           'providerNSA': 'urn:ogf:network:ana.dlp.surfnet.nl:2024:nsa:safnari',
+#                           'requesterNSA': 'urn:ogf:network:anaeng.global:2024:nsa:nsi-aura'}},
+#  'Body': {'reserveCommitConfirmed': {'connectionId': UUID('1153d8ed-f97b-4f01-b529-af8080980ea9')}}}
+#
+#
+# {'Header': {'nsiHeader': {'protocolVersion': 'application/vnd.ogf.nsi.cs.v2.requester+soap',
+#                           'correlationId': UUID('2e4cb8d7-41f8-4133-aab5-59369f42b088'),
+#                           'requesterNSA': 'urn:ogf:network:anaeng.global:2024:nsa:nsi-aura',
+#                           'providerNSA': 'urn:ogf:network:ana.dlp.surfnet.nl:2024:nsa:safnari'}},
+#  'Body': {'errorEvent': {'connectionId': UUID('0e092969-c8f7-4f2f-b115-6271fd5a87f7'),
+#                          'notificationId': '1',
+#                          'timeStamp': datetime.datetime(2025, 2, 26, 11, 13, 0, 344533, tzinfo=datetime.timezone.utc),
+#                          'event': 'activateFailed',
+#                          'originatingConnectionId': 'ff484dde-b9c8-4ec9-b863-f3d9c9fe2b3c',
+#                          'originatingNSA': 'urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:nsa:supa',
+#                          'additionalInfo': {},
+#                          'serviceException': {'nsaId': 'urn:ogf:network:ana.dlp.surfnet.nl:2024:nsa:safnari',
+#                                               'connectionId': UUID('0e092969-c8f7-4f2f-b115-6271fd5a87f7'),
+#                                               'serviceType': {},
+#                                               'errorId': '00800',
+#                                               'text': 'GENERIC_RM_ERROR: An internal (N)RM error has caused a '
+#                                                       'message processing failure.',
+#                                               'childException': {'nsaId': 'urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:nsa:supa',
+#                                                                  'connectionId': UUID('ff484dde-b9c8-4ec9-b863-f3d9c9fe2b3c'),
+#                                                                  'serviceType': {},
+#                                                                  'errorId': '00800',
+#                                                                  'text': 'GENERIC_RM_ERROR: An internal (N)RM error '
+#                                                                          'has caused a message processing failure. ',
+#                                                                  'variables': {}}}}}}
+#
+def nsi_util_element_to_dict(node, attributes=True):
+    """Convert an lxml.etree node tree into a dict."""
+    result = {}
+    if attributes:
+        for item in node.attrib.items():
+            key, result[key] = item
+
+    for element in node.iterchildren():
+        # Remove namespace prefix
+        key = etree.QName(element).localname
+
+        # Process element as tree element if the inner XML contains non-whitespace content
+        if element.text and element.text.strip():
+            if key in ("connectionId", "correlationId"):
+                value = UUID(element.text)
+            elif key in ("timeStamp", "startTime", "endTime"):
+                value = datetime.fromisoformat(element.text)
+            else:
+                value = element.text
+        else:
+            value = nsi_util_element_to_dict(element)
+        # Create a list of values for multiple identical keys
+        if key in result:
+            if type(result[key]) is list:
+                result[key].append(value)
+            else:
+                result[key] = [result[key], value]
+        else:
+            result[key] = value
+    return result
+
+
+def nsi_util_xml_to_dict(xml: bytes) -> dict[Any, Any]:
+    """Convert XML string to dict."""
+    return nsi_util_element_to_dict(etree.fromstring(xml))
 
 
 # Read discover information, return dict with found services
