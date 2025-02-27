@@ -17,8 +17,10 @@ from typing import Annotated
 from uuid import UUID
 
 from annotated_types import Ge, Gt, Le, doc
-from pydantic import BaseModel
-from sqlmodel import Field, SQLModel
+from pydantic import BaseModel, computed_field
+from sqlalchemy.orm import column_property
+from sqlalchemy.testing.schema import mapped_column
+from sqlmodel import Field, SQLModel, select
 
 #
 # Types
@@ -75,8 +77,6 @@ class NetworkLink(BaseModel):
 
 
 class Reservation(SQLModel, table=True):
-    """TODO: class should be renamed to `Connection`."""
-
     id: int | None = Field(default=None, primary_key=True)
     connectionId: UUID | None
     globalReservationId: UUID | None
@@ -84,16 +84,32 @@ class Reservation(SQLModel, table=True):
     description: str
     startTime: datetime | None
     endTime: datetime | None
-    sourceSTP: int
-    destSTP: int
+    sourceStpId: int = mapped_column()
+    destStpId: int = mapped_column()
     sourceVlan: Vlan
     destVlan: Vlan
     bandwidth: Bandwidth
-    reservationState: str | None
-    lifecycleState: str | None
-    dataPlaneStatus: str | None
-    state: str  # Statemachine default state field name # TODO: this should replace other state's
+    state: str  # Statemachine default state field name
     # state: str = Field(default=ConnectionStateMachine.ConnectionNew.value) # need to fix circular imports to use this
+
+    @computed_field
+    @property
+    def sourceStp(self) -> str:
+        return self._sourceStp
+
+    @computed_field
+    @property
+    def destStp(self) -> str:
+        return self._destStp
+
+
+# workaround to use column_property with SQLModel by injecting the scalar subquery after the class definition
+Reservation._sourceStp = column_property(
+    select(STP.description).where(STP.id == Reservation.sourceStpId).correlate_except(STP).scalar_subquery()
+)
+Reservation._destStp = column_property(
+    select(STP.description).where(STP.id == Reservation.destStpId).correlate_except(STP).scalar_subquery()
+)
 
 
 #

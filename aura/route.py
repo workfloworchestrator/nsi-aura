@@ -108,6 +108,7 @@ def fastapi_landing_page(request: Request) -> list[AnyComponent]:
     selecta_url = str(settings.SERVER_URL_PREFIX) + "selecta/"
     query_url = str(settings.SERVER_URL_PREFIX) + "query/"
     database_url = str(settings.SERVER_URL_PREFIX) + "database/"
+    reservations_url = str(settings.SERVER_URL_PREFIX) + "reservations/"
     input_form_url = str(settings.SERVER_URL_PREFIX) + "forms/input_form/"
 
     # Check if authorized
@@ -154,6 +155,10 @@ def fastapi_landing_page(request: Request) -> list[AnyComponent]:
                 c.Link(
                     components=[c.Paragraph(text="Show database tables")],
                     on_click=GoToEvent(url=database_url),
+                ),
+                c.Link(
+                    components=[c.Paragraph(text="Show reservations")],
+                    on_click=GoToEvent(url=reservations_url),
                 ),
                 create_footer(),
             ]

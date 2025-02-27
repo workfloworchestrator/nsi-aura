@@ -613,6 +613,19 @@ def nsi_util_parse_xml(xml):
 #  'Body': {'reserveCommitConfirmed': {'connectionId': UUID('1153d8ed-f97b-4f01-b529-af8080980ea9')}}}
 #
 #
+# {'Header': {'nsiHeader': {'protocolVersion': 'application/vnd.ogf.nsi.cs.v2.provider+soap',
+#                           'correlationId': UUID('53100ae8-3544-434d-8f42-ea0e1f0951d8'),
+#                           'requesterNSA': 'urn:ogf:network:anaeng.global:2024:nsa:nsi-aura',
+#                           'providerNSA': 'urn:ogf:network:ana.dlp.surfnet.nl:2024:nsa:safnari'}},
+#  'Body': {'Fault': {'faultcode': 'soapenv:Server',
+#                     'faultstring': 'Connection state machine is in invalid state for received message',
+#                     'detail': {'serviceException': {'nsaId': 'urn:ogf:network:ana.dlp.surfnet.nl:2024:nsa:safnari',
+#                                                     'errorId': '00201',
+#                                                     'text': 'Connection state machine is in invalid state for '
+#                                                             'received message',
+#                                                     'variables': {}}}}}}
+#
+#
 # {'Header': {'nsiHeader': {'protocolVersion': 'application/vnd.ogf.nsi.cs.v2.requester+soap',
 #                           'correlationId': UUID('2e4cb8d7-41f8-4133-aab5-59369f42b088'),
 #                           'requesterNSA': 'urn:ogf:network:anaeng.global:2024:nsa:nsi-aura',
@@ -1186,6 +1199,19 @@ def nsi_send_provision(reservation: Reservation) -> dict[str, str]:
     retdict = nsi_soap_parse_provision_reply(soap_xml)  # TODO: need error handling on failed post soap
     log.info("provision successful")
     return retdict
+
+
+def nsi_send_terminate(reservation: Reservation) -> dict[str, str]:
+    soap_xml = generate_terminate_xml(
+        provision_templstr,
+        reservation.correlationId,
+        str(settings.NSA_BASE_URL) + "api/nsi/callback/",
+        str(reservation.connectionId),
+        state.global_provider_nsa_id,
+    )
+    soap_xml = nsi_util_post_soap(state.global_soap_provider_url, soap_xml)
+    reply_dict = nsi_util_xml_to_dict(soap_xml)
+    return reply_dict
 
 
 #
