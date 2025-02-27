@@ -18,6 +18,6 @@ from sqlmodel import create_engine
 from aura.model import SQLModel
 from aura.settings import settings
 
-engine = create_engine(f"sqlite:///{settings.DATABASE_DIRECTORY}/aura.db", echo=True)
+engine = create_engine(f"sqlite:///{settings.DATABASE_DIRECTORY}/aura.db", echo=settings.SQL_LOGGING)
 SQLModel.metadata.create_all(engine)
 Session = sessionmaker(engine)

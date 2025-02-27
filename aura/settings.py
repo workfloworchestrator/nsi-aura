@@ -71,5 +71,8 @@ class Settings(BaseSettings):
         """External base URL of this NSA."""
         return HttpUrl(f"{self.NSA_SCHEME}://{self.NSA_HOST}:{self.NSA_PORT}{self.NSA_PATH_PREFIX}")
 
+    # Logging
+    SQL_LOGGING: bool = False
+
 
 settings = Settings(_env_file="aura.env")
