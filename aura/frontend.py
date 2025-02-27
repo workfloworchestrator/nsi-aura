@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import asyncio
 
 import structlog
 from fastapi import APIRouter, Request
@@ -22,7 +21,13 @@ from fastui.events import BackEvent, GoToEvent, PageEvent
 
 from aura.db import Session
 from aura.fsm import ConnectionStateMachine
-from aura.job import gui_terminate_connection_job, nsi_send_provision_job, nsi_send_reserve_commit_job, scheduler
+from aura.job import (
+    gui_terminate_connection_job,
+    nsi_send_provision_job,
+    nsi_send_reserve_commit_job,
+    nsi_send_reserve_job,
+    scheduler,
+)
 from aura.model import STP, Reservation
 from aura.nsi_aura import create_footer
 from aura.nsi_comm import nsi_util_xml_to_dict
@@ -136,15 +141,18 @@ def reservation_details(id: int) -> list[AnyComponent]:
                     on_click=PageEvent(name="modal-terminate-reservation"),
                     class_name="+ ms-2",
                 ),
+                c.Button(
+                    text="Reprovision Reservation",
+                    on_click=PageEvent(name="modal-reprovision-reservation"),
+                    class_name="+ ms-2",
+                ),
                 c.Modal(
-                    title="Form Prompt",
+                    title=f"Terminate reservation {reservation.description}?",
                     body=[
                         c.Paragraph(text="Are you sure you want to terminate this reservation?"),
                         c.Form(
-                            # form_fields=[FormFieldInput(title= "id", name='id', initial=reservation.id)],
                             form_fields=[],
                             submit_url=f"/api/reservations/{reservation.id}/terminate",
-                            loading=[c.Spinner(text="Starting terminating reservation ...")],
                             footer=[],
                             submit_trigger=PageEvent(name="modal-terminate-reservation-submit"),
                         ),
@@ -155,9 +163,36 @@ def reservation_details(id: int) -> list[AnyComponent]:
                             named_style="secondary",
                             on_click=PageEvent(name="modal-terminate-reservation", clear=True),
                         ),
-                        c.Button(text="Submit", on_click=PageEvent(name="modal-terminate-reservation-submit")),
+                        c.Button(
+                            text="Submit",
+                            on_click=PageEvent(name="modal-terminate-reservation-submit"),
+                        ),
                     ],
                     open_trigger=PageEvent(name="modal-terminate-reservation"),
+                ),
+                c.Modal(
+                    title=f"Reprovision reservation {reservation.description}?",
+                    body=[
+                        c.Paragraph(text="Are you sure you want to reprovision this reservation?"),
+                        c.Form(
+                            form_fields=[],
+                            submit_url=f"/api/reservations/{reservation.id}/reprovision",
+                            footer=[],
+                            submit_trigger=PageEvent(name="modal-reprovision-reservation-submit"),
+                        ),
+                    ],
+                    footer=[
+                        c.Button(
+                            text="Cancel",
+                            named_style="secondary",
+                            on_click=PageEvent(name="modal-reprovision-reservation", clear=True),
+                        ),
+                        c.Button(
+                            text="Submit",
+                            on_click=PageEvent(name="modal-reprovision-reservation-submit"),
+                        ),
+                    ],
+                    open_trigger=PageEvent(name="modal-reprovision-reservation"),
                 ),
                 create_footer(),
             ]
@@ -166,16 +201,24 @@ def reservation_details(id: int) -> list[AnyComponent]:
 
 
 @router.post("/api/reservations/{id}/terminate", response_model=FastUI, response_model_exclude_none=True)
-async def modal_prompt_submit(id: int) -> list[AnyComponent]:
+async def terminate_reservation(id: int) -> list[AnyComponent]:
     """Terminate reservation with given id."""
-    logger.info("modal-terminate-reservation!", id=id)
     with Session.begin() as session:
         reservation = session.query(Reservation).filter(Reservation.id == id).one()
         csm = ConnectionStateMachine(reservation)
         csm.gui_terminate_connection()
     scheduler.add_job(gui_terminate_connection_job, args=[id])
-    await asyncio.sleep(2.0)
     return [c.FireEvent(event=PageEvent(name="modal-terminate-reservation", clear=True))]
+
+
+@router.post("/api/reservations/{id}/reprovision", response_model=FastUI, response_model_exclude_none=True)
+async def reprovision_reservation(id: int) -> list[AnyComponent]:
+    """Reprovision reservation with given id."""
+    with Session.begin() as session:
+        reservation = session.query(Reservation).filter(Reservation.id == id).one()
+        ConnectionStateMachine(reservation).nsi_send_reserve()
+    scheduler.add_job(nsi_send_reserve_job, args=[id])
+    return [c.FireEvent(event=PageEvent(name="modal-reprovision-reservation", clear=True))]
 
 
 @router.post("/api/nsi/callback/")

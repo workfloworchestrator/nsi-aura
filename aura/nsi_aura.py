@@ -386,17 +386,21 @@ except:
 
 
 def create_footer():
-    img = c.Image(
-        # src='https://avatars.githubusercontent.com/u/110818415',
-        src="/static/ANA-website-footer.png",
-        alt="ANA footer Logo",
-        width=900,
-        height=240,
-        loading="lazy",
-        referrer_policy="no-referrer",
-        class_name="border rounded",
+    footer = c.Div(
+        components=[
+            c.Image(
+                # src='https://avatars.githubusercontent.com/u/110818415',
+                src="/static/ANA-website-footer.png",
+                alt="ANA footer Logo",
+                width=900,
+                height=240,
+                loading="lazy",
+                referrer_policy="no-referrer",
+                class_name="border rounded",
+            )
+        ]
     )
-    return img
+    return footer
 
 
 def show_endpoints_table(heading, clickurl, local_endpoints) -> list[AnyComponent]:
