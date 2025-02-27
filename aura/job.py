@@ -68,7 +68,6 @@ def gui_terminate_connection_job(reservation_id: int) -> None:
     log = logger.bind(
         module=__name__,
         job=nsi_send_provision.__name__,
-        reservation_id=reservation.id,
         reservationId=reservation.id,
         correlationId=str(reservation.correlationId),
         connectionId=str(reservation.connectionId),

@@ -651,6 +651,17 @@ def nsi_util_parse_xml(xml):
 #                                                                          'has caused a message processing failure. ',
 #                                                                  'variables': {}}}}}}
 #
+# {'Header': {'nsiHeader': {'protocolVersion': 'application/vnd.ogf.nsi.cs.v2.requester+soap',
+#                           'correlationId': UUID('5f4f77fe-22cf-4a5e-aecf-d4b7dd291c50'),
+#                           'requesterNSA': 'urn:ogf:network:anaeng.global:2024:nsa:nsi-aura',
+#                           'providerNSA': 'urn:ogf:network:ana.dlp.surfnet.nl:2024:nsa:safnari'}},
+#  'Body': {'dataPlaneStateChange': {'connectionId': UUID('8c5bac21-336e-47b0-8479-1c7e3fba21d1'),
+#                                    'notificationId': '1',
+#                                    'timeStamp': datetime.datetime(2025, 2, 27, 16, 3, 28, 414707, tzinfo=datetime.timezone.utc),
+#                                    'dataPlaneStatus': {'active': 'true',
+#                                                        'version': '1',
+#                                                        'versionConsistent': 'true'}}}}
+#
 def nsi_util_element_to_dict(node, attributes=True):
     """Convert an lxml.etree node tree into a dict."""
     result = {}
@@ -1201,9 +1212,9 @@ def nsi_send_provision(reservation: Reservation) -> dict[str, str]:
     return retdict
 
 
-def nsi_send_terminate(reservation: Reservation) -> dict[str, str]:
+def nsi_send_terminate(reservation: Reservation) -> dict[str, Any]:
     soap_xml = generate_terminate_xml(
-        provision_templstr,
+        terminate_templstr,
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         str(reservation.connectionId),

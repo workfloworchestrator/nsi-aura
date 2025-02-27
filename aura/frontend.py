@@ -190,6 +190,13 @@ async def nsi_callback(request: Request):
             error_event_dict = nsi_util_xml_to_dict(body)
             connectionId = error_event_dict["Body"]["errorEvent"]["connectionId"]
             reservation = session.query(Reservation).filter(Reservation.connectionId == connectionId).one()
+        elif (
+            request.headers["soapaction"]
+            == '"http://schemas.ogf.org/nsi/2013/12/connection/service/dataPlaneStateChange"'
+        ):
+            state_change_dict = nsi_util_xml_to_dict(body)
+            connectionId = state_change_dict["Body"]["dataPlaneStateChange"]["connectionId"]
+            reservation = session.query(Reservation).filter(Reservation.connectionId == connectionId).one()
         else:
             reply_dict = nsi_util_xml_to_dict(body)
             correlationId = reply_dict["Header"]["nsiHeader"]["correlationId"]
@@ -219,6 +226,13 @@ async def nsi_callback(request: Request):
             case '"http://schemas.ogf.org/nsi/2013/12/connection/service/terminateConfirmed"':
                 log.info("terminate confirmed")
                 csm.nsi_receive_terminate_confirmed()
+            case '"http://schemas.ogf.org/nsi/2013/12/connection/service/dataPlaneStateChange"':
+                active = state_change_dict["Body"]["dataPlaneStateChange"]["dataPlaneStatus"]["active"]
+                log.info("data plane state change", active=active)
+                if active == "true":
+                    csm.nsi_receive_data_plane_up()
+                else:
+                    log.warning("data plane down not implemented yet")
             case '"http://schemas.ogf.org/nsi/2013/12/connection/service/errorEvent"':
                 log.info("error event", text=error_event_dict["Body"]["errorEvent"]["serviceException"]["text"])
                 csm.nsi_receive_error_event()
