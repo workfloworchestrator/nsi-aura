@@ -73,6 +73,7 @@ class Settings(BaseSettings):
 
     # Logging
     SQL_LOGGING: bool = False
+    LOG_LEVEL: str = "INFO"
 
 
 settings = Settings(_env_file="aura.env")

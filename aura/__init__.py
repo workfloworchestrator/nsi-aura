@@ -12,16 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#
-# FastAPI
-#
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from aura.form import router as form_router
 from aura.frontend import router as frontend_router
+from aura.log import init as log_init
 from aura.route import router as route_router
 
+log_init()
 app = FastAPI()
 
 # make sure the folder named 'static' exists in the project,

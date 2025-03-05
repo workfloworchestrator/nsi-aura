@@ -1136,13 +1136,11 @@ logger = structlog.get_logger()
 
 def nsi_send_reserve(reservation: Reservation, source_stp: STP, dest_stp: STP) -> dict[str, str]:
     log = logger.bind(
-        module=__name__,
-        job=nsi_send_reserve.__name__,
-        reservation_id=reservation.id,
-        globalReservationId=reservation.globalReservationId,
-        correlationId=reservation.correlationId,
+        reservationId=reservation.id,
+        globalReservationId=str(reservation.globalReservationId),
+        correlationId=str(reservation.correlationId),
     )
-    log.info("send reserve")
+    log.info("send reserve to aggregator")
     reserve_xml = generate_reserve_xml(
         reserve_templstr,
         reservation.correlationId,
@@ -1162,20 +1160,17 @@ def nsi_send_reserve(reservation: Reservation, source_stp: STP, dest_stp: STP) -
     )
     soap_xml = nsi_util_post_soap(state.global_soap_provider_url, reserve_xml)
     retdict = nsi_soap_parse_reserve_reply(soap_xml)  # TODO: need error handling post soap failure
-    log.info("reserve successful", connectionId=retdict["connectionId"])
+    log.info("reserve successfully sent", connectionId=str(retdict["connectionId"]))
     return retdict
 
 
 def nsi_send_reserve_commit(reservation: Reservation) -> dict[str, str]:
     log = logger.bind(
-        module=__name__,
-        job=nsi_send_reserve_commit.__name__,
-        reservation_id=reservation.id,
         reservationId=reservation.id,
         correlationId=str(reservation.correlationId),
         connectionId=str(reservation.connectionId),
     )
-    log.info("send reserve commit")
+    log.info("send reserve commit to aggregator")
     soap_xml = generate_reserve_commit_xml(
         reserve_commit_templstr,
         reservation.correlationId,
@@ -1185,20 +1180,17 @@ def nsi_send_reserve_commit(reservation: Reservation) -> dict[str, str]:
     )
     soap_xml = nsi_util_post_soap(state.global_soap_provider_url, soap_xml)
     retdict = nsi_soap_parse_reserve_commit_reply(soap_xml)  # TODO: need error handling on failed post soap
-    log.info("reserve commit successful")
+    log.info("reserve commit successful sent")
     return retdict
 
 
 def nsi_send_provision(reservation: Reservation) -> dict[str, str]:
     log = logger.bind(
-        module=__name__,
-        job=nsi_send_provision.__name__,
-        reservation_id=reservation.id,
         reservationId=reservation.id,
         correlationId=str(reservation.correlationId),
         connectionId=str(reservation.connectionId),
     )
-    log.info("send provision")
+    log.info("send provision to aggregator")
     soap_xml = generate_provision_xml(
         provision_templstr,
         reservation.correlationId,
@@ -1208,11 +1200,17 @@ def nsi_send_provision(reservation: Reservation) -> dict[str, str]:
     )
     soap_xml = nsi_util_post_soap(state.global_soap_provider_url, soap_xml)
     retdict = nsi_soap_parse_provision_reply(soap_xml)  # TODO: need error handling on failed post soap
-    log.info("provision successful")
+    log.info("provision successful sent")
     return retdict
 
 
 def nsi_send_terminate(reservation: Reservation) -> dict[str, Any]:
+    log = logger.bind(
+        reservationId=reservation.id,
+        correlationId=str(reservation.correlationId),
+        connectionId=str(reservation.connectionId),
+    )
+    log.info("send terminate to aggregator")
     soap_xml = generate_terminate_xml(
         terminate_templstr,
         reservation.correlationId,
@@ -1222,6 +1220,7 @@ def nsi_send_terminate(reservation: Reservation) -> dict[str, Any]:
     )
     soap_xml = nsi_util_post_soap(state.global_soap_provider_url, soap_xml)
     reply_dict = nsi_util_xml_to_dict(soap_xml)
+    log.info("terminate successful sent")
     return reply_dict
 
 

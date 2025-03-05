@@ -17,7 +17,7 @@ import structlog
 from aura.db import Session
 from aura.model import STP
 
-logger = structlog.get_logger(__name__)
+logger = structlog.get_logger()
 
 
 def update_service_termination_points_from_dds(stps: dict[str : dict[str, str]]) -> None:

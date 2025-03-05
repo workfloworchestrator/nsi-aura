@@ -110,7 +110,7 @@ def post_form(form: Annotated[InputForm, fastui_form(InputForm)]):
         csm.nsi_send_reserve()  # TODO: move this action behind a button on the reservation overview page
     scheduler.add_job(nsi_send_reserve_job, args=[reservation_id])
 
-    return [c.FireEvent(event=GoToEvent(url="/"))]
+    return [c.FireEvent(event=GoToEvent(url=f"/reservations/{reservation_id}/log"))]
 
 
 @router.get("/api/forms/input_form/", response_model=FastUI, response_model_exclude_none=True)

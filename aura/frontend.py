@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import asyncio
+from datetime import datetime
+from typing import AsyncIterable
 
 import structlog
 from fastapi import APIRouter, Request
@@ -18,6 +21,7 @@ from fastui import AnyComponent, FastUI
 from fastui import components as c
 from fastui.components.display import DisplayLookup
 from fastui.events import BackEvent, GoToEvent, PageEvent
+from starlette.responses import StreamingResponse
 
 from aura.db import Session
 from aura.fsm import ConnectionStateMachine
@@ -28,7 +32,7 @@ from aura.job import (
     nsi_send_reserve_job,
     scheduler,
 )
-from aura.model import STP, Reservation
+from aura.model import STP, Log, Reservation
 from aura.nsi_aura import create_footer
 from aura.nsi_comm import nsi_util_xml_to_dict
 from aura.settings import settings
@@ -200,6 +204,56 @@ def reservation_details(id: int) -> list[AnyComponent]:
     ]
 
 
+async def reservation_log_stream(id: int) -> AsyncIterable[str]:
+    lines = []
+    last_timestamp = datetime.fromtimestamp(0)
+    while True:
+        await asyncio.sleep(0.5)
+        with Session() as session:
+            messages = (
+                session.query(Log.message, Log.timestamp)
+                .filter(Log.reservation_id == id)
+                .filter(Log.timestamp > last_timestamp)
+                .all()
+            )
+        for message, timestamp in messages:
+            lines.append(c.Div(components=[c.Text(text=message)]))
+            last_timestamp = timestamp
+        m = FastUI(root=lines)
+        yield f"data: {m.model_dump_json(by_alias=True, exclude_none=True)}\n\n"
+
+
+@router.get("/api/reservations/{id}/log/sse")
+async def sse_ai_response(id: int) -> StreamingResponse:
+    return StreamingResponse(reservation_log_stream(id), media_type="text/event-stream")
+
+
+@router.get("/api/reservations/{id}/log", response_model=FastUI, response_model_exclude_none=True)
+async def terminate_reservation(id: int) -> list[AnyComponent]:
+    """Show streaming log for reservation with given id."""
+    heading = "streaming log"
+    return [
+        c.Page(  # Page provides a basic container for components
+            components=[
+                c.Heading(text=heading, level=2, class_name="+ text-danger"),
+                c.Link(components=[c.Paragraph(text="Back")], on_click=BackEvent()),
+                c.Heading(level=3, text="log ...."),
+                c.Div(
+                    components=[
+                        c.ServerLoad(
+                            path=f"/reservations/{id}/log/sse",
+                            sse=True,
+                            sse_retry=500,
+                        ),
+                    ],
+                    class_name="my-2 p-2 border rounded",
+                ),
+                create_footer(),
+            ]
+        ),
+    ]
+
+
 @router.post("/api/reservations/{id}/terminate", response_model=FastUI, response_model_exclude_none=True)
 async def terminate_reservation(id: int) -> list[AnyComponent]:
     """Terminate reservation with given id."""
@@ -208,7 +262,10 @@ async def terminate_reservation(id: int) -> list[AnyComponent]:
         csm = ConnectionStateMachine(reservation)
         csm.gui_terminate_connection()
     scheduler.add_job(gui_terminate_connection_job, args=[id])
-    return [c.FireEvent(event=PageEvent(name="modal-terminate-reservation", clear=True))]
+    return [
+        c.FireEvent(event=PageEvent(name="modal-terminate-reservation", clear=True)),
+        c.FireEvent(event=GoToEvent(url=f"/reservations/{id}/log")),
+    ]
 
 
 @router.post("/api/reservations/{id}/reprovision", response_model=FastUI, response_model_exclude_none=True)
@@ -253,34 +310,38 @@ async def nsi_callback(request: Request):
         csm = ConnectionStateMachine(reservation)
         match request.headers["soapaction"]:
             case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveFailed"':
-                log.warning("reserve failed")
+                log.warning("reserve failed from aggregator")
                 csm.nsi_receive_reserve_failed()
             case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveConfirmed"':
-                log.info("reserve confirmed")
+                log.info("reserve confirmed from aggregator")
                 csm.nsi_receive_reserve_confirmed()
                 csm.nsi_send_reserve_commit()  # TODO: decide if we want to auto commit or not
             case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveCommitConfirmed"':
-                log.info("reserve commit confirmed")
+                log.info("reserve commit confirmed from aggregator")
                 csm.nsi_receive_reserve_commit_confirmed()
                 csm.nsi_send_provision()  # TODO: decide if we want to auto provision or not
             case '"http://schemas.ogf.org/nsi/2013/12/connection/service/provisionConfirmed"':
-                log.info("provision confirmed")
+                log.info("provision confirmed from aggregator")
                 csm.nsi_receive_provision_confirmed()
             case '"http://schemas.ogf.org/nsi/2013/12/connection/service/terminateConfirmed"':
-                log.info("terminate confirmed")
+                log.info("terminate confirmed from aggregator")
                 csm.nsi_receive_terminate_confirmed()
             case '"http://schemas.ogf.org/nsi/2013/12/connection/service/dataPlaneStateChange"':
                 active = state_change_dict["Body"]["dataPlaneStateChange"]["dataPlaneStatus"]["active"]
-                log.info("data plane state change", active=active)
                 if active == "true":
+                    log.info("data plane state change up from aggregator", active=active)
                     csm.nsi_receive_data_plane_up()
                 else:
+                    log.info("data plane state change down from aggregator", active=active)
                     log.warning("data plane down not implemented yet")
             case '"http://schemas.ogf.org/nsi/2013/12/connection/service/errorEvent"':
-                log.info("error event", text=error_event_dict["Body"]["errorEvent"]["serviceException"]["text"])
+                log.info(
+                    "error event from aggregator",
+                    text=error_event_dict["Body"]["errorEvent"]["serviceException"]["text"],
+                )
                 csm.nsi_receive_error_event()
             case _:
-                log.error("no matching soap action")
+                log.error("no matching soap action in message from aggregator")
         reservation_id = reservation.id
     # start job that corresponds with above state transition # TODO decide if we want to auto commit/provision or not
     match request.headers["soapaction"]:

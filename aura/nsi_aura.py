@@ -15,7 +15,6 @@
 import copy
 import secrets
 
-import structlog
 from fastapi import HTTPException, Request
 from fastui import AnyComponent
 from fastui import components as c
@@ -47,8 +46,6 @@ from aura.util import update_service_termination_points_from_dds
 
 # pydantic suckx
 c.Link.model_rebuild()
-
-logger = structlog.get_logger(__name__)
 
 #
 # Security: Session cookies as per

@@ -112,6 +112,18 @@ Reservation._destStp = column_property(
 )
 
 
+class Log(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    reservation_id: int
+    name: str
+    module: str
+    line: int
+    function: str
+    filename: str
+    timestamp: datetime
+    message: str
+
+
 #
 # Span i.e. a Connection i,e., two STPs that are connected, e.g. for showing a path
 #

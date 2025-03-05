@@ -14,6 +14,8 @@
 from uuid import UUID, uuid4
 
 import structlog
+from apscheduler.executors.pool import ThreadPoolExecutor
+from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
 from pytz import utc
 
@@ -23,7 +25,12 @@ from aura.nsi_comm import nsi_send_provision, nsi_send_reserve, nsi_send_reserve
 
 # Advanced Python Scheduler
 # scheduler = AsyncIOScheduler(event_loop=asyncio.get_running_loop(), timezone=utc)
-scheduler = BackgroundScheduler(timezone=utc)
+scheduler = BackgroundScheduler(
+    jobstores={"default": MemoryJobStore()},
+    executors={"default": ThreadPoolExecutor(max_workers=10)},
+    job_defaults={"coalesce": False, "max_instances": 1, "misfire_grace_time": None},
+    timezone=utc,
+)
 scheduler.start()
 
 

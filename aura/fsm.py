@@ -34,7 +34,7 @@ class AuraStateMachine(StateMachine):
         """Statemachine will call this function on every state transition."""
         if isinstance(state, State):
             self.log.info(
-                "State transition",
+                f"State transition to {state.name}",
                 to_state=state.id,
                 connectionId=str(self.model.connectionId),  # type: ignore[union-attr]
             )
