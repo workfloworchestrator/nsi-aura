@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     NSA_PORT: str = "8000"
     NSA_PATH_PREFIX: str = ""
 
+    # provider NSA
+    PROVIDER_NSA_URL: HttpUrl = HttpUrl("http://127.0.0.1:9000/nsi-v2/ConnectionServiceProvider")
+    PROVIDER_NSA_ID: str = "urn:ogf:network:domain.example:2024:nsa"
+
     # NOTE: HttpUrl class will automatically add trailing / when converting to str
     @property
     def NSA_BASE_URL(self):

@@ -35,7 +35,6 @@ import structlog
 from lxml import etree
 from urllib3.util.retry import Retry
 
-from aura import state
 from aura.model import STP, Reservation
 from aura.settings import settings
 
@@ -1156,9 +1155,9 @@ def nsi_send_reserve(reservation: Reservation, source_stp: STP, dest_stp: STP) -
         ),  # end time
         {URN_STP_NAME: source_stp.urn_base, URN_STP_VLAN: reservation.sourceVlan},
         {URN_STP_NAME: dest_stp.urn_base, URN_STP_VLAN: reservation.destVlan},
-        state.global_provider_nsa_id,
+        settings.PROVIDER_NSA_ID,
     )
-    soap_xml = nsi_util_post_soap(state.global_soap_provider_url, reserve_xml)
+    soap_xml = nsi_util_post_soap(settings.PROVIDER_NSA_URL, reserve_xml)
     retdict = nsi_soap_parse_reserve_reply(soap_xml)  # TODO: need error handling post soap failure
     log.info("reserve successfully sent", connectionId=str(retdict["connectionId"]))
     return retdict
@@ -1176,9 +1175,9 @@ def nsi_send_reserve_commit(reservation: Reservation) -> dict[str, str]:
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         str(reservation.connectionId),
-        state.global_provider_nsa_id,
+        settings.PROVIDER_NSA_ID,
     )
-    soap_xml = nsi_util_post_soap(state.global_soap_provider_url, soap_xml)
+    soap_xml = nsi_util_post_soap(settings.PROVIDER_NSA_URL, soap_xml)
     retdict = nsi_soap_parse_reserve_commit_reply(soap_xml)  # TODO: need error handling on failed post soap
     log.info("reserve commit successful sent")
     return retdict
@@ -1196,9 +1195,9 @@ def nsi_send_provision(reservation: Reservation) -> dict[str, str]:
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         str(reservation.connectionId),
-        state.global_provider_nsa_id,
+        settings.PROVIDER_NSA_ID,
     )
-    soap_xml = nsi_util_post_soap(state.global_soap_provider_url, soap_xml)
+    soap_xml = nsi_util_post_soap(settings.PROVIDER_NSA_URL, soap_xml)
     retdict = nsi_soap_parse_provision_reply(soap_xml)  # TODO: need error handling on failed post soap
     log.info("provision successful sent")
     return retdict
@@ -1210,9 +1209,9 @@ def nsi_send_release(reservation: Reservation) -> dict[str, Any]:
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         str(reservation.connectionId),
-        state.global_provider_nsa_id,
+        settings.PROVIDER_NSA_ID,
     )
-    soap_xml = nsi_util_post_soap(state.global_soap_provider_url, soap_xml)
+    soap_xml = nsi_util_post_soap(settings.PROVIDER_NSA_URL, soap_xml)
     return nsi_util_xml_to_dict(soap_xml)
 
 
@@ -1222,9 +1221,9 @@ def nsi_send_terminate(reservation: Reservation) -> dict[str, Any]:
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         str(reservation.connectionId),
-        state.global_provider_nsa_id,
+        settings.PROVIDER_NSA_ID,
     )
-    soap_xml = nsi_util_post_soap(state.global_soap_provider_url, soap_xml)
+    soap_xml = nsi_util_post_soap(settings.PROVIDER_NSA_URL, soap_xml)
     return nsi_util_xml_to_dict(soap_xml)
 
 

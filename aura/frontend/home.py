@@ -12,10 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-import structlog
 from fastapi import APIRouter
+from fastui import AnyComponent, FastUI
+from fastui import components as c
+
+from aura.frontend.util import app_page
 
 router = APIRouter()
 
-logger = structlog.get_logger(__name__)
+
+@router.get("/", response_model=FastUI, response_model_exclude_none=True)
+def home() -> list[AnyComponent]:
+    return app_page(c.Paragraph(text="Hoi!"))
