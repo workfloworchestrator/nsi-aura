@@ -21,7 +21,13 @@ from pytz import utc
 
 from aura.db import Session
 from aura.model import STP, Reservation
-from aura.nsi_comm import nsi_send_provision, nsi_send_reserve, nsi_send_reserve_commit, nsi_send_terminate
+from aura.nsi_comm import (
+    nsi_send_provision,
+    nsi_send_release,
+    nsi_send_reserve,
+    nsi_send_reserve_commit,
+    nsi_send_terminate,
+)
 
 # Advanced Python Scheduler
 # scheduler = AsyncIOScheduler(event_loop=asyncio.get_running_loop(), timezone=utc)
@@ -79,10 +85,30 @@ def gui_terminate_connection_job(reservation_id: int) -> None:
         correlationId=str(reservation.correlationId),
         connectionId=str(reservation.connectionId),
     )
-    log.info("send terminate")
-    reply_dict = nsi_send_terminate(reservation)  # TODO: need error handling on failed post soap
+    log.info("send terminate to aggregator")
+    reply_dict = nsi_send_terminate(reservation)
     if "Fault" in reply_dict["Body"]:
         se = reply_dict["Body"]["Fault"]["detail"]["serviceException"]
-        log.warning("send terminate failed", nsaId=se["nsaId"], errorId=se["errorId"], text=se["text"])
+        log.warning(f"send terminate failed: {se["text"]}", nsaId=se["nsaId"], errorId=se["errorId"], text=se["text"])
+        # TODO: transition to error state (that needs to be defined)
     else:
-        log.info("send terminate successful")
+        log.info("terminate successfully sent")
+
+
+def gui_release_connection_job(reservation_id: int) -> None:
+    new_correlation_id_on_reservation(reservation_id)
+    with Session() as session:
+        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
+    log = logger.bind(
+        reservationId=reservation.id,
+        correlationId=str(reservation.correlationId),
+        connectionId=str(reservation.connectionId),
+    )
+    log.info("send release to aggregator")
+    reply_dict = nsi_send_release(reservation)
+    if "Fault" in reply_dict["Body"]:
+        se = reply_dict["Body"]["Fault"]["detail"]["serviceException"]
+        log.warning(f"send release failed: {se["text"]}", nsaId=se["nsaId"], errorId=se["errorId"], text=se["text"])
+        # TODO: transition to error state (that needs to be defined)
+    else:
+        log.info("send release successful")

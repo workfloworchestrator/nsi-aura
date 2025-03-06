@@ -1204,13 +1204,19 @@ def nsi_send_provision(reservation: Reservation) -> dict[str, str]:
     return retdict
 
 
-def nsi_send_terminate(reservation: Reservation) -> dict[str, Any]:
-    log = logger.bind(
-        reservationId=reservation.id,
-        correlationId=str(reservation.correlationId),
-        connectionId=str(reservation.connectionId),
+def nsi_send_release(reservation: Reservation) -> dict[str, Any]:
+    soap_xml = generate_release_xml(
+        release_templstr,
+        reservation.correlationId,
+        str(settings.NSA_BASE_URL) + "api/nsi/callback/",
+        str(reservation.connectionId),
+        state.global_provider_nsa_id,
     )
-    log.info("send terminate to aggregator")
+    soap_xml = nsi_util_post_soap(state.global_soap_provider_url, soap_xml)
+    return nsi_util_xml_to_dict(soap_xml)
+
+
+def nsi_send_terminate(reservation: Reservation) -> dict[str, Any]:
     soap_xml = generate_terminate_xml(
         terminate_templstr,
         reservation.correlationId,
@@ -1219,9 +1225,7 @@ def nsi_send_terminate(reservation: Reservation) -> dict[str, Any]:
         state.global_provider_nsa_id,
     )
     soap_xml = nsi_util_post_soap(state.global_soap_provider_url, soap_xml)
-    reply_dict = nsi_util_xml_to_dict(soap_xml)
-    log.info("terminate successful sent")
-    return reply_dict
+    return nsi_util_xml_to_dict(soap_xml)
 
 
 #

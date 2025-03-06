@@ -16,16 +16,18 @@ from datetime import datetime
 from typing import AsyncIterable
 
 import structlog
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastui import AnyComponent, FastUI
 from fastui import components as c
 from fastui.components.display import DisplayLookup
 from fastui.events import BackEvent, GoToEvent, PageEvent
 from starlette.responses import StreamingResponse
+from statemachine.exceptions import TransitionNotAllowed
 
 from aura.db import Session
 from aura.fsm import ConnectionStateMachine
 from aura.job import (
+    gui_release_connection_job,
     gui_terminate_connection_job,
     nsi_send_provision_job,
     nsi_send_reserve_commit_job,
@@ -108,6 +110,41 @@ def reservations_view() -> list[AnyComponent]:
     ]
 
 
+def button_with_modal(name: str, button: str, title: str, modal: str, url: str) -> list[AnyComponent]:
+    """Create a button and modal with Cancel and Submit buttons."""
+    return [
+        c.Button(
+            text=button,
+            on_click=PageEvent(name=name),
+            class_name="+ ms-2",
+        ),
+        c.Modal(
+            title=title,
+            body=[
+                c.Paragraph(text=modal),
+                c.Form(
+                    form_fields=[],
+                    submit_url=url,
+                    footer=[],
+                    submit_trigger=PageEvent(name=f"{name}-submit"),
+                ),
+            ],
+            footer=[
+                c.Button(
+                    text="Cancel",
+                    named_style="secondary",
+                    on_click=PageEvent(name=name, clear=True),
+                ),
+                c.Button(
+                    text="Submit",
+                    on_click=PageEvent(name=f"{name}-submit"),
+                ),
+            ],
+            open_trigger=PageEvent(name=name),
+        ),
+    ]
+
+
 @router.get("/api/reservations/{id}/", response_model=FastUI, response_model_exclude_none=True)
 def reservation_details(id: int) -> list[AnyComponent]:
     """Display reservation details and action buttons."""
@@ -140,39 +177,24 @@ def reservation_details(id: int) -> list[AnyComponent]:
                         DisplayLookup(field="state"),
                     ],
                 ),
-                c.Button(
-                    text="Terminate Reservation",
-                    on_click=PageEvent(name="modal-terminate-reservation"),
-                    class_name="+ ms-2",
+                *button_with_modal(
+                    name="modal-terminate-reservation",
+                    button="Terminate Reservation",
+                    title=f"Terminate reservation {reservation.description}?",
+                    modal="Are you sure you want to terminate this reservation?",
+                    url=f"/api/reservations/{reservation.id}/terminate",
+                ),
+                *button_with_modal(
+                    name="modal-release-reservation",
+                    button="Release Reservation",
+                    title=f"Release reservation {reservation.description}?",
+                    modal="Are you sure you want to release this reservation?",
+                    url=f"/api/reservations/{reservation.id}/release",
                 ),
                 c.Button(
                     text="Reprovision Reservation",
                     on_click=PageEvent(name="modal-reprovision-reservation"),
                     class_name="+ ms-2",
-                ),
-                c.Modal(
-                    title=f"Terminate reservation {reservation.description}?",
-                    body=[
-                        c.Paragraph(text="Are you sure you want to terminate this reservation?"),
-                        c.Form(
-                            form_fields=[],
-                            submit_url=f"/api/reservations/{reservation.id}/terminate",
-                            footer=[],
-                            submit_trigger=PageEvent(name="modal-terminate-reservation-submit"),
-                        ),
-                    ],
-                    footer=[
-                        c.Button(
-                            text="Cancel",
-                            named_style="secondary",
-                            on_click=PageEvent(name="modal-terminate-reservation", clear=True),
-                        ),
-                        c.Button(
-                            text="Submit",
-                            on_click=PageEvent(name="modal-terminate-reservation-submit"),
-                        ),
-                    ],
-                    open_trigger=PageEvent(name="modal-terminate-reservation"),
                 ),
                 c.Modal(
                     title=f"Reprovision reservation {reservation.description}?",
@@ -224,12 +246,12 @@ async def reservation_log_stream(id: int) -> AsyncIterable[str]:
 
 
 @router.get("/api/reservations/{id}/log/sse")
-async def sse_ai_response(id: int) -> StreamingResponse:
+async def reservation_log_sse(id: int) -> StreamingResponse:
     return StreamingResponse(reservation_log_stream(id), media_type="text/event-stream")
 
 
 @router.get("/api/reservations/{id}/log", response_model=FastUI, response_model_exclude_none=True)
-async def terminate_reservation(id: int) -> list[AnyComponent]:
+async def reservation_log(id: int) -> list[AnyComponent]:
     """Show streaming log for reservation with given id."""
     heading = "streaming log"
     return [
@@ -255,21 +277,41 @@ async def terminate_reservation(id: int) -> list[AnyComponent]:
 
 
 @router.post("/api/reservations/{id}/terminate", response_model=FastUI, response_model_exclude_none=True)
-async def terminate_reservation(id: int) -> list[AnyComponent]:
+async def reservation_terminate(id: int) -> list[AnyComponent]:
     """Terminate reservation with given id."""
-    with Session.begin() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == id).one()
-        csm = ConnectionStateMachine(reservation)
-        csm.gui_terminate_connection()
-    scheduler.add_job(gui_terminate_connection_job, args=[id])
-    return [
-        c.FireEvent(event=PageEvent(name="modal-terminate-reservation", clear=True)),
-        c.FireEvent(event=GoToEvent(url=f"/reservations/{id}/log")),
-    ]
+    try:
+        with Session.begin() as session:
+            reservation = session.query(Reservation).filter(Reservation.id == id).one()
+            csm = ConnectionStateMachine(reservation)
+            csm.gui_terminate_connection()
+        scheduler.add_job(gui_terminate_connection_job, args=[id])
+        return [
+            c.FireEvent(event=PageEvent(name="modal-terminate-reservation", clear=True)),
+            c.FireEvent(event=GoToEvent(url=f"/reservations/{id}/log")),
+        ]
+    except TransitionNotAllowed as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/api/reservations/{id}/release", response_model=FastUI, response_model_exclude_none=True)
+async def reservation_release(id: int) -> list[AnyComponent]:
+    """Release reservation with given id."""
+    try:
+        with Session.begin() as session:
+            reservation = session.query(Reservation).filter(Reservation.id == id).one()
+            csm = ConnectionStateMachine(reservation)
+            csm.gui_release_connection()
+        scheduler.add_job(gui_release_connection_job, args=[id])
+        return [
+            c.FireEvent(event=PageEvent(name="modal-release-reservation", clear=True)),
+            c.FireEvent(event=GoToEvent(url=f"/reservations/{id}/log")),
+        ]
+    except TransitionNotAllowed as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/api/reservations/{id}/reprovision", response_model=FastUI, response_model_exclude_none=True)
-async def reprovision_reservation(id: int) -> list[AnyComponent]:
+async def reservation_reprovision(id: int) -> list[AnyComponent]:
     """Reprovision reservation with given id."""
     with Session.begin() as session:
         reservation = session.query(Reservation).filter(Reservation.id == id).one()
@@ -323,6 +365,9 @@ async def nsi_callback(request: Request):
             case '"http://schemas.ogf.org/nsi/2013/12/connection/service/provisionConfirmed"':
                 log.info("provision confirmed from aggregator")
                 csm.nsi_receive_provision_confirmed()
+            case '"http://schemas.ogf.org/nsi/2013/12/connection/service/releaseConfirmed"':
+                log.info("release confirmed from aggregator")
+                csm.nsi_receive_release_confirmed()
             case '"http://schemas.ogf.org/nsi/2013/12/connection/service/terminateConfirmed"':
                 log.info("terminate confirmed from aggregator")
                 csm.nsi_receive_terminate_confirmed()

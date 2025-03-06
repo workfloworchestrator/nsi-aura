@@ -140,6 +140,16 @@ def init() -> None:
                 # "uvicorn.error": {
                 #     "propagate": False
                 # }
+                "uvicorn.access": {
+                    "handlers": ["default", "file", "database"],
+                    "level": settings.LOG_LEVEL,
+                    "propagate": True,
+                },
+                "uvicorn.error": {
+                    "handlers": ["default", "file", "database"],
+                    "level": settings.LOG_LEVEL,
+                    "propagate": True,
+                },
             },
         }
     )
