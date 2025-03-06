@@ -29,7 +29,7 @@ def app_page(*components: AnyComponent, title: str | None = None) -> list[AnyCom
             start_links=[
                 c.Link(
                     components=[c.Text(text="Reservations")],
-                    on_click=GoToEvent(url="/reservations"),
+                    on_click=GoToEvent(url="/reservations/active"),
                     active="startswith:/reservations",
                 ),
                 c.Link(
@@ -57,13 +57,12 @@ def app_page(*components: AnyComponent, title: str | None = None) -> list[AnyCom
             ],
         ),
         c.Footer(
-            extra_text="FastUI Demo",
+            extra_text="AURA PoC",
             links=[
                 c.Link(
-                    components=[c.Text(text="Github")], on_click=GoToEvent(url="https://github.com/pydantic/FastUI")
+                    components=[c.Text(text="Github")],
+                    on_click=GoToEvent(url="https://github.com/workfloworchestrator/nsi-aura/"),
                 ),
-                c.Link(components=[c.Text(text="PyPI")], on_click=GoToEvent(url="https://pypi.org/project/fastui/")),
-                c.Link(components=[c.Text(text="NPM")], on_click=GoToEvent(url="https://www.npmjs.com/org/pydantic/")),
             ],
         ),
     ]
