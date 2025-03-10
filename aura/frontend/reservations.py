@@ -220,7 +220,7 @@ async def reservation_log_stream(id: int) -> AsyncIterable[str]:
                 .all()
             )
         for message, timestamp in messages:
-            lines.append(c.Div(components=[c.Text(text=message)]))
+            lines.append(c.Div(components=[c.Text(text=f"{timestamp.isoformat()} - {message}")]))
             last_timestamp = timestamp
         m = FastUI(root=lines)
         yield f"data: {m.model_dump_json(by_alias=True, exclude_none=True)}\n\n"
