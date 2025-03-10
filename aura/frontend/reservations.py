@@ -310,7 +310,7 @@ def reservations_all() -> list[AnyComponent]:
 
 @router.get("/active", response_model=FastUI, response_model_exclude_none=True)
 def reservations_active() -> list[AnyComponent]:
-    """Display overview of all reservations."""
+    """Display overview of active reservations."""
     with Session() as session:
         reservations = (
             session.query(Reservation).filter(Reservation.state == ConnectionStateMachine.ConnectionActive.value).all()
@@ -319,6 +319,26 @@ def reservations_active() -> list[AnyComponent]:
         *tabs(),
         reservation_table(reservations),
         title="All reservations",
+    )
+
+
+@router.get("/attention", response_model=FastUI, response_model_exclude_none=True)
+def reservations_active() -> list[AnyComponent]:
+    """Display overview of reservations that need attention."""
+    with Session() as session:
+        reservations = (
+            session.query(Reservation)
+            .filter(
+                (Reservation.state != ConnectionStateMachine.ConnectionActive.value)
+                & (Reservation.state != ConnectionStateMachine.ConnectionTerminating.value)
+                & (Reservation.state != ConnectionStateMachine.ConnectionTerminated.value)
+            )
+            .all()
+        )
+    return app_page(
+        *tabs(),
+        reservation_table(reservations),
+        title="Reservations that need attention",
     )
 
 
@@ -348,7 +368,12 @@ def tabs() -> list[AnyComponent]:
                 c.Link(
                     components=[c.Text(text="Active")],
                     on_click=GoToEvent(url="/reservations/active"),
-                    active="startswith:/reservation/active",
+                    active="startswith:/reservations/active",
+                ),
+                c.Link(
+                    components=[c.Text(text="Attention")],
+                    on_click=GoToEvent(url="/reservations/attention"),
+                    active="startswith:/reservations/attention",
                 ),
                 c.Link(
                     components=[c.Text(text="All")],
