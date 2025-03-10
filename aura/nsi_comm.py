@@ -43,6 +43,7 @@ from aura.settings import settings
 #
 reserve_templstr = None
 reserve_commit_templstr = None
+reserve_abort_templstr = None
 provision_templstr = None
 query_summary_sync_templstr = None
 query_recursive_templstr = None
@@ -224,6 +225,17 @@ reserve_commit_keys = [
 ]
 
 
+# RESERVE ABORT
+NSI_RESERVE_ABORT_TEMPLATE_XMLFILE = "ReserveAbort.xml"
+
+reserve_abort_keys = [
+    "#CORRELATION-ID#",  # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
+    "#REPLY-TO-URL#",  # http://127.0.0.1:7080/NSI/services/RequesterService2
+    "#CONNECTION-ID#",  # note: no urn prefix: 2d71c50b-a6ff-46e5-8e37-567470ba832a
+    "#PROVIDER-NSA-ID#",  # urn:ogf:network:example.domain:2001:nsa:supa
+]
+
+
 # PROVISION
 NSI_PROVISION_TEMPLATE_XMLFILE = "Provision.xml"
 
@@ -336,6 +348,23 @@ def generate_reserve_xml(
 
 
 def generate_reserve_commit_xml(message_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id):
+    # Generate values
+    correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
+
+    message_dict = {}
+    message_dict["#CORRELATION-ID#"] = correlation_urn
+    message_dict["#REPLY-TO-URL#"] = reply_to_url
+    message_dict["#CONNECTION-ID#"] = connid_str
+    message_dict["#PROVIDER-NSA-ID#"] = provider_nsa_id
+
+    message_xml = message_templstr
+    for message_key in reserve_commit_keys:
+        message_xml = message_xml.replace(message_key, message_dict[message_key])
+
+    return message_xml
+
+
+def generate_reserve_abort_xml(message_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id):
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
@@ -476,6 +505,7 @@ def nsi_comm_init(templ_absdir):
     #
     global reserve_templstr
     global reserve_commit_templstr
+    global reserve_abort_templstr
     global provision_templstr
     global query_summary_sync_templstr
     global query_recursive_templstr
@@ -496,6 +526,13 @@ def nsi_comm_init(templ_absdir):
     # Read Reserve Commit template code
     with open(reserve_commit_templpath) as reserve_commit_templfile:
         reserve_commit_templstr = reserve_commit_templfile.read()
+
+    # RESERVE-ABORT
+    reserve_abort_templpath = os.path.join(templ_absdir, NSI_RESERVE_ABORT_TEMPLATE_XMLFILE)
+
+    # Read Reserve Abort template code
+    with open(reserve_abort_templpath) as reserve_abort_templfile:
+        reserve_abort_templstr = reserve_abort_templfile.read()
 
     # PROVISION
     provision_templpath = os.path.join(templ_absdir, NSI_PROVISION_TEMPLATE_XMLFILE)
@@ -1201,6 +1238,18 @@ def nsi_send_provision(reservation: Reservation) -> dict[str, str]:
     retdict = nsi_soap_parse_provision_reply(soap_xml)  # TODO: need error handling on failed post soap
     log.info("provision successful sent")
     return retdict
+
+
+def nsi_send_reserve_abort(reservation: Reservation) -> dict[str, Any]:
+    soap_xml = generate_reserve_abort_xml(
+        reserve_abort_templstr,
+        reservation.correlationId,
+        str(settings.NSA_BASE_URL) + "api/nsi/callback/",
+        str(reservation.connectionId),
+        settings.PROVIDER_NSA_ID,
+    )
+    soap_xml = nsi_util_post_soap(settings.PROVIDER_NSA_URL, soap_xml)
+    return nsi_util_xml_to_dict(soap_xml)
 
 
 def nsi_send_release(reservation: Reservation) -> dict[str, Any]:

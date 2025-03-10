@@ -49,6 +49,7 @@ dev = [
     "mypy",
     "python-statemachine[diagrams]",
     "ruff",
+    "types-pytz",
     "types-requests",
 ]
 

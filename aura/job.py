@@ -50,6 +50,7 @@ def new_correlation_id_on_reservation(reservation_id: int) -> None:
 
 
 def nsi_send_reserve_job(reservation_id: int) -> None:
+    new_correlation_id_on_reservation(reservation_id)
     with Session() as session:
         reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
         source_stp = session.query(STP).filter(STP.id == reservation.sourceStpId).one()  # TODO: replace with relation
@@ -93,6 +94,25 @@ def gui_terminate_connection_job(reservation_id: int) -> None:
         # TODO: transition to error state (that needs to be defined)
     else:
         log.info("terminate successfully sent")
+
+
+# def gui_retry_reserve_connection_job(reservation_id: int) -> None:
+#     new_correlation_id_on_reservation(reservation_id)
+#     with Session() as session:
+#         reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
+#     log = logger.bind(
+#         reservationId=reservation.id,
+#         correlationId=str(reservation.correlationId),
+#         connectionId=str(reservation.connectionId),
+#     )
+#     log.info("send reserve abort to aggregator")
+#     reply_dict = nsi_send_reserve_abort(reservation)
+#     if "Fault" in reply_dict["Body"]:
+#         se = reply_dict["Body"]["Fault"]["detail"]["serviceException"]
+#         log.warning(f"send release failed: {se["text"]}", nsaId=se["nsaId"], errorId=se["errorId"], text=se["text"])
+#         # TODO: transition to error state (that needs to be defined)
+#     else:
+#         log.info("send reserve abort successful")
 
 
 def gui_release_connection_job(reservation_id: int) -> None:

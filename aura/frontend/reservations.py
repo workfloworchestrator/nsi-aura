@@ -35,6 +35,7 @@ from aura.fsm import ConnectionStateMachine
 from aura.job import (
     gui_release_connection_job,
     gui_terminate_connection_job,
+    nsi_send_provision_job,
     nsi_send_reserve_job,
     scheduler,
 )
@@ -113,7 +114,6 @@ def reservation_post(form: Annotated[ReservationInputForm, fastui_form(Reservati
     """Store values from input form in reservation database and start NSI reserve job."""
     reservation = Reservation(
         globalReservationId=uuid4(),
-        correlationId=uuid4(),
         description=form.description,
         sourceStpId=int(form.sourceSTP),
         destStpId=int(form.destSTP),
@@ -169,26 +169,40 @@ def reservation_details(id: int) -> list[AnyComponent]:
             ],
         ),
         *button_with_modal(
-            name="modal-terminate-reservation",
-            button="Terminate Reservation",
-            title=f"Terminate reservation {reservation.description}?",
-            modal="Are you sure you want to terminate this reservation?",
-            url=f"/api/reservations/{reservation.id}/terminate",
-        ),
-        *button_with_modal(
             name="modal-release-reservation",
-            button="Release Reservation",
+            button="Release",
             title=f"Release reservation {reservation.description}?",
             modal="Are you sure you want to release this reservation?",
             url=f"/api/reservations/{reservation.id}/release",
         ),
         *button_with_modal(
-            name="modal-reprovision-reservation",
-            button="Reprovision Reservation",
-            title=f"Reprovision reservation {reservation.description}?",
-            modal="Are you sure you want to reprovision this reservation?",
-            url=f"/api/reservations/{reservation.id}/reprovision",
+            name="modal-provision-reservation",
+            button="Provision",
+            title=f"Provision reservation {reservation.description}?",
+            modal="Are you sure you want to Provision this reservation?",
+            url=f"/api/reservations/{reservation.id}/provision",
         ),
+        *button_with_modal(
+            name="modal-terminate-reservation",
+            button="Terminate",
+            title=f"Terminate reservation {reservation.description}?",
+            modal="Are you sure you want to terminate this reservation?",
+            url=f"/api/reservations/{reservation.id}/terminate",
+        ),
+        *button_with_modal(
+            name="modal-reserve-again-reservation",
+            button="Reserve Again",
+            title=f"Reserve reservation {reservation.description} again?",
+            modal="Are you sure you want to reserve this reservation again?",
+            url=f"/api/reservations/{reservation.id}/reserve-again",
+        ),
+        # *button_with_modal(
+        #     name="modal-re-provision-reservation",
+        #     button="Re-provision",
+        #     title=f"Re-provision reservation {reservation.description}?",
+        #     modal="Are you sure you want to re-provision this reservation?",
+        #     url=f"/api/reservations/{reservation.id}/re-provision",
+        # ),
         title="Reservation details",
     )
 
@@ -236,6 +250,24 @@ async def reservation_log(id: int) -> list[AnyComponent]:
     )
 
 
+@router.post("/{id}/reserve-again", response_model=FastUI, response_model_exclude_none=True)
+async def reservation_retry_reserve(id: int) -> list[AnyComponent]:
+    """Reserve reservation with given id again."""
+    try:
+        with Session.begin() as session:
+            reservation = session.query(Reservation).filter(Reservation.id == id).one()
+            csm = ConnectionStateMachine(reservation)
+            csm.gui_reserve_again()
+            csm.nsi_send_reserve()
+        scheduler.add_job(nsi_send_reserve_job, args=[id])
+        return [
+            c.FireEvent(event=PageEvent(name="modal-reserve-again-reservation", clear=True)),
+            c.FireEvent(event=GoToEvent(url=f"/reservations/{id}/log")),
+        ]
+    except TransitionNotAllowed as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 @router.post("/{id}/terminate", response_model=FastUI, response_model_exclude_none=True)
 async def reservation_terminate(id: int) -> list[AnyComponent]:
     """Terminate reservation with given id."""
@@ -270,17 +302,36 @@ async def reservation_release(id: int) -> list[AnyComponent]:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/{id}/reprovision", response_model=FastUI, response_model_exclude_none=True)
-async def reservation_reprovision(id: int) -> list[AnyComponent]:
-    """Reprovision reservation with given id."""
-    with Session.begin() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == id).one()
-        ConnectionStateMachine(reservation).nsi_send_reserve()
-    scheduler.add_job(nsi_send_reserve_job, args=[id])
-    return [
-        c.FireEvent(event=PageEvent(name="modal-reprovision-reservation", clear=True)),
-        c.FireEvent(event=GoToEvent(url=f"/reservations/{id}/log")),
-    ]
+@router.post("/{id}/provision", response_model=FastUI, response_model_exclude_none=True)
+async def reservation_provision(id: int) -> list[AnyComponent]:
+    """Provision reservation with given id."""
+    try:
+        with Session.begin() as session:
+            reservation = session.query(Reservation).filter(Reservation.id == id).one()
+            ConnectionStateMachine(reservation).gui_provision_connection()
+        scheduler.add_job(nsi_send_provision_job, args=[id])
+        return [
+            c.FireEvent(event=PageEvent(name="modal-provision-reservation", clear=True)),
+            c.FireEvent(event=GoToEvent(url=f"/reservations/{id}/log")),
+        ]
+    except TransitionNotAllowed as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# @router.post("/{id}/re-provision", response_model=FastUI, response_model_exclude_none=True)
+# async def reservation_re_provision(id: int) -> list[AnyComponent]:
+#     """Reprovision reservation with given id."""
+#     try:
+#         with Session.begin() as session:
+#             reservation = session.query(Reservation).filter(Reservation.id == id).one()
+#             ConnectionStateMachine(reservation).nsi_send_reserve()
+#         scheduler.add_job(nsi_send_reserve_job, args=[id])
+#         return [
+#             c.FireEvent(event=PageEvent(name="modal-re-provision-reservation", clear=True)),
+#             c.FireEvent(event=GoToEvent(url=f"/reservations/{id}/log")),
+#         ]
+#     except TransitionNotAllowed as e:
+#         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/all", response_model=FastUI, response_model_exclude_none=True)

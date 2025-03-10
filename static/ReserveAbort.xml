@@ -15,8 +15,8 @@
     </head:nsiHeader>
   </soapenv:Header>
   <soapenv:Body>
-    <type:reserveCommit>
+    <type:reserveAbort>
       <connectionId>#CONNECTION-ID#</connectionId>
-    </type:reserveCommit>
+    </type:reserveAbort>
   </soapenv:Body>
 </soapenv:Envelope>

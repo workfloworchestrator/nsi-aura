@@ -50,6 +50,7 @@ class ConnectionStateMachine(AuraStateMachine):
     ConnectionProvisioned = State("ConnectionProvisioned", "CONNECTION_PROVISIONED")
     ConnectionReleased = State("ConnectionReleased", "CONNECTION_RELEASED")
     ConnectionActive = State("ConnectionActive", "CONNECTION_ACTIVE")
+    ConnectionInActive = State("ConnectionInActive", "CONNECTION_INACTIVE")
     ConnectionFailed = State("ConnectionFailed", "CONNECTION_FAILED")
     ConnectionTerminated = State("ConnectionTerminated", "CONNECTION_TERMINATED")
     ConnectionDeleted = State("ConnectionDeleted", "CONNECTION_DELETED", final=True)
@@ -61,41 +62,36 @@ class ConnectionStateMachine(AuraStateMachine):
     ConnectionReleasing = State("ConnectionReleasing", "CONNECTION_RELEASING")
     ConnectionReserveFailed = State("ConnectionReserveFailed", "CONNECTION_RESERVE_FAILED")
     ConnectionReserveTimeout = State("ConnectionReserveTimeout", "CONNECTION_RESERVE_TIMEOUT")
-    ConnectionReserveAborting = State("ConnectionReserveAborting", "CONNECTION_RESERVE_ABORTING")
-    ConnectionReserveAborted = State("ConnectionReserveAborted", "CONNECTION_RESERVE_ABORTED")
     ConnectionTerminating = State("ConnectionTerminating", "CONNECTION_TERMINATING")
 
     # fmt: off
-    nsi_send_reserve = (
-        ConnectionNew.to(ConnectionReserveChecking)
-        | ConnectionReserveAborted.to(ConnectionReserveChecking)
-        | ConnectionTerminated.to(ConnectionReserveChecking)
-    )
+    nsi_send_reserve = ConnectionNew.to(ConnectionReserveChecking)
     nsi_receive_reserve_confirmed = ConnectionReserveChecking.to(ConnectionReserveHeld)
     nsi_receive_reserve_failed = ConnectionReserveChecking.to(ConnectionReserveFailed)
     nsi_receive_reserve_timeout = ConnectionReserveHeld.to(ConnectionReserveTimeout)
-    nsi_receive_reserve_abort_confirmed = ConnectionReserveAborting.to(ConnectionReserveAborted)
     nsi_send_reserve_commit = ConnectionReserveHeld.to(ConnectionReserveCommitting)
     nsi_receive_reserve_commit_confirmed = ConnectionReserveCommitting.to(ConnectionReserveCommitted)
     nsi_send_provision = ConnectionReserveCommitted.to(ConnectionProvisioning)
     nsi_receive_provision_confirmed = ConnectionProvisioning.to(ConnectionProvisioned)
     nsi_receive_release_confirmed = ConnectionReleasing.to(ConnectionReleased)
     nsi_receive_data_plane_up = ConnectionProvisioned.to(ConnectionActive)
+    nsi_receive_data_plane_down = ConnectionReleased.to(ConnectionInActive)
     gui_delete_connection = ConnectionTerminated.to(ConnectionDeleted)
     nsi_receive_error_event = (
         ConnectionActive.to(ConnectionFailed)
         | ConnectionProvisioned.to(ConnectionFailed)
     )
     gui_release_connection = ConnectionActive.to(ConnectionReleasing)
-    gui_provision_connection = ConnectionReleased.to(ConnectionProvisioning)
+    gui_provision_connection = ConnectionInActive.to(ConnectionProvisioning)
     gui_terminate_connection = (
-        ConnectionReleased.to(ConnectionTerminating)
+        ConnectionReserveTimeout.to(ConnectionTerminating)
+        | ConnectionInActive.to(ConnectionTerminating)
         | ConnectionFailed.to(ConnectionTerminating)
     )
     nsi_receive_terminate_confirmed = ConnectionTerminating.to(ConnectionTerminated)
-    gui_reserve_retry = (
-        ConnectionReserveFailed.to(ConnectionReserveAborting)
-        | ConnectionReserveTimeout.to(ConnectionReserveAborting)
+    gui_reserve_again = (
+        ConnectionReserveFailed.to(ConnectionNew)
+        | ConnectionTerminated.to(ConnectionNew)
     )
     # fmt: on
 
