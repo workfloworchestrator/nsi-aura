@@ -135,6 +135,12 @@ def reservation_post(form: Annotated[ReservationInputForm, fastui_form(Reservati
     return [c.FireEvent(event=GoToEvent(url=f"/reservations/{reservation_id}/log"))]
 
 
+@router.get("", response_model=FastUI, response_model_exclude_none=True)
+async def reservations() -> list[AnyComponent]:
+    """Redirect to active tab of reservations page."""
+    return [c.FireEvent(event=GoToEvent(url="/reservations/active"))]
+
+
 @router.get("/{id}/", response_model=FastUI, response_model_exclude_none=True)
 def reservation_details(id: int) -> list[AnyComponent]:
     """Display reservation details and action buttons."""
@@ -304,7 +310,7 @@ def reservations_active() -> list[AnyComponent]:
 
 
 @router.get("/attention", response_model=FastUI, response_model_exclude_none=True)
-def reservations_active() -> list[AnyComponent]:
+def reservations_attention() -> list[AnyComponent]:
     """Display overview of reservations that need attention."""
     with Session() as session:
         reservations = (
