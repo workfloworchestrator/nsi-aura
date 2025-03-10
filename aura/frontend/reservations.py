@@ -176,34 +176,12 @@ def reservation_details(id: int) -> list[AnyComponent]:
             modal="Are you sure you want to release this reservation?",
             url=f"/api/reservations/{reservation.id}/release",
         ),
-        c.Button(
-            text="Reprovision Reservation",
-            on_click=PageEvent(name="modal-reprovision-reservation"),
-            class_name="+ ms-2",
-        ),
-        c.Modal(
+        *button_with_modal(
+            name="modal-reprovision-reservation",
+            button="Reprovision Reservation",
             title=f"Reprovision reservation {reservation.description}?",
-            body=[
-                c.Paragraph(text="Are you sure you want to reprovision this reservation?"),
-                c.Form(
-                    form_fields=[],
-                    submit_url=f"/api/reservations/{reservation.id}/reprovision",
-                    footer=[],
-                    submit_trigger=PageEvent(name="modal-reprovision-reservation-submit"),
-                ),
-            ],
-            footer=[
-                c.Button(
-                    text="Cancel",
-                    named_style="secondary",
-                    on_click=PageEvent(name="modal-reprovision-reservation", clear=True),
-                ),
-                c.Button(
-                    text="Submit",
-                    on_click=PageEvent(name="modal-reprovision-reservation-submit"),
-                ),
-            ],
-            open_trigger=PageEvent(name="modal-reprovision-reservation"),
+            modal="Are you sure you want to reprovision this reservation?",
+            url=f"/api/reservations/{reservation.id}/reprovision",
         ),
         title="Reservation details",
     )
@@ -293,7 +271,10 @@ async def reservation_reprovision(id: int) -> list[AnyComponent]:
         reservation = session.query(Reservation).filter(Reservation.id == id).one()
         ConnectionStateMachine(reservation).nsi_send_reserve()
     scheduler.add_job(nsi_send_reserve_job, args=[id])
-    return [c.FireEvent(event=PageEvent(name="modal-reprovision-reservation", clear=True))]
+    return [
+        c.FireEvent(event=PageEvent(name="modal-reprovision-reservation", clear=True)),
+        c.FireEvent(event=GoToEvent(url=f"/reservations/{id}/log")),
+    ]
 
 
 @router.get("/all", response_model=FastUI, response_model_exclude_none=True)
