@@ -100,10 +100,8 @@ async def nsi_callback(request: Request):
                         log.info("data plane state change down from aggregator", active=active)
                         csm.nsi_receive_data_plane_down()
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/errorEvent"':
-                    log.info(
-                        "error event from aggregator",
-                        text=error_event_dict["Body"]["errorEvent"]["serviceException"]["text"],
-                    )
+                    text = error_event_dict["Body"]["errorEvent"]["serviceException"]["text"]
+                    log.warning(f"error event from aggregator: {text}", text=text)
                     csm.nsi_receive_error_event()
                 case _:
                     log.error("no matching soap action in message from aggregator")
