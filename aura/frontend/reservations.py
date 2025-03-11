@@ -147,6 +147,7 @@ def reservation_details(id: int) -> list[AnyComponent]:
     root_url = str(settings.SERVER_URL_PREFIX) + ""  # back to landing
     with Session() as session:
         reservation = session.query(Reservation).filter(Reservation.id == id).one_or_none()
+        csm = ConnectionStateMachine(reservation)
     heading = reservation.description
     return app_page(
         c.Heading(level=3, text=heading),
@@ -168,33 +169,52 @@ def reservation_details(id: int) -> list[AnyComponent]:
                 DisplayLookup(field="state"),
             ],
         ),
-        *button_with_modal(
-            name="modal-release-reservation",
-            button="Release",
-            title=f"Release reservation {reservation.description}?",
-            modal="Are you sure you want to release this reservation?",
-            url=f"/api/reservations/{reservation.id}/release",
+        *(
+            button_with_modal(
+                name="modal-release-reservation",
+                button="Release",
+                title=f"Release reservation {reservation.description}?",
+                modal="Are you sure you want to release this reservation?",
+                url=f"/api/reservations/{reservation.id}/release",
+            )
+            if csm.current_state == ConnectionStateMachine.ConnectionActive
+            else []
         ),
-        *button_with_modal(
-            name="modal-provision-reservation",
-            button="Provision",
-            title=f"Provision reservation {reservation.description}?",
-            modal="Are you sure you want to Provision this reservation?",
-            url=f"/api/reservations/{reservation.id}/provision",
+        *(
+            button_with_modal(
+                name="modal-provision-reservation",
+                button="Provision",
+                title=f"Provision reservation {reservation.description}?",
+                modal="Are you sure you want to Provision this reservation?",
+                url=f"/api/reservations/{reservation.id}/provision",
+            )
+            if csm.current_state == ConnectionStateMachine.ConnectionInActive
+            else []
         ),
-        *button_with_modal(
-            name="modal-terminate-reservation",
-            button="Terminate",
-            title=f"Terminate reservation {reservation.description}?",
-            modal="Are you sure you want to terminate this reservation?",
-            url=f"/api/reservations/{reservation.id}/terminate",
+        *(
+            button_with_modal(
+                name="modal-terminate-reservation",
+                button="Terminate",
+                title=f"Terminate reservation {reservation.description}?",
+                modal="Are you sure you want to terminate this reservation?",
+                url=f"/api/reservations/{reservation.id}/terminate",
+            )
+            if csm.current_state == ConnectionStateMachine.ConnectionReserveTimeout
+            or csm.current_state == ConnectionStateMachine.ConnectionFailed
+            or csm.current_state == ConnectionStateMachine.ConnectionInActive
+            else []
         ),
-        *button_with_modal(
-            name="modal-reserve-again-reservation",
-            button="Reserve Again",
-            title=f"Reserve reservation {reservation.description} again?",
-            modal="Are you sure you want to reserve this reservation again?",
-            url=f"/api/reservations/{reservation.id}/reserve-again",
+        *(
+            button_with_modal(
+                name="modal-reserve-again-reservation",
+                button="Reserve Again",
+                title=f"Reserve reservation {reservation.description} again?",
+                modal="Are you sure you want to reserve this reservation again?",
+                url=f"/api/reservations/{reservation.id}/reserve-again",
+            )
+            if csm.current_state == ConnectionStateMachine.ConnectionFailed
+            or csm.current_state == ConnectionStateMachine.ConnectionTerminated
+            else []
         ),
         # *button_with_modal(
         #     name="modal-re-provision-reservation",
