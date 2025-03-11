@@ -86,7 +86,7 @@ def gui_terminate_connection_job(reservation_id: int) -> None:
         correlationId=str(reservation.correlationId),
         connectionId=str(reservation.connectionId),
     )
-    log.info("send terminate to aggregator")
+    log.info("send terminate to nsi provider")
     reply_dict = nsi_send_terminate(reservation)
     if "Fault" in reply_dict["Body"]:
         se = reply_dict["Body"]["Fault"]["detail"]["serviceException"]
@@ -105,7 +105,7 @@ def gui_terminate_connection_job(reservation_id: int) -> None:
 #         correlationId=str(reservation.correlationId),
 #         connectionId=str(reservation.connectionId),
 #     )
-#     log.info("send reserve abort to aggregator")
+#     log.info("send reserve abort to nsi provider")
 #     reply_dict = nsi_send_reserve_abort(reservation)
 #     if "Fault" in reply_dict["Body"]:
 #         se = reply_dict["Body"]["Fault"]["detail"]["serviceException"]
@@ -124,7 +124,7 @@ def gui_release_connection_job(reservation_id: int) -> None:
         correlationId=str(reservation.correlationId),
         connectionId=str(reservation.connectionId),
     )
-    log.info("send release to aggregator")
+    log.info("send release to nsi provider")
     reply_dict = nsi_send_release(reservation)
     if "Fault" in reply_dict["Body"]:
         se = reply_dict["Body"]["Fault"]["detail"]["serviceException"]

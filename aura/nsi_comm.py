@@ -1176,7 +1176,7 @@ def nsi_send_reserve(reservation: Reservation, source_stp: STP, dest_stp: STP) -
         globalReservationId=str(reservation.globalReservationId),
         correlationId=str(reservation.correlationId),
     )
-    log.info("send reserve to aggregator")
+    log.info("send reserve to nsi provider")
     reserve_xml = generate_reserve_xml(
         reserve_templstr,
         reservation.correlationId,
@@ -1206,7 +1206,7 @@ def nsi_send_reserve_commit(reservation: Reservation) -> dict[str, str]:
         correlationId=str(reservation.correlationId),
         connectionId=str(reservation.connectionId),
     )
-    log.info("send reserve commit to aggregator")
+    log.info("send reserve commit to nsi provider")
     soap_xml = generate_reserve_commit_xml(
         reserve_commit_templstr,
         reservation.correlationId,
@@ -1226,7 +1226,7 @@ def nsi_send_provision(reservation: Reservation) -> dict[str, str]:
         correlationId=str(reservation.correlationId),
         connectionId=str(reservation.connectionId),
     )
-    log.info("send provision to aggregator")
+    log.info("send provision to nsi provider")
     soap_xml = generate_provision_xml(
         provision_templstr,
         reservation.correlationId,

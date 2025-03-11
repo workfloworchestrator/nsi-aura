@@ -65,46 +65,46 @@ async def nsi_callback(request: Request):
             csm = ConnectionStateMachine(reservation)
             match request.headers["soapaction"]:
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveFailed"':
-                    log.warning("reserve failed from aggregator")
+                    log.warning("reserve failed from nsi provider")
                     csm.nsi_receive_reserve_failed()
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveTimeout"':
-                    log.warning("reserve timeout from aggregator")
+                    log.warning("reserve timeout from nsi provider")
                     csm.nsi_receive_reserve_timeout()
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveConfirmed"':
-                    log.info("reserve confirmed from aggregator")
+                    log.info("reserve confirmed from nsi provider")
                     csm.nsi_receive_reserve_confirmed()
                     csm.nsi_send_reserve_commit()  # TODO: decide if we want to auto commit or not
                 # case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveAbortConfirmed"':
-                #     log.info("reserve abort confirmed from aggregator")
+                #     log.info("reserve abort confirmed from nsi provider")
                 #     csm.nsi_receive_reserve_abort_confirmed()
                 #     csm.nsi_send_reserve()  # TODO: decide if we want to auto provision or not
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveCommitConfirmed"':
-                    log.info("reserve commit confirmed from aggregator")
+                    log.info("reserve commit confirmed from nsi provider")
                     csm.nsi_receive_reserve_commit_confirmed()
                     csm.nsi_send_provision()  # TODO: decide if we want to auto provision or not
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/provisionConfirmed"':
-                    log.info("provision confirmed from aggregator")
+                    log.info("provision confirmed from nsi provider")
                     csm.nsi_receive_provision_confirmed()
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/releaseConfirmed"':
-                    log.info("release confirmed from aggregator")
+                    log.info("release confirmed from nsi provider")
                     csm.nsi_receive_release_confirmed()
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/terminateConfirmed"':
-                    log.info("terminate confirmed from aggregator")
+                    log.info("terminate confirmed from nsi provider")
                     csm.nsi_receive_terminate_confirmed()
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/dataPlaneStateChange"':
                     active = state_change_dict["Body"]["dataPlaneStateChange"]["dataPlaneStatus"]["active"]
                     if active == "true":
-                        log.info("data plane state change up from aggregator", active=active)
+                        log.info("data plane state change up from nsi provider", active=active)
                         csm.nsi_receive_data_plane_up()
                     else:
-                        log.info("data plane state change down from aggregator", active=active)
+                        log.info("data plane state change down from nsi provider", active=active)
                         csm.nsi_receive_data_plane_down()
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/errorEvent"':
                     text = error_event_dict["Body"]["errorEvent"]["serviceException"]["text"]
-                    log.warning(f"error event from aggregator: {text}", text=text)
+                    log.warning(f"error event from nsi provider: {text}", text=text)
                     csm.nsi_receive_error_event()
                 case _:
-                    log.error("no matching soap action in message from aggregator")
+                    log.error("no matching soap action in message from nsi provider")
             reservation_id = reservation.id
         except TransitionNotAllowed as e:
             log.warning(str(e))
