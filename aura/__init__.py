@@ -17,11 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from fastui import prebuilt_html
 from starlette.responses import HTMLResponse, PlainTextResponse
 
-from aura.form import router as form_router
 from aura.frontend.database import router as database_router
-
-# from aura.route import router as route_router
-# from aura.frontend.frontend import router as frontend_router
 from aura.frontend.home import router as home_router
 from aura.frontend.nsi import router as nsi_router
 from aura.frontend.reservations import router as reservations_router
@@ -35,9 +31,6 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # include routes
-# app.include_router(form_router)
-# app.include_router(frontend_router)
-# app.include_router(route_router)
 app.include_router(reservations_router, prefix="/api/reservations")
 app.include_router(database_router, prefix="/api/database")
 app.include_router(nsi_router, prefix="/api/nsi")
