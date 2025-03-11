@@ -23,7 +23,7 @@ from fastapi import APIRouter, HTTPException
 from fastui import AnyComponent, FastUI
 from fastui import components as c
 from fastui.components.display import DisplayLookup
-from fastui.events import GoToEvent, PageEvent
+from fastui.events import GoToEvent, PageEvent, BackEvent
 from fastui.forms import SelectSearchResponse, fastui_form
 from pydantic import Field
 from starlette.responses import StreamingResponse
@@ -169,6 +169,16 @@ def reservation_details(id: int) -> list[AnyComponent]:
                 DisplayLookup(field="state"),
             ],
         ),
+        c.Button(
+            text="Back",
+            on_click=BackEvent(),
+            class_name="+ ms-2",
+        ),
+        c.Button(
+            text="Log",
+            on_click=GoToEvent(url=f"/reservations/{id}/log"),
+            class_name="+ ms-2",
+        ),
         *(
             button_with_modal(
                 name="modal-release-reservation",
@@ -212,7 +222,7 @@ def reservation_details(id: int) -> list[AnyComponent]:
                 modal="Are you sure you want to reserve this reservation again?",
                 url=f"/api/reservations/{reservation.id}/reserve-again",
             )
-            if csm.current_state == ConnectionStateMachine.ConnectionFailed
+            if csm.current_state == ConnectionStateMachine.ConnectionReserveFailed
             or csm.current_state == ConnectionStateMachine.ConnectionTerminated
             else []
         ),
@@ -265,6 +275,11 @@ async def reservation_log(id: int) -> list[AnyComponent]:
                 ),
             ],
             class_name="my-2 p-2 border rounded",
+        ),
+        c.Button(
+            text="Back",
+            on_click=BackEvent(),
+            class_name="+ ms-2",
         ),
         title="Streaming log",
     )
@@ -376,7 +391,7 @@ def reservations_active() -> list[AnyComponent]:
     return app_page(
         *tabs(),
         reservation_table(reservations),
-        title="All reservations",
+        title="Active reservations",
     )
 
 
