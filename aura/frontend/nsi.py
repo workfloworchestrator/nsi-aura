@@ -62,7 +62,7 @@ async def nsi_callback(request: Request):
             match request.headers["soapaction"]:
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveFailed"':
                     se = body["Body"]["reserveFailed"]["serviceException"]
-                    text = se["childException"]["text"] if "childException" in se else se["serviceException"]["text"]
+                    text = se["childException"]["text"] if "childException" in se else se["text"]
                     log.warning(f"reserve failed from nsi provider: {text}")
                     csm.nsi_receive_reserve_failed()
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveTimeout"':
