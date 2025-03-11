@@ -37,24 +37,20 @@ async def nsi_callback(request: Request):
     from aura.db import Session
 
     log = logger.bind(module=__name__, job=nsi_callback.__name__)
-    body = await request.body()
+    body = nsi_util_xml_to_dict(await request.body())
     with Session.begin() as session:
         try:
             if soap_action(request, '"http://schemas.ogf.org/nsi/2013/12/connection/service/errorEvent"'):
-                error_event_dict = nsi_util_xml_to_dict(body)
-                connectionId = error_event_dict["Body"]["errorEvent"]["connectionId"]
+                connectionId = body["Body"]["errorEvent"]["connectionId"]
                 reservation = session.query(Reservation).filter(Reservation.connectionId == connectionId).one()
             elif soap_action(request, '"http://schemas.ogf.org/nsi/2013/12/connection/service/dataPlaneStateChange"'):
-                state_change_dict = nsi_util_xml_to_dict(body)
-                connectionId = state_change_dict["Body"]["dataPlaneStateChange"]["connectionId"]
+                connectionId = body["Body"]["dataPlaneStateChange"]["connectionId"]
                 reservation = session.query(Reservation).filter(Reservation.connectionId == connectionId).one()
             elif soap_action(request, '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveTimeout"'):
-                state_change_dict = nsi_util_xml_to_dict(body)
-                connectionId = state_change_dict["Body"]["reserveTimeout"]["connectionId"]
+                connectionId = body["Body"]["reserveTimeout"]["connectionId"]
                 reservation = session.query(Reservation).filter(Reservation.connectionId == connectionId).one()
             else:
-                reply_dict = nsi_util_xml_to_dict(body)
-                correlationId = reply_dict["Header"]["nsiHeader"]["correlationId"]
+                correlationId = body["Header"]["nsiHeader"]["correlationId"]
                 reservation = session.query(Reservation).filter(Reservation.correlationId == correlationId).one()
             log = log.bind(
                 reservationId=reservation.id,
@@ -65,7 +61,9 @@ async def nsi_callback(request: Request):
             csm = ConnectionStateMachine(reservation)
             match request.headers["soapaction"]:
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveFailed"':
-                    log.warning("reserve failed from nsi provider")
+                    se = body["Body"]["reserveFailed"]["serviceException"]
+                    text = se["childException"]["text"] if "childException" in se else se["serviceException"]["text"]
+                    log.warning(f"reserve failed from nsi provider: {text}")
                     csm.nsi_receive_reserve_failed()
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveTimeout"':
                     log.warning("reserve timeout from nsi provider")
@@ -92,7 +90,7 @@ async def nsi_callback(request: Request):
                     log.info("terminate confirmed from nsi provider")
                     csm.nsi_receive_terminate_confirmed()
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/dataPlaneStateChange"':
-                    active = state_change_dict["Body"]["dataPlaneStateChange"]["dataPlaneStatus"]["active"]
+                    active = body["Body"]["dataPlaneStateChange"]["dataPlaneStatus"]["active"]
                     if active == "true":
                         log.info("data plane state change up from nsi provider", active=active)
                         csm.nsi_receive_data_plane_up()
@@ -100,7 +98,7 @@ async def nsi_callback(request: Request):
                         log.info("data plane state change down from nsi provider", active=active)
                         csm.nsi_receive_data_plane_down()
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/errorEvent"':
-                    text = error_event_dict["Body"]["errorEvent"]["serviceException"]["text"]
+                    text = body["Body"]["errorEvent"]["serviceException"]["text"]
                     log.warning(f"error event from nsi provider: {text}", text=text)
                     csm.nsi_receive_error_event()
                 case _:

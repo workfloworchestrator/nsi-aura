@@ -649,6 +649,33 @@ def nsi_util_parse_xml(xml):
 #  'Body': {'reserveCommitConfirmed': {'connectionId': UUID('1153d8ed-f97b-4f01-b529-af8080980ea9')}}}
 #
 #
+# {'Header': {'nsiHeader': {'protocolVersion': 'application/vnd.ogf.nsi.cs.v2.requester+soap',
+#                           'correlationId': UUID('620d1ce7-bce5-48f9-b12f-c6e7c42e2054'),
+#                           'requesterNSA': 'urn:ogf:network:anaeng.global:2024:nsa:nsi-aura',
+#                           'providerNSA': 'urn:ogf:network:ana.dlp.surfnet.nl:2024:nsa:safnari'}},
+#  'Body': {'reserveFailed': {'connectionId': UUID('6572756a-141c-4179-bd58-94abdd93589e'),
+#                             'connectionStates': {'reservationState': 'ReserveFailed',
+#                                                  'provisionState': 'Released',
+#                                                  'lifecycleState': 'Created',
+#                                                  'dataPlaneStatus': {'active': 'false',
+#                                                                      'version': '0',
+#                                                                      'versionConsistent': 'false'}},
+#                             'serviceException': {'nsaId': 'urn:ogf:network:ana.dlp.surfnet.nl:2024:nsa:safnari',
+#                                                  'errorId': '00502',
+#                                                  'text': 'Child connection segment error is present',
+#                                                  'variables': {},
+#                                                  'childException': {'nsaId': 'urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:nsa:supa',
+#                                                                     'connectionId': UUID('e4fb92a9-7169-4b8a-a1c3-3981211e88dd'),
+#                                                                     'serviceType': {},
+#                                                                     'errorId': '00704',
+#                                                                     'text': 'STP_UNAVALABLE: Specified STP already '
+#                                                                             'in use. (no matching VLAN found '
+#                                                                             '(requested: 3762, available: 3764-3769)',
+#                                                                     'variables': {'variable': {'namespace': 'http://schemas.ogf.org/nsi/2013/12/services/point2point',
+#                                                                                                'type': 'sourceSTP',
+#                                                                                                'value': 'urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:ana-moxy:hpc-1?vlan=3762'}}}}}}}
+#
+#
 # {'Header': {'nsiHeader': {'protocolVersion': 'application/vnd.ogf.nsi.cs.v2.provider+soap',
 #                           'correlationId': UUID('53100ae8-3544-434d-8f42-ea0e1f0951d8'),
 #                           'requesterNSA': 'urn:ogf:network:anaeng.global:2024:nsa:nsi-aura',
