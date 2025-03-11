@@ -23,7 +23,7 @@ from fastapi import APIRouter, HTTPException
 from fastui import AnyComponent, FastUI
 from fastui import components as c
 from fastui.components.display import DisplayLookup
-from fastui.events import GoToEvent, PageEvent, BackEvent
+from fastui.events import BackEvent, GoToEvent, PageEvent
 from fastui.forms import SelectSearchResponse, fastui_form
 from pydantic import Field
 from starlette.responses import StreamingResponse
@@ -281,7 +281,7 @@ async def reservation_log(id: int) -> list[AnyComponent]:
             on_click=BackEvent(),
             class_name="+ ms-2",
         ),
-        title="Streaming log",
+        title=f"Streaming log {id}",
     )
 
 

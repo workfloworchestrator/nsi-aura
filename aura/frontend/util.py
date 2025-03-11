@@ -22,7 +22,7 @@ c.Link.model_rebuild()
 
 def app_page(*components: AnyComponent, title: str | None = None) -> list[AnyComponent]:
     return [
-        c.PageTitle(text=f"FastUI Demo — {title}" if title else "FastUI Demo"),
+        c.PageTitle(text=f"AURA — {title}" if title else "AURA PoC"),
         c.Navbar(
             title="AURA PoC",
             title_event=GoToEvent(url="/"),
