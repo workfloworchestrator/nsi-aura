@@ -203,19 +203,6 @@ def reservation_details(id: int) -> list[AnyComponent]:
         ),
         *(
             button_with_modal(
-                name="modal-terminate-reservation",
-                button="Terminate",
-                title=f"Terminate reservation {reservation.description}?",
-                modal="Are you sure you want to terminate this reservation?",
-                url=f"/api/reservations/{reservation.id}/terminate",
-            )
-            if csm.current_state == ConnectionStateMachine.ConnectionReserveTimeout
-            or csm.current_state == ConnectionStateMachine.ConnectionFailed
-            or csm.current_state == ConnectionStateMachine.ConnectionInActive
-            else []
-        ),
-        *(
-            button_with_modal(
                 name="modal-reserve-again-reservation",
                 button="Reserve Again",
                 title=f"Reserve reservation {reservation.description} again?",
@@ -226,13 +213,20 @@ def reservation_details(id: int) -> list[AnyComponent]:
             or csm.current_state == ConnectionStateMachine.ConnectionTerminated
             else []
         ),
-        # *button_with_modal(
-        #     name="modal-re-provision-reservation",
-        #     button="Re-provision",
-        #     title=f"Re-provision reservation {reservation.description}?",
-        #     modal="Are you sure you want to re-provision this reservation?",
-        #     url=f"/api/reservations/{reservation.id}/re-provision",
-        # ),
+        *(
+            button_with_modal(
+                name="modal-terminate-reservation",
+                button="Terminate",
+                title=f"Terminate reservation {reservation.description}?",
+                modal="Are you sure you want to terminate this reservation?",
+                url=f"/api/reservations/{reservation.id}/terminate",
+            )
+            if csm.current_state == ConnectionStateMachine.ConnectionReserveTimeout
+            or csm.current_state == ConnectionStateMachine.ConnectionFailed
+            or csm.current_state == ConnectionStateMachine.ConnectionInActive
+            or csm.current_state == ConnectionStateMachine.ConnectionReserveFailed
+            else []
+        ),
         title="Reservation details",
     )
 
@@ -351,22 +345,6 @@ async def reservation_provision(id: int) -> list[AnyComponent]:
         ]
     except TransitionNotAllowed as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
-
-
-# @router.post("/{id}/re-provision", response_model=FastUI, response_model_exclude_none=True)
-# async def reservation_re_provision(id: int) -> list[AnyComponent]:
-#     """Reprovision reservation with given id."""
-#     try:
-#         with Session.begin() as session:
-#             reservation = session.query(Reservation).filter(Reservation.id == id).one()
-#             ConnectionStateMachine(reservation).nsi_send_reserve()
-#         scheduler.add_job(nsi_send_reserve_job, args=[id])
-#         return [
-#             c.FireEvent(event=PageEvent(name="modal-re-provision-reservation", clear=True)),
-#             c.FireEvent(event=GoToEvent(url=f"/reservations/{id}/log")),
-#         ]
-#     except TransitionNotAllowed as e:
-#         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/all", response_model=FastUI, response_model_exclude_none=True)

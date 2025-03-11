@@ -87,6 +87,7 @@ class ConnectionStateMachine(AuraStateMachine):
         ConnectionReserveTimeout.to(ConnectionTerminating)
         | ConnectionInActive.to(ConnectionTerminating)
         | ConnectionFailed.to(ConnectionTerminating)
+        | ConnectionReserveFailed.to(ConnectionTerminating)
     )
     nsi_receive_terminate_confirmed = ConnectionTerminating.to(ConnectionTerminated)
     gui_reserve_again = (
