@@ -30,4 +30,18 @@ to federate the ANA trans-Atlantic links via network automation.
 
 @router.get("/", response_model=FastUI, response_model_exclude_none=True)
 def home() -> list[AnyComponent]:
-    return app_page(c.Heading(text="Introduction"), c.Paragraph(text=text))
+    return app_page(
+        c.Heading(text="Introduction"),
+        c.Paragraph(text=text),
+        c.Div(
+            components=[
+                c.Image(
+                    src="/static/ConnectionStateAndActions.drawio.png",
+                    alt="AURA Connection State and Actions diagram",
+                    loading="lazy",
+                    referrer_policy="no-referrer",
+                )
+            ],
+            class_name="+ d-flex justify-content-center",
+        ),
+    )

@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from logging import Handler, LogRecord, config
 from datetime import datetime
+from logging import Handler, LogRecord, config
 from uuid import UUID
 
 import structlog
