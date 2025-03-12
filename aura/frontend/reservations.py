@@ -409,6 +409,7 @@ def reservation_table(reservations: list[Reservation]) -> c.Table:
             DisplayLookup(field="bandwidth"),
             DisplayLookup(field="state"),
         ],
+        class_name="+ small",
     )
 
 

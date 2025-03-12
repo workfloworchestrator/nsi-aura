@@ -34,6 +34,7 @@ def fastapi_database_tables() -> list[AnyComponent]:
         c.Table(
             data_model=Reservation,
             data=reservations,
+            class_name="+ table-sm small",
         ),
         title="Reservation",
     )
@@ -50,6 +51,7 @@ def fastapi_database_tables() -> list[AnyComponent]:
         c.Table(
             data_model=STP,
             data=stps,
+            class_name="+ table-sm small",
         ),
         title="STP",
     )
