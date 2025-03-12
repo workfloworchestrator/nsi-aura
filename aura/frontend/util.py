@@ -79,9 +79,9 @@ def aura_logo() -> AnyComponent:
                 height=240,
                 loading="lazy",
                 referrer_policy="no-referrer",
-                class_name="border rounded",
             )
-        ]
+        ],
+        class_name="+ d-flex justify-content-center",
     )
 
 
