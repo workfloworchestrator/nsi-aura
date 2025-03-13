@@ -26,7 +26,7 @@ pip install .
 And run nsi-aura:
 
 ```shell
-fastapi dev aura
+PYTHONPATH=. python aura
 ```
 
 ## Development
