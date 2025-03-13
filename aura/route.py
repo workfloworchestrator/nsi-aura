@@ -13,12 +13,12 @@
 # limitations under the License.
 
 import asyncio
-import logging
 import os
 import traceback
 import uuid
 from datetime import timedelta
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastui import AnyComponent, FastUI
@@ -67,6 +67,8 @@ from aura.nsi_comm import (
 from aura.settings import settings
 from aura.state import DUMMY_CONNECTION_ID_STR, DUMMY_CORRELATION_ID_STR
 
+logger = structlog.get_logger()
+
 #
 # Constants
 #
@@ -84,9 +86,6 @@ sample_qr_cbpath = os.path.join("samples", "query-recursive-callback-example3.xm
 # Routes
 #
 
-logger = logging.getLogger("uvicorn.error")
-logger.setLevel(logging.DEBUG)
-
 router = APIRouter()
 
 
@@ -95,7 +94,9 @@ router = APIRouter()
 @router.get("/api/", response_model=FastUI, response_model_exclude_none=True, dependencies=[Depends(get_auth_user)])
 def fastapi_landing_page(request: Request) -> list[AnyComponent]:
     """Landing page"""
-    logger.debug("DEBUG: /api/ ENTER landing")
+    log = logger.bind()
+
+    log.debug("DEBUG: /api/ ENTER landing")
 
     if not aura.state.ONLINE:
         # Could not talk to agent, go to standalone demo
@@ -170,6 +171,8 @@ def fastapi_landing_page(request: Request) -> list[AnyComponent]:
 @router.get("/api/reload-topos/", response_model=FastUI, response_model_exclude_none=True)
 def fastapi_reload_topos() -> list[AnyComponent]:
     """Reload topos from NSI-Orchestrator"""
+    log = logger.bind()
+
     click_url = str(settings.SERVER_URL_PREFIX) + ""  # back to landing
     try:
         # TODO, USE await example with data model from fastUI tutorial
@@ -200,7 +203,7 @@ def fastapi_reload_topos() -> list[AnyComponent]:
             if upa_id != aura.state.global_provider_nsa_id:
                 upas_list_as_string += upa_id + ", "
 
-            print("fastapi_reload_topos: Adding to Datamodel", upa_id)
+            log.debug("fastapi_reload_topos: Adding to Datamodel", upa_id=upa_id)
             discovery_obj = discoverydict2model(disccount, document["discovery"])
             local_discoveries.append(discovery_obj)
             disccount += 1
@@ -241,9 +244,11 @@ def fastapi_endpoint_select_a() -> list[AnyComponent]:
     """Show a table of four endpoints, `/api` is the endpoint the frontend will connect to
     when a endpoint visits `/` to fetch components to render.
     """
+    log = logger.bind()
+
     try:
 
-        logger.debug("DEBUG: /api/selecta/ ENTER")
+        log.debug("DEBUG: /api/selecta/ ENTER")
 
         # Arno: id refers to id of item in table as shown.
         # NOTE: relative to /api ...!
@@ -252,13 +257,13 @@ def fastapi_endpoint_select_a() -> list[AnyComponent]:
         except:
             traceback.print_exc()
 
-        logger.debug("DEBUG: /api/selecta/ create complist")
+        log.debug("DEBUG: /api/selecta/ create complist")
 
         query_url = str(settings.SERVER_URL_PREFIX) + "query/"
         # querycomp = c.Link(components=[c.Text(text='Query existing connections from NSI Aggregator')], on_click=GoToEvent(url=query_url))
         # complist.append(querycomp)
 
-        logger.debug("DEBUG: /api/selecta/ return complist")
+        log.debug("DEBUG: /api/selecta/ return complist")
 
         return complist
     except Exception:
@@ -270,12 +275,14 @@ def fastapi_endpoint_select_z(epida: int) -> list[AnyComponent]:
     """Show a table of four endpoints, `/api` is the endpoint the frontend will connect to
     when a endpoint visits `/` to fetch components to render.
     """
-    logger.debug("DEBUG: /api/selectz/ ENTER")
+    log = logger.bind()
+
+    log.debug("DEBUG: /api/selectz/ ENTER")
 
     # NOTE: relative to /api...!
     clickurl = "/selectlink/?epida=" + str(epida) + "&epidz={id}"
 
-    logger.debug("DEBUG: URL template" + clickurl)
+    log.debug("DEBUG: URL template" + clickurl)
 
     return show_endpoints_table("Select endpoint Z", clickurl, aura.state.global_endpoints)
 
@@ -283,12 +290,14 @@ def fastapi_endpoint_select_z(epida: int) -> list[AnyComponent]:
 @router.get("/api/selectlink/", response_model=FastUI, response_model_exclude_none=True)
 def fastapi_endpoint_select_link(epida: int, epidz: int) -> list[AnyComponent]:
     """Show a table of links, on click goto Reserve page"""
-    logger.debug("DEBUG: /api/selectlink/ ENTER")
+    log = logger.bind()
+
+    log.debug("DEBUG: /api/selectlink/ ENTER")
 
     # NOTE: relative to /api...!
     clickurl = "/reserve/?epida=" + str(epida) + "&epidz=" + str(epidz) + "&linkid={id}"
 
-    logger.debug("DEBUG: URL template" + clickurl)
+    log.debug("DEBUG: URL template" + clickurl)
 
     return show_links_table("Select ANA link", clickurl, aura.state.global_links)
 
@@ -316,10 +325,12 @@ async def fastapi_general_poll(msg: str, corrid: uuid.UUID, connid: uuid.UUID) -
     corrid: expected correlation UUID
     connid: expected connection ID (also a UUID)
     """
+    log = logger.bind()
+
     try:
-        print("poll: ENTER")
-        print("poll: ENTER for", msg)
-        logger.debug("poll: ENTER2: " + msg)
+        log.debug("poll: ENTER")
+        log.debug("poll: ENTER for", msg=msg)
+        log.debug("poll: ENTER2: " + msg)
 
         await asyncio.sleep(1)  # 1 second, fractions allowed too
         aura.state.pollcount += 1
@@ -331,7 +342,7 @@ async def fastapi_general_poll(msg: str, corrid: uuid.UUID, connid: uuid.UUID) -
         # currently not used, could use for sanity checking
         clean_connectionid_str = str(connid)
 
-        print("poll: Polling for", clean_correlationid_str)
+        log.debug("poll: Polling for", clean_correlationid_str=clean_correlationid_str)
 
         poll_again = True
         complist = []
@@ -366,11 +377,11 @@ async def fastapi_general_poll(msg: str, corrid: uuid.UUID, connid: uuid.UUID) -
             poll_url = generate_poll_url(msg, clean_correlationid_str, clean_connectionid_str)
             retlist.append(c.ServerLoad(path=poll_url))
 
-        print("poll: RETURN")
+        log.debug("poll: RETURN")
         return retlist
     except:
         traceback.print_exc()
-        print("poll: ERROR")
+        log.debug("poll: ERROR")
         return [c.Paragraph(text="poll: EXCEPTION", class_name="+ text-danger")]
 
 
@@ -379,11 +390,13 @@ def fastui_generate_from_callback(msg, xml):
     type "msg" from the Orchestrator
     Returns a Component list
     """
+    log = logger.bind()
+
     complist = []
     if msg == FASTAPI_MSGNAME_RESERVE:
         retdict = nsi_soap_parse_reserve_callback(xml)
 
-        print("fastui_generate_from_callback: Parsed", retdict)
+        log.debug("fastui_generate_from_callback: Parsed", retdict=retdict)
 
         faultstring = retdict[S_FAULTSTRING_TAG]
         if faultstring is None:
@@ -453,7 +466,9 @@ async def orchestrator_general_callback(request: Request):
     reply is stored in global_orch_async_replies_dict by correlationId
     Returns nothing
     """
-    print("CALLBACK: ENTER")
+    log = logger.bind()
+
+    log.debug("CALLBACK: ENTER")
 
     # Check if callback if for the correlationId we sent
     query_correlationid_py = None
@@ -466,7 +481,7 @@ async def orchestrator_general_callback(request: Request):
     # Retrieve body
     body = await request.body()
     # body = request.body()
-    print("CALLBACK: Got body", body)
+    log.debug("CALLBACK: Got body", body=body)
 
     content_type = request.headers["content-type"]
     if content_type_is_valid_soap(content_type):
@@ -481,12 +496,12 @@ async def orchestrator_general_callback(request: Request):
                 )
             body_correlationid_str = str(body_correlationid_py)
             with aura.state.global_orch_async_replies_lock:
-                print("CALLBACK: Got lock")
+                log.debug("CALLBACK: Got lock")
                 aura.state.global_orch_async_replies_dict[body_correlationid_str] = body
         except:
             traceback.print_exc()
     else:
-        print("CALLBACK: Orchestrator did not return XML, but #" + request.headers["content-type"] + "#")
+        log.debug("CALLBACK: Orchestrator did not return XML, but #" + request.headers["content-type"] + "#")
 
     # TODO: reply from example
     return ["Rick", "Morty"]
@@ -498,8 +513,10 @@ async def orchestrator_general_callback(request: Request):
 @router.get("/api/reserve/", response_model=FastUI, response_model_exclude_none=True)
 def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponent]:
     """NSI RESERVE"""
+    log = logger.bind()
+
     try:
-        print("fastapi_nsi_reserve: ENTER")
+        log.debug("fastapi_nsi_reserve: ENTER")
 
         endpointa = next(u for u in aura.state.global_endpoints if u.id == epida)
         endpointz = next(u for u in aura.state.global_endpoints if u.id == epidz)
@@ -518,12 +535,12 @@ def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponen
         # From static/orch-callback-reply-soap.xml
         # test_correlationid_str = '8d8e76aa-854e-45e7-ae10-c7fd856fdbad'
         # expected_correlationid_py = uuid.UUID(test_correlationid_str)
-        print("fastapi_nsi_reserve: TEST WITH", expected_correlationid_py)
+        log.debug("fastapi_nsi_reserve: TEST WITH", expected_correlationid_py=expected_correlationid_py)
 
         orch_reply_to_url = generate_callback_url(expected_correlationid_py)
 
-        print("fastapi_nsi_reserve: Orch will reply via", orch_reply_to_url)
-        print("aura.state.global_soap_provider_url:", aura.state.global_soap_provider_url)
+        log.debug("fastapi_nsi_reserve: Orch will reply via", orch_reply_to_url=orch_reply_to_url)
+        log.debug("aura.state.global_soap_provider_url:", global_soap_provider_url=aura.state.global_soap_provider_url)
 
         # Fake data for off-line, to be overwritten
         reserve_reply_dict = {}
@@ -560,7 +577,7 @@ def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponen
         clean_correlationid_str = reserve_reply_dict["correlationId"]
         clean_connectionid_str = reserve_reply_dict["connectionId"]
 
-        print("fastapi_nsi_reserve: REPLY HAS CORRUUID", clean_correlationid_str)
+        log.debug("fastapi_nsi_reserve: REPLY HAS CORRUUID", clean_correlationid_str=clean_correlationid_str)
 
         # Create URL
         # For GUI to poll on (relative URL)
@@ -580,7 +597,7 @@ def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponen
             str(settings.SERVER_URL_PREFIX) + "reserve-commit/?connid=" + reserve_reply_dict["connectionId"]
         )
 
-        print("ARNO: fastapi_nsi_reserve: URLS", root_url, query_rec_url, sim_reply_to_url)
+        log.debug("ARNO: fastapi_nsi_reserve: URLS", root_url=root_url, query_rec_url=query_rec_url, sim_reply_to_url=sim_reply_to_url)
 
     except Exception:
         traceback.print_exc()
@@ -615,8 +632,10 @@ def fastapi_nsi_reserve_commit(connid: uuid.UUID) -> list[AnyComponent]:
     # TODO: check input uuid str
     # fastapi names must be as in query param
     """
+    log = logger.bind()
+
     try:
-        print("fastapi_nsi_reserve_commit: ENTER")
+        log.debug("fastapi_nsi_reserve_commit: ENTER")
         expect_connectionid_str = str(connid)
 
         #
@@ -684,8 +703,10 @@ def fastapi_nsi_reserve_commit_callback(corrid: uuid.UUID, connid: uuid.UUID) ->
     # TODO: check input uuid str
     # TODO: check reply in body
     """
+    log = logger.bind()
+
     try:
-        print("fastapi_nsi_reserve_commit_callback: ENTER")
+        log.debug("fastapi_nsi_reserve_commit_callback: ENTER")
 
         # TODO: We got async reply from NSI-Orchestrator, now process it
         # We expect the following ids in the
@@ -754,13 +775,15 @@ def fastapi_nsi_reserve_commit_callback(corrid: uuid.UUID, connid: uuid.UUID) ->
 @router.get("/api/provision-callback/", response_model=FastUI, response_model_exclude_none=True)
 def fastapi_nsi_provision_callback(corrid: uuid.UUID, connid: uuid.UUID) -> list[AnyComponent]:
     """NSI PROVISION callback, Go Back to Start, or Show List"""
+    log = logger.bind()
+
     try:
         # TODO: We got async reply from NSI-Orchestrator, now process it
         # We expect the following ids in the
         expect_correlationid_str = str(corrid)
         expect_connectionid_str = str(connid)
 
-        print("fastapi_nsi_provision_callback: ENTER")
+        log.debug("fastapi_nsi_provision_callback: ENTER")
 
         root_url = str(settings.SERVER_URL_PREFIX) + ""
         query_url = str(settings.SERVER_URL_PREFIX) + "query/"
@@ -788,7 +811,9 @@ def fastapi_nsi_provision_callback(corrid: uuid.UUID, connid: uuid.UUID) -> list
 @router.get("/api/query/", response_model=FastUI, response_model_exclude_none=True)
 def fastapi_nsi_connections_query() -> list[AnyComponent]:
     """NSI Query, Go Back to Start"""
-    print("fastapi_nsi_connections_query: ENTER")
+    log = logger.bind()
+
+    log.debug("fastapi_nsi_connections_query: ENTER")
     click_url = "/reservation-details/?id={id}"
     try:
         if aura.state.ONLINE:
@@ -798,13 +823,13 @@ def fastapi_nsi_connections_query() -> list[AnyComponent]:
                 aura.state.global_provider_nsa_id,
             )
 
-            print("fastapi_nsi_connections_query: Got reservations", resdictlist)
+            log.debug("fastapi_nsi_connections_query: Got reservations", resdictlist=resdictlist)
 
             # Turn into Model
             nsi_load_parsed_soap_into_reservations_model(resdictlist)
 
-            logger.debug("fastapi_nsi_connections_query: UPDATED reservations Model")
-            print("fastapi_nsi_connections_query: UPDATED reservations Model")
+            log.debug("fastapi_nsi_connections_query: UPDATED reservations Model")
+            log.debug("fastapi_nsi_connections_query: UPDATED reservations Model")
 
     except Exception:
         traceback.print_exc()
@@ -863,8 +888,10 @@ def fastapi_nsi_terminate(connid: str) -> list[AnyComponent]:
     # TODO: check input uuid str
     # TODO: check reply in body
     """
+    log = logger.bind()
+
     try:
-        print("fastapi_nsi_terminate: ENTER")
+        log.debug("fastapi_nsi_terminate: ENTER")
 
         # TODO: We got async reply from NSI-Orchestrator, now process it
         # We expect the following ids in the
@@ -944,8 +971,10 @@ def fastapi_nsi_release(connid: str) -> list[AnyComponent]:
     # TODO: check input uuid str
     # TODO: check reply in body
     """
+    log = logger.bind()
+
     try:
-        print("fastapi_nsi_release: ENTER")
+        log.debug("fastapi_nsi_release: ENTER")
 
         # TODO: We got async reply from NSI-Orchestrator, now process it
         # We expect the following ids in the
@@ -1024,8 +1053,10 @@ def fastapi_nsi_reserve_timeout_ack(connid: str) -> list[AnyComponent]:
     # TODO: check input uuid str
     # TODO: check reply in body
     """
+    log = logger.bind()
+
     try:
-        print("fastapi_nsi_reserve_timeout_ack: ENTER")
+        log.debug("fastapi_nsi_reserve_timeout_ack: ENTER")
 
         # TODO: We got async reply from NSI-Orchestrator, now process it
         # We expect the following ids in the
@@ -1106,8 +1137,10 @@ def fastapi_nsi_query_recursive(connid: str) -> list[AnyComponent]:
     # TODO: check input uuid str
     # TODO: check reply in body
     """
+    log = logger.bind()
+
     try:
-        print("fastapi_nsi_query_recursive: ENTER")
+        log.debug("fastapi_nsi_query_recursive: ENTER")
 
         # We expect the following ids in the
         expect_connectionid_str = connid
@@ -1135,7 +1168,7 @@ def fastapi_nsi_query_recursive(connid: str) -> list[AnyComponent]:
 
         orch_reply_to_url = str(settings.NSA_BASE_URL) + "api/callback/"
 
-        print("fastapi_nsi_query_recursive: Orch will reply via", orch_reply_to_url)
+        log.debug("fastapi_nsi_query_recursive: Orch will reply via", orch_reply_to_url=orch_reply_to_url)
 
         if aura.state.ONLINE:
             query_recursive_reply_dict = nsi_query_recursive(
@@ -1163,7 +1196,7 @@ def fastapi_nsi_query_recursive(connid: str) -> list[AnyComponent]:
         # TEST w/example3
         clean_correlationid_str = "dffc7375-4711-4ab2-9fda-88d51a0f2237"
 
-        print("fastapi_nsi_query_recursive: REPLY HAS CORRUUID", clean_correlationid_str)
+        log.debug("fastapi_nsi_query_recursive: REPLY HAS CORRUUID", clean_correlationid_str=clean_correlationid_str)
 
         # Create URL
         # For GUI to poll on (relative URL)
@@ -1245,8 +1278,10 @@ def fastapi_endpoint_profile(id: int) -> list[AnyComponent]:
 @router.get("/api/reservation-details/", response_model=FastUI, response_model_exclude_none=True)
 def fastapi_reservation_profile(id: int) -> list[AnyComponent]:
     """Reservation profile page, the frontend will fetch this when the endpoint visits `/endpoint/?id={id}`."""
+    log = logger.bind()
+
     try:
-        logger.debug("fastapi_reservation_profile: ENTER")
+        log.debug("fastapi_reservation_profile: ENTER")
 
         reservation = next(u for u in aura.state.global_reservations if u.id == id)
 
@@ -1293,13 +1328,15 @@ def fastapi_reservation_profile(id: int) -> list[AnyComponent]:
 @router.get("/api/login/")
 async def session_login(username: str, password: str):
     """/login?username=ssss&password=1234234234"""
-    print("LOGIN: ENTER", username, password)
+    log = logger.bind()
+
+    log.debug("LOGIN: ENTER", username=username, password=password)
 
     allow = (username, password) == USER_CORRECT
     if allow is False:
         raise HTTPException(status_code=401)
 
-    print("LOGIN: OK")
+    log.debug("LOGIN: OK")
 
     # Arno
     sessionid_b64str = create_and_record_sessionid(username)

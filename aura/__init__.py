@@ -25,15 +25,16 @@ from aura.job import nsi_poll_dds_job, scheduler
 from aura.log import init as log_init
 
 #
+# logging
+#
+log_init()
+
+#
 # scheduler
 #
 scheduler.start()
 # TODO: remove replace_existing after fixing running __init__ twice
 scheduler.add_job(nsi_poll_dds_job, trigger=IntervalTrigger(minutes=1), coalesce=True, replace_existing=True)
-#
-# logging
-#
-log_init()
 
 #
 # application

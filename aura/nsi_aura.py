@@ -22,9 +22,11 @@ from fastui.components.display import DisplayLookup
 from fastui.events import BackEvent, GoToEvent
 
 import aura.state
-from aura.model import Discovery, Endpoint, NetworkLink, Reservation, Span
+from aura.model import Discovery, Endpoint, NetworkLink, Span
 from aura.nsi_comm import *
 from aura.settings import settings
+
+logger = structlog.get_logger()
 
 #
 # NSI-AuRA = NSI ANA ultimate Requester Agent
@@ -81,9 +83,10 @@ def get_auth_user(request: Request):
 
 
 def discoverydict2model(disccount, disc_metadata_dict):
+    log = logger.bind()
 
     disc_dict = disc_metadata_dict["metadata"]
-    print("DISC2DATAMODEL:", disc_dict)
+    log.debug("DISC2DATAMODEL:", disc_dict=disc_dict)
 
     agentid = disc_dict["id"]
     version = disc_dict["version"]
@@ -107,6 +110,8 @@ def nsi_load_dds_documents():
     - global_soap_provider_url
     returns dds_documents_dict for displaying summaries to the user
     """
+    log = logger.bind()  # TODO: maek log function specific
+
     dds_documents_dict = nsi_get_dds_documents(str(settings.ANAGRAM_DDS_URL))
 
     # DDS knows all, so also who is our Orchestrator/Safnari
@@ -114,14 +119,14 @@ def nsi_load_dds_documents():
     aura.state.global_provider_nsa_id = orchestrator_dict["metadata"]["id"]
     aura.state.global_soap_provider_url = orchestrator_dict["services"][SOAP_PROVIDER_MIME_TYPE]
 
-    print("nsi_load_dds_documents: Found Aggregator ID", aura.state.global_provider_nsa_id)
-    print("nsi_load_dds_documents: Found Aggregator SOAP", aura.state.global_soap_provider_url)
+    log.debug("nsi_load_dds_documents: Found Aggregator ID", global_provider_nsa_id=aura.state.global_provider_nsa_id)
+    log.debug("nsi_load_dds_documents: Found Aggregator SOAP", global_soap_provider_url=aura.state.global_soap_provider_url)
 
     worldwide_stps = {}
     worldwide_sdp_list = []
     documents = dds_documents_dict["documents"]
     for upa_id in documents.keys():
-        print("nsi_load_dds_documents: Found uPA", upa_id)
+        log.debug("nsi_load_dds_documents: Found uPA", upa_id=upa_id)
 
         # Load topologies, compose list of STPs (aka Endpoints) and SDPs (aka Links)
         document = documents[upa_id]
@@ -129,8 +134,8 @@ def nsi_load_dds_documents():
         stps = topo_dict["stps"]
         sdps = topo_dict["sdps"]
 
-        print("nsi_load_dds_documents: Adding STPs", len(stps), stps)
-        print("nsi_load_dds_documents: Adding SDPs", len(sdps), sdps)
+        log.debug("nsi_load_dds_documents: Adding STPs", len=len(stps), stps=stps)
+        log.debug("nsi_load_dds_documents: Adding SDPs", len=len(sdps), sdps=stps)
 
         worldwide_stps.update(stps)
 
@@ -190,10 +195,12 @@ def stps2endpoints(stps):
     """Take downloaded STPs and put into a DataModel Endpoints list
     Returns list
     """
+    log = logger.bind()
+
     local_endpoints = []
     bidiports = stps
 
-    print("nsi_reload_topology_into_endpoints_model: Loading STPs", bidiports)
+    log.debug("nsi_reload_topology_into_endpoints_model: Loading STPs", bidiports=bidiports)
     if bidiports is None:
         return local_endpoints
 
@@ -245,6 +252,8 @@ import json
 
 
 def sdp_remove_duplicates(dict_list):
+    log = logger.bind()
+
     seen = set()
     unique_dicts = []
 
@@ -260,7 +269,7 @@ def sdp_remove_duplicates(dict_list):
         dict_str = json.dumps(d2, sort_keys=True)
         sdict_str = json.dumps(sd, sort_keys=True)
 
-        print("sdp_remove_duplicates: COMP", dict_str, sdict_str)
+        log.debug("sdp_remove_duplicates: COMP", dict_str=dict_str, sdict_str=sdict_str)
 
         if dict_str not in seen and sdict_str not in seen:
             seen.add(dict_str)
@@ -279,15 +288,17 @@ def nsi_reload_topology_into_links_model(sdps):
     """Take downloaded STPs and put into Endpoints
     Returns nothing
     """
+    log = logger.bind()
+
     global links
 
-    print("nsi_reload_topology_into_links_model: Loading SDPs", sdps)
+    log.debug("nsi_reload_topology_into_links_model: Loading SDPs", sdps=sdps)
     if sdps is None or len(sdps) == 0:
         return
 
     unique_sdps = sdp_remove_duplicates(sdps)
 
-    print("nsi_reload_topology_into_links_model: Loading unique SDPs", sdps)
+    log.debug("nsi_reload_topology_into_links_model: Loading unique SDPs", sdps=sdps)
 
     #
     # Override default links

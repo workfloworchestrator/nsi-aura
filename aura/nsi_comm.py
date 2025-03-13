@@ -38,6 +38,8 @@ from urllib3.util.retry import Retry
 from aura.model import STP, Reservation
 from aura.settings import settings
 
+logger = structlog.get_logger()
+
 #
 # Module-only variables, set by nsi_comm_init()
 #
@@ -53,8 +55,10 @@ reserve_timeout_ack_templstr = None
 
 
 def prettyprint(element, **kwargs):
+    log = logger.bind()
+
     xml = etree.tostring(element, pretty_print=True, **kwargs)
-    print(xml.decode(), end="")
+    log.debug(xml.decode(), end="")
 
 
 FIND_ANYWHERE_PREFIX = ".//"
@@ -451,6 +455,8 @@ def generate_reserve_timeout_ack_xml(message_templstr, correlation_uuid_py, repl
 
 def generate_query_summary_sync_xml(message_templstr, correlation_uuid_py, reply_to_url, provider_nsa_id):
     # Generate values
+    log = logger.bind()
+
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
     message_dict = {}
@@ -462,7 +468,7 @@ def generate_query_summary_sync_xml(message_templstr, correlation_uuid_py, reply
     for message_key in query_summary_sync_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
-    print("QUERY_XML", message_xml)
+    log.debug("QUERY_XML", message_xml=message_xml)
     return message_xml
 
 
@@ -492,6 +498,8 @@ def nsi_comm_init(templ_absdir):
     """Initialise NSI communications."""
     # Getting Max Retry errors? Due to passphrase protected private key
     # https://stackoverflow.com/questions/23013220/max-retries-exceeded-with-url-in-requests
+    log = logger.bind()
+
     retry = Retry(connect=3, backoff_factor=0.5)
     adapter = requests.adapters.HTTPAdapter(max_retries=retry)
     session = requests.Session()
@@ -499,7 +507,7 @@ def nsi_comm_init(templ_absdir):
     session.mount("https://", adapter)
 
     # TODO: this is currently called from aura/__init__.py which causes it to be called twice.
-    print("NSI-COMM-INIT: loading templates")
+    log.debug("NSI-COMM-INIT: loading templates")
     #
     # Load SOAP templates
     #
@@ -585,19 +593,21 @@ def nsi_util_get_and_parse_xml(url):
 
 
 def nsi_util_get_xml(url):
+    log = logger.bind()
+
     # throws Exception to higher layer for display to user
-    print("SENDING HTTP REQUEST FOR XML", url)
+    log.debug("SENDING HTTP REQUEST FOR XML", url=url)
     # 2024-11-08: SuPA moxy currently has self-signed certificate
     r = requests.get(url, verify=False, cert=(settings.NSI_AURA_CERTIFICATE, settings.NSI_AURA_PRIVATE_KEY))
-    # logger.debug print(r.status_code)
-    # logger.debug print(r.headers['content-type'])
-    # logger.debug print(r.encoding)
-    print(r.status_code)
-    print(r.headers["content-type"])
-    print(r.encoding)
-    print(r.content)
+    # logger.debug log.debug(r.status_code)
+    # logger.debug log.debug(r.headers['content-type'])
+    # logger.debug log.debug(r.encoding)
+    log.debug(r.status_code)
+    log.debug(r.headers["content-type"])
+    log.debug(r.encoding)
+    log.debug(r.content)
     # except:
-    #    print("nsi_util_get_and_parse_xml: error talking to "+url,file=sys.stderr)
+    #    log.debug("nsi_util_get_and_parse_xml: error talking to "+url,file=sys.stderr)
     #    traceback.print_exc()
     #    return None
 
@@ -605,7 +615,7 @@ def nsi_util_get_xml(url):
     content_type = content_type.lower()  # UTF-8 and utf-8
     if content_type == "application/xml" or content_type.startswith("text/xml"):
         return r.content
-    print(url + " did not return XML, but " + r.headers["content-type"])
+    log.debug(url + " did not return XML, but " + r.headers["content-type"])
     return None
 
 
@@ -772,6 +782,8 @@ def nsi_get_dds_documents(url):
 
     TODO: All topology data from all uPAs is downloaded in one go. Will this scale?
     """
+    log = logger.bind()
+
     # REPLACE
     # with open(os.path.join("samples","dds.xml")) as dds_file:
     #    tree = etree.parse(dds_file)
@@ -788,7 +800,7 @@ def nsi_get_dds_documents(url):
     root = tree.getroot()
 
     for element in root.iter():
-        print(f"nsi_get_dds_documents: ROOT FOUND {element.tag} - {element.text} --- {element.attrib}")
+        log.debug(f"nsi_get_dds_documents: ROOT FOUND {element.tag} - {element.text} --- {element.attrib}")
 
     # Store documents
     # Find all document tags
@@ -803,7 +815,7 @@ def nsi_get_dds_documents(url):
 
     for tag in element.findall(FIND_ANYWHERE_PREFIX + DOCUMENT_TAG):
 
-        print(f"nsi_get_dds_documents FOUND document {tag.tag} - {tag.text} --- {tag.attrib}")
+        log.debug(f"nsi_get_dds_documents FOUND document {tag.tag} - {tag.text} --- {tag.attrib}")
         nsa = tag.find(FIND_ANYWHERE_PREFIX + NSA_SHORT_TAG)
         type = tag.find(FIND_ANYWHERE_PREFIX + TYPE_SHORT_TAG)
         content = tag.find(FIND_ANYWHERE_PREFIX + CONTENT_SHORT_TAG)
@@ -826,28 +838,28 @@ def nsi_get_dds_documents(url):
             if type.text == DISCOVERY_POSTFIX_MIME_TYPE:
                 disc_dict = nsi_parse_discovery_xml_tree(tree2)
                 # Sanity check: compare nsa.text to ["metadata"]["id"]
-                # print("GET DOCUMENTS: COMPARE",nsa.text)
-                print("nsi_get_dds_documents: DISC", disc_dict)
+                # log.debug("GET DOCUMENTS: COMPARE",nsa.text)
+                log.debug("nsi_get_dds_documents: DISC", disc_dict=disc_dict)
 
                 documents[nsa_id]["discovery"] = disc_dict
 
             elif type.text == TOPOLOGY_POSTFIX_MIME_TYPE:
                 topo_dict = nsi_parse_topology_sdp_xml_tree(tree2)
                 # Sanity check: compare nsa.text to ["metadata"]["id"]
-                # print("GET DOCUMENTS: COMPARE",nsa.text)
-                print("nsi_get_dds_documents: TOPO", topo_dict)
+                # log.debug("GET DOCUMENTS: COMPARE",nsa.text)
+                log.debug("nsi_get_dds_documents: TOPO", topo_dict=topo_dict)
 
                 documents[nsa_id]["topology"] = topo_dict
 
     complete_documents = {}
     for nsa_id in documents.keys():
         document = documents[nsa_id]
-        print("nsi_get_dds_documents: COMPLETE?", document)
+        log.debug("nsi_get_dds_documents: COMPLETE?", document=document)
         # Add to set when info complete
         if document["discovery"] is not None and document["topology"] is not None:
 
             nsa_id = document["discovery"]["metadata"][NSA_ID_ATTRIB]
-            print("nsi_get_dds_documents: ADDING DOC", nsa_id)
+            log.debug("nsi_get_dds_documents: ADDING DOC", nsa_id=nsa_id)
             complete_documents[nsa_id] = document
 
     #
@@ -876,8 +888,8 @@ def nsi_get_dds_documents(url):
 
         local = nsi_parse_discovery_xml_tree(tree2)
         # Sanity check: compare nsa.text to ["metadata"]["id"]
-        # print("GET DOCUMENTS: COMPARE",nsa.text)
-        print("GET DOCUMENT: ORCH local", local)
+        # log.debug("GET DOCUMENTS: COMPARE",nsa.text)
+        log.debug("GET DOCUMENT: ORCH local", local=local)
 
     ret_dict = {"local": local, "documents": complete_documents}
     return ret_dict
@@ -900,6 +912,8 @@ def nsi_get_discovery(url):
 
 def nsi_parse_discovery_xml_tree(tree):
     """Get discovery dict from tree"""
+    log = logger.bind()
+
     metadata = {}
     metadata[NSA_ID_ATTRIB] = None
     metadata[NSA_VERSION_ATTRIB] = None
@@ -909,7 +923,7 @@ def nsi_parse_discovery_xml_tree(tree):
     root = tree.getroot()
 
     # for element in root.iter():
-    #    print(f"#FOUND {element.tag} - {element.text} --- {element.attrib}")
+    #    log.debug(f"#FOUND {element.tag} - {element.text} --- {element.attrib}")
 
     # Store metadata
 
@@ -923,22 +937,22 @@ def nsi_parse_discovery_xml_tree(tree):
             tag = element
             break
 
-    # print("TOPO NSA list",tag)
-    # print("TOPO NSA attribs",tag.attrib)
+    # log.debug("TOPO NSA list",tag)
+    # log.debug("TOPO NSA attribs",tag.attrib)
 
     metadata[NSA_ID_ATTRIB] = tag.attrib[NSA_ID_ATTRIB]
     metadata[NSA_VERSION_ATTRIB] = tag.attrib[NSA_VERSION_ATTRIB]
     metadata[NSA_EXPIRES_ATTRIB] = tag.attrib[NSA_EXPIRES_ATTRIB]
     # TODO more info
 
-    # print("TOPO META",metadata)
+    # log.debug("TOPO META",metadata)
 
     # Find all interface tags
     for element in tree.findall(FIND_ANYWHERE_PREFIX + INTERFACE_TAG):
-        print(f"#FOUND interface {element.tag} - {element.text} --- {element.attrib}")
+        log.debug(f"#FOUND interface {element.tag} - {element.text} --- {element.attrib}")
         itype = element.find(FIND_ANYWHERE_PREFIX + TYPE_IN_INTERFACE_TAG)
         href = element.find(FIND_ANYWHERE_PREFIX + HREF_IN_INTERFACE_TAG)
-        print("SERVICE", itype.text, href.text)
+        log.debug("SERVICE", text=itype.text, href=href.text)
         services[itype.text] = href.text
 
     disc_dict = {"metadata": metadata, "services": services}
@@ -951,6 +965,8 @@ def nsi_get_discovery(url):
     "metadata": info about the topology
     "services": Key is the MIME type, value the URL
     """
+    log = logger.bind()
+
     metadata = {}
     metadata[NSA_ID_ATTRIB] = None
     metadata[NSA_VERSION_ATTRIB] = None
@@ -965,7 +981,7 @@ def nsi_get_discovery(url):
     root = tree.getroot()
 
     # for element in root.iter():
-    #    print(f"#FOUND {element.tag} - {element.text} --- {element.attrib}")
+    #    log.debug(f"#FOUND {element.tag} - {element.text} --- {element.attrib}")
 
     # Store metadata
 
@@ -979,22 +995,22 @@ def nsi_get_discovery(url):
             tag = element
             break
 
-    # print("TOPO NSA list",tag)
-    # print("TOPO NSA attribs",tag.attrib)
+    # log.debug("TOPO NSA list",tag)
+    # log.debug("TOPO NSA attribs",tag.attrib)
 
     metadata[NSA_ID_ATTRIB] = tag.attrib[NSA_ID_ATTRIB]
     metadata[NSA_VERSION_ATTRIB] = tag.attrib[NSA_VERSION_ATTRIB]
     metadata[NSA_EXPIRES_ATTRIB] = tag.attrib[NSA_EXPIRES_ATTRIB]
     # TODO more info
 
-    # print("TOPO META",metadata)
+    # log.debug("TOPO META",metadata)
 
     # Find all interface tags
     for element in tree.findall(FIND_ANYWHERE_PREFIX + INTERFACE_TAG):
-        print(f"#FOUND interface {element.tag} - {element.text} --- {element.attrib}")
+        log.debug(f"#FOUND interface {element.tag} - {element.text} --- {element.attrib}")
         itype = element.find(FIND_ANYWHERE_PREFIX + TYPE_IN_INTERFACE_TAG)
         href = element.find(FIND_ANYWHERE_PREFIX + HREF_IN_INTERFACE_TAG)
-        print("SERVICE", itype.text, href.text)
+        log.debug("SERVICE", itype=itype.text, href=href.text)
         services[itype.text] = href.text
 
     disc_dict = {"metadata": metadata, "services": services}
@@ -1021,31 +1037,33 @@ def nsi_get_topology(url):
 
 def nsi_parse_topology_xml_tree(tree):
     """Find all BidirectionalPorts, ignoring STP vs SDP. No longer used."""
+    log = logger.bind()
+
     # Find all BidirectionalPort tags
     bidiports = {}
 
     bidicount = 1
     for element in tree.findall(FIND_ANYWHERE_PREFIX + BIDI_PORT_TAG):
-        # logger.debug print(f"#FOUND PortGroup {element.tag} - {element.text} --- {element.attrib}")
+        # logger.debug log.debug(f"#FOUND PortGroup {element.tag} - {element.text} --- {element.attrib}")
         bidiport_id = element.attrib["id"]
         name = next(name.text for name in element.iter(NAME_TAG))
         bidiports[bidiport_id] = {FASTUID_ID_KEY: bidicount, "name": name}  # id for fastui
         bidicount += 1
 
-    # logger.debug print("#BIDIPORTS",bidiports)
+    # logger.debug log.debug("#BIDIPORTS",bidiports)
 
     # Find Relation hasInbountPort, which contains PortGroups that have the VLANS per unidirectional STP,
     # i.e., bidi + ":in". I consider those to be the same as the outbond ones.
 
     for element in tree.findall(FIND_ANYWHERE_PREFIX + RELATION_TAG):
-        # print(f"#FOUND2 Relation {element.tag} - {element.text} --- {element.attrib}")
+        # log.debug(f"#FOUND2 Relation {element.tag} - {element.text} --- {element.attrib}")
         if element.attrib["type"] == RELATION_HAS_INBOUND_PORT_TYPE:
 
-            # logger.debug print("#hasINBOUNDPORT")
+            # logger.debug log.debug("#hasINBOUNDPORT")
             # for inport in element.find(FIND_ANYWHERE_PREFIX+PORTGROUP_TAG):
             for inport in element.iterfind(FIND_ANYWHERE_PREFIX + PORTGROUP_TAG):
 
-                # logger.debug print("#INBOUND PORTGROUP",inport.attrib)
+                # logger.debug log.debug("#INBOUND PORTGROUP",inport.attrib)
 
                 # ISSUE: also matches PortGroup isAlias within
 
@@ -1053,12 +1071,12 @@ def nsi_parse_topology_xml_tree(tree):
                     inport_id = inport.attrib["id"]  # this is the bidiport_id + ":in"
                     bidiport_id = inport_id[: -len(INPORT_IN_POSTFIX)]
 
-                    # logger.debug print("INPORT",bidiport_id)
+                    # logger.debug log.debug("INPORT",bidiport_id)
 
                     lg = inport.find(FIND_ANYWHERE_PREFIX + LABEL_GROUP_TAG)
-                    # logger.debug print("LABELGROUP",lg)
+                    # logger.debug log.debug("LABELGROUP",lg)
                     if lg is not None:
-                        # logger.debug print("#VLANS",lg.text)
+                        # logger.debug log.debug("#VLANS",lg.text)
                         vlanstr = lg.text
 
                     if inport is not None and lg is not None:
@@ -1097,15 +1115,17 @@ def nsi_parse_topology_sdp_xml_tree(tree):
     "stps" : all BiDirectionalPorts (in variant), a dictionary indexed by port id
     "sdps" : all BiDirectionalPorts linked via isAlias, a list with "inport","outport" and "vlanranges"
     """
+    log = logger.bind()
+
     # Find all BidirectionalPort tags
     bidiports = {}
 
     bidicount = 1
     for element in tree.findall(FIND_ANYWHERE_PREFIX + BIDI_PORT_TAG):
-        # logger.debug print(f"#FOUND PortGroup {element.tag} - {element.text} --- {element.attrib}")
+        # logger.debug log.debug(f"#FOUND PortGroup {element.tag} - {element.text} --- {element.attrib}")
         bidiport_id = element.attrib["id"]
 
-        print("nsi_parse_topology_sdp_xml_tree: DDSSTP", bidiport_id)
+        log.debug("nsi_parse_topology_sdp_xml_tree: DDSSTP", bidiport_id=bidiport_id)
         # Prepare new dict
         if (name_element := element.find(NAME_TAG)) is not None:
             name = name_element.text
@@ -1114,7 +1134,7 @@ def nsi_parse_topology_sdp_xml_tree(tree):
         bidiports[bidiport_id] = {FASTUID_ID_KEY: bidicount, "name": name}  # id for fastui + name of bidiport
         bidicount += 1
 
-    #    #logger.debug print("#BIDIPORTS",bidiports)
+    #    #logger.debug log.debug("#BIDIPORTS",bidiports)
 
     sdps = []
 
@@ -1124,14 +1144,14 @@ def nsi_parse_topology_sdp_xml_tree(tree):
     # Also
 
     for element in tree.findall(FIND_ANYWHERE_PREFIX + RELATION_TAG):
-        # print(f"#FOUND2 Relation {element.tag} - {element.text} --- {element.attrib}")
+        # log.debug(f"#FOUND2 Relation {element.tag} - {element.text} --- {element.attrib}")
         if element.attrib["type"] == RELATION_HAS_INBOUND_PORT_TYPE:
 
-            # logger.debug print("#hasINBOUNDPORT")
+            # logger.debug log.debug("#hasINBOUNDPORT")
             # for inport in element.find(FIND_ANYWHERE_PREFIX+PORTGROUP_TAG):
             for inport in element.iterfind(FIND_ANYWHERE_PREFIX + PORTGROUP_TAG):
 
-                # logger.debug print("#INBOUND PORTGROUP",inport.attrib)
+                # logger.debug log.debug("#INBOUND PORTGROUP",inport.attrib)
 
                 # ISSUE: also matches PortGroup isAlias within
 
@@ -1139,26 +1159,28 @@ def nsi_parse_topology_sdp_xml_tree(tree):
                     inport_id = inport.attrib["id"]  # this is the bidiport_id + ":in"
                     bidiport_id = inport_id[: -len(INPORT_IN_POSTFIX)]
 
-                    # logger.debug print("INPORT",bidiport_id)
+                    # logger.debug log.debug("INPORT",bidiport_id)
 
                     lg = inport.find(FIND_ANYWHERE_PREFIX + LABEL_GROUP_TAG)
-                    # logger.debug print("LABELGROUP",lg)
+                    # logger.debug log.debug("LABELGROUP",lg)
                     if lg is not None:
-                        # logger.debug print("#VLANS",lg.text)
+                        # logger.debug log.debug("#VLANS",lg.text)
                         vlanstr = lg.text
 
                     relalias = inport.find(FIND_ANYWHERE_PREFIX + RELATION_TAG)
-                    print("nsi_parse_topology_sdp_xml_tree: ALIAS", relalias)
+                    log.debug("nsi_parse_topology_sdp_xml_tree: ALIAS", relalias=relalias)
                     if relalias is not None:
-                        # print("nsi_parse_topology_sdp_xml_tree: ALIAS attrib",relalias.attrib)
+                        # log.debug("nsi_parse_topology_sdp_xml_tree: ALIAS attrib",relalias.attrib)
                         if relalias.attrib[RELATION_TYPE_ATTRIB] == RELATION_IS_ALIAS_TYPE:
                             # Found SDP
                             outport = relalias.find(FIND_ANYWHERE_PREFIX + PORTGROUP_TAG)
                             if outport is None:
-                                print("nsi_parse_topology_sdp_xml_tree: No portgroup in Relation isAlias")
+                                log.debug("nsi_parse_topology_sdp_xml_tree: No portgroup in Relation isAlias")
                             else:
                                 outport_id = outport.attrib[PORTGROUP_ID_ATTRIB]
-                                print("nsi_parse_topology_sdp_xml_tree: SDP found from", inport_id, "to", outport_id)
+                                log.debug(
+                                    f"nsi_parse_topology_sdp_xml_tree: SDP found from {inport_id} to {outport_id}"
+                                )
                                 sdp = {"inport": inport_id, "outport": outport_id, "vlanranges": vlanstr}
                                 sdps.append(sdp)
 
@@ -1175,14 +1197,14 @@ def nsi_parse_topology_sdp_xml_tree(tree):
         found = False
         for sdp in sdps:
 
-            print("SOADM:", sdp, bidiports[sbidiport_id])
+            log.debug("SOADM:", sdp=sdp, bidiport=bidiports[sbidiport_id])
             inport_id = sdp["inport"]
             tbidiport_id = inport_id[: -len(INPORT_IN_POSTFIX)]
             if sbidiport_id == tbidiport_id:
-                print("Dropping SDP from STPs", sbidiport_id)
+                log.debug("Dropping SDP from STPs", sbidiport_id=sbidiport_id)
                 found = True
         if not found:
-            print("Adding STP to STPs", sbidiport_id)
+            log.debug("Adding STP to STPs", sbidiport_id=sbidiport_id)
             stps[sbidiport_id] = bidiports[sbidiport_id]
 
     retdict = {}
@@ -1194,9 +1216,6 @@ def nsi_parse_topology_sdp_xml_tree(tree):
 #
 # new NSI SAOP request interface
 #
-logger = structlog.get_logger()
-
-
 def nsi_send_reserve(reservation: Reservation, source_stp: STP, dest_stp: STP) -> dict[str, str]:
     log = logger.bind(
         reservationId=reservation.id,
@@ -1310,6 +1329,8 @@ def nsi_connections_query(request_url, callback_url_prefix, provider_nsa_id):
     """NSI QUERY
     Returns: See nsi_soap_parse_query_reply
     """
+    log = logger.bind()
+
     try:
         correlation_uuid_py = generate_uuid()
 
@@ -1321,12 +1342,12 @@ def nsi_connections_query(request_url, callback_url_prefix, provider_nsa_id):
         )
 
         # TODO: send XML to Safnari
-        print("nsi_connections_query: QUERY XML", query_xml)
-        print("nsi_connections_query: CALLING ORCH")
+        log.debug("nsi_connections_query: QUERY XML", query_xml=query_xml)
+        log.debug("nsi_connections_query: CALLING ORCH")
         soap_xml = nsi_util_post_soap(request_url, query_xml)
         reservations = nsi_soap_parse_query_reply(soap_xml)
 
-        print("nsi_connections_query: Got reply parsed", reservations)
+        log.debug("nsi_connections_query: Got reply parsed", reservations=reservations)
         return reservations
 
     except:
@@ -1351,6 +1372,8 @@ def nsi_reserve(
     pass a given correlationId, hence the parameter.
     Returns: dict with ["correlationId":correlationId,"connectionId":connectionId] as strings
     """
+    log = logger.bind()
+
     try:
         connection_descr = NSI_RESERVE_XML_CONNECTION_PREFIX + " " + epnamea + " to " + epnamez + " over " + linkname
         start_datetime_py = datetime.datetime.now(datetime.timezone.utc)
@@ -1374,13 +1397,13 @@ def nsi_reserve(
 
         # Send XML to Aggregator
         # Wait here for HTTP reply synchronously, which must have given CorrelationId
-        print("RESERVE: Request XML", reserve_xml)
+        log.debug("RESERVE: Request XML", reserve_xml=reserve_xml)
         soap_xml = nsi_util_post_soap(request_url, reserve_xml)
 
-        print("RESERVE: GOT HTTP REPLY", soap_xml)
+        log.debug("RESERVE: GOT HTTP REPLY", soap_xml=soap_xml)
         retdict = nsi_soap_parse_reserve_reply(soap_xml)
 
-        print("RESERVE: Got connectionId", retdict)
+        log.debug("RESERVE: Got connectionId", retdict=retdict)
         # TODO: do type checking inside nsi_soap_parse()
         got_correlation_uuid_py = UUID(retdict["correlationId"])
         if got_correlation_uuid_py != expect_correlation_uuid_py:
@@ -1399,6 +1422,8 @@ def nsi_reserve_commit(request_url, provider_nsa_id: str, connid_str):
     """NSI RESERVE_COMMIT(SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"connectionId":connectionId] as strings
     """
+    log = logger.bind()
+
     try:
         correlation_uuid_py = generate_uuid()
 
@@ -1411,17 +1436,17 @@ def nsi_reserve_commit(request_url, provider_nsa_id: str, connid_str):
             reserve_commit_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id
         )
 
-        print("RESERVE-COMMIT: Request XML", reserve_commit_xml)
+        log.debug("RESERVE-COMMIT: Request XML", reserve_commit_xml=reserve_commit_xml)
 
         # TODO: send XML to Safnari
-        print("RESERVE-COMMIT: CALLING ORCH")
+        log.debug("RESERVE-COMMIT: CALLING ORCH")
         soap_xml = nsi_util_post_soap(request_url, reserve_commit_xml)
 
-        print("RESERVE-COMMIT: GOT HTTP REPLY", soap_xml)
+        log.debug("RESERVE-COMMIT: GOT HTTP REPLY", soap_xml=soap_xml)
 
         retdict = nsi_soap_parse_reserve_commit_reply(soap_xml)
 
-        print("RESERVE-COMMIT: Got correlationId", retdict)
+        log.debug("RESERVE-COMMIT: Got correlationId", retdict=retdict)
 
         # TODO: verify correlationId are the same
 
@@ -1435,6 +1460,8 @@ def nsi_provision(request_url, callback_url_prefix: str, provider_nsa_id: str, c
     """NSI PROVISION(SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"connectionId":connectionId] as strings
     """
+    log = logger.bind()
+
     try:
         correlation_uuid_py = generate_uuid()
 
@@ -1447,17 +1474,17 @@ def nsi_provision(request_url, callback_url_prefix: str, provider_nsa_id: str, c
             provision_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id
         )
 
-        print("PROVISION: Request XML", provision_xml)
+        log.debug("PROVISION: Request XML", provision_xml=provision_xml)
 
         # TODO: send XML to Safnari
-        print("PROVISION: CALLING ORCH")
+        log.debug("PROVISION: CALLING ORCH")
         soap_xml = nsi_util_post_soap(request_url, provision_xml)
 
-        print("PROVISION: GOT HTTP REPLY", soap_xml)
+        log.debug("PROVISION: GOT HTTP REPLY", soap_xml=soap_xml)
 
         retdict = nsi_soap_parse_provision_reply(soap_xml)
 
-        print("PROVISION: Got correlationId", retdict)
+        log.debug("PROVISION: Got correlationId", retdict=retdict)
         # TODO: verify correlationId in reply are the same as in request
 
         return retdict
@@ -1470,6 +1497,8 @@ def nsi_terminate(request_url, callback_url_prefix: str, provider_nsa_id: str, c
     """NSI TERMINATE(SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"connectionId":connectionId] as strings
     """
+    log = logger.bind()
+
     try:
         correlation_uuid_py = generate_uuid()
 
@@ -1482,17 +1511,17 @@ def nsi_terminate(request_url, callback_url_prefix: str, provider_nsa_id: str, c
             terminate_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id
         )
 
-        print("TERMINATE: Request XML", terminate_xml)
+        log.debug("TERMINATE: Request XML", terminate_xml=terminate_xml)
 
         # TODO: send XML to Safnari
-        print("TERMINATE: CALLING ORCH")
+        log.debug("TERMINATE: CALLING ORCH")
         soap_xml = nsi_util_post_soap(request_url, terminate_xml)
 
-        print("TERMINATE: GOT HTTP REPLY", soap_xml)
+        log.debug("TERMINATE: GOT HTTP REPLY", soap_xml=soap_xml)
 
         retdict = nsi_soap_parse_terminate_reply(soap_xml)
 
-        print("TERMINATE: Got fault ", retdict[S_FAULTSTRING_TAG], "correlationId", retdict[S_CORRELATION_ID_TAG])
+        log.debug(f"TERMINATE: Got fault {retdict[S_FAULTSTRING_TAG]} correlationId {retdict[S_CORRELATION_ID_TAG]}")
 
         # TODO: verify correlationId are the same
 
@@ -1506,6 +1535,8 @@ def nsi_release(request_url, callback_url_prefix: str, provider_nsa_id: str, con
     """NSI RELEASE (SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"connectionId":connectionId] as strings
     """
+    log = logger.bind()
+
     try:
         correlation_uuid_py = generate_uuid()
 
@@ -1518,17 +1549,17 @@ def nsi_release(request_url, callback_url_prefix: str, provider_nsa_id: str, con
             release_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id
         )
 
-        print("RELEASE: Request XML", release_xml)
+        log.debug("RELEASE: Request XML", release_xml=release_xml)
 
         # TODO: send XML to Safnari
-        print("RELEASE: CALLING ORCH")
+        log.debug("RELEASE: CALLING ORCH")
         soap_xml = nsi_util_post_soap(request_url, release_xml)
 
-        print("RELEASE: GOT HTTP REPLY", soap_xml)
+        log.debug("RELEASE: GOT HTTP REPLY", soap_xml=soap_xml)
 
         retdict = nsi_soap_parse_release_reply(soap_xml)
 
-        print("RELEASE: Got fault ", retdict[S_FAULTSTRING_TAG], "correlationId", retdict[S_CORRELATION_ID_TAG])
+        log.debug(f"RELEASE: Got fault {retdict[S_FAULTSTRING_TAG]} correlationId {retdict[S_CORRELATION_ID_TAG]}")
 
         # TODO: verify correlationId are the same
 
@@ -1542,6 +1573,8 @@ def nsi_reserve_timeout_ack(request_url, callback_url_prefix: str, provider_nsa_
     """NSI RESERVE-TIMEOUT-ACK(SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"connectionId":connectionId] as strings
     """
+    log = logger.bind()
+
     try:
         correlation_uuid_py = generate_uuid()
 
@@ -1554,13 +1587,13 @@ def nsi_reserve_timeout_ack(request_url, callback_url_prefix: str, provider_nsa_
             reserve_timeout_ack_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id
         )
 
-        print("RESERVE_TIMEOUT_ACK: Request XML", reserve_timeout_ack_xml)
+        log.debug("RESERVE_TIMEOUT_ACK: Request XML", reserve_timeout_ack_xml=reserve_timeout_ack_xml)
 
         # TODO: send XML to Safnari
-        print("RESERVE_TIMEOUT_ACK: CALLING ORCH")
+        log.debug("RESERVE_TIMEOUT_ACK: CALLING ORCH")
         soap_xml = nsi_util_post_soap(request_url, reserve_timeout_ack_xml)
 
-        print("RESERVE_TIMEOUT_ACK: GOT HTTP REPLY", soap_xml)
+        log.debug("RESERVE_TIMEOUT_ACK: GOT HTTP REPLY", soap_xml=soap_xml)
 
         retdict = nsi_soap_parse_reserve_timeout_ack_reply(soap_xml)
 
@@ -1583,6 +1616,8 @@ def nsi_query_recursive(request_url, orch_reply_to_url: str, provider_nsa_id: st
     """NSI QUERY RECURSIVE(SOAP-template,)
     Returns: dict with ["correlationId":correlationId,"connectionId":connectionId] as strings
     """
+    log = logger.bind()
+
     try:
         correlation_uuid_py = generate_uuid()
 
@@ -1595,17 +1630,19 @@ def nsi_query_recursive(request_url, orch_reply_to_url: str, provider_nsa_id: st
             query_recursive_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id
         )
 
-        print("QUERY_RECURSIVE: Request XML", query_recursive_xml)
+        log.debug("QUERY_RECURSIVE: Request XML", query_recursive_xml=query_recursive_xml)
 
         # TODO: send XML to Safnari
-        print("QUERY_RECURSIVE: CALLING ORCH")
+        log.debug("QUERY_RECURSIVE: CALLING ORCH")
         soap_xml = nsi_util_post_soap(request_url, query_recursive_xml)
 
-        print("QUERY_RECURSIVE: GOT HTTP REPLY", soap_xml)
+        log.debug("QUERY_RECURSIVE: GOT HTTP REPLY", soap_xml=soap_xml)
 
         retdict = nsi_soap_parse_query_recursive_reply(soap_xml)
 
-        print("QUERY_RECURSIVE: Got fault ", retdict[S_FAULTSTRING_TAG], "correlationId", retdict[S_CORRELATION_ID_TAG])
+        log.debug(
+            f"QUERY_RECURSIVE: Got fault {retdict[S_FAULTSTRING_TAG]} correlationId {retdict[S_CORRELATION_ID_TAG]}"
+        )
 
         # TODO: verify correlationId are the same
 
@@ -1619,15 +1656,17 @@ def nsi_soap_parse_callback(body):
     """Extracts correlationID from Aggregator async callback.
     @return UUID as UUID class
     """
+    log = logger.bind()
+
     tree = nsi_util_parse_xml(body)
     tag = tree.find(FIND_ANYWHERE_PREFIX + S_CORRELATION_ID_TAG)
     if tag is not None:
-        print("CALLBACK: Found correlationId", tag.text)
+        log.debug("CALLBACK: Found correlationId", tag=tag.text)
         correlation_urn = tag.text
         # Checks input format
         correlation_uuid = UUID(correlation_urn)
         return correlation_uuid
-    print("CALLBACK: Could not find correlationId", body)
+    log.debug("CALLBACK: Could not find correlationId", body=body)
     raise Exception("correlationId not found in callback")
 
 
@@ -1635,16 +1674,18 @@ def nsi_soap_parse_error_event(body):
     """Extracts connectionId and serviceException from Aggregator async errorEvent.
     @return UUID as UUID class
     """
+    log = logger.bind()
+
     tree = nsi_util_parse_xml(body)
     element = tree.find(FIND_ANYWHERE_PREFIX + S_CONNECTION_ID_TAG)
     if element is not None:
-        print("CALLBACK: Found connectionId", element.text)
+        log.debug("CALLBACK: Found connectionId", element=element.text)
         connectionId = UUID(element.text)
         element = tree.find(FIND_ANYWHERE_PREFIX + S_SERVICE_EXCEPTION_TAG)
         if element is not None:
-            print("CALLBACK: Found serviceException")
+            log.debug("CALLBACK: Found serviceException")
             return connectionId, {element.tag: element.text for element in element.iter()}
-    print("CALLBACK: Could not find connectionId and/or serviceException in errorEvent", body)
+    log.debug("CALLBACK: Could not find connectionId and/or serviceException in errorEvent", body=body)
     raise Exception("errorEvent not found in callback")
 
 
@@ -1658,6 +1699,8 @@ def nsi_util_post_soap(url, soapreqmsg):
     """Does HTTP POST of soapreqmsg to URL
     Returns: response.content, a SOAP reply
     """
+    log = logger.bind()
+
     # headers = {'content-type': 'application/soap+xml'}
     headers = {"content-type": "text/xml"}
     body = soapreqmsg
@@ -1670,12 +1713,12 @@ def nsi_util_post_soap(url, soapreqmsg):
         verify=False,
         cert=(settings.NSI_AURA_CERTIFICATE, settings.NSI_AURA_PRIVATE_KEY),
     )
-    print(response.status_code)
-    print("#CONTENT TYPE#", response.headers["content-type"])
+    log.debug(response.status_code)
+    log.debug(f"#CONTENT TYPE# {response.headers['content-type']}")
     if content_type_is_valid_soap(response.headers["content-type"]):
         return response.content
-    # print(response.encoding)
-    # print(response.content)
+    # log.debug(response.encoding)
+    # log.debug(response.content)
     raise Exception(url + " did not return XML, but" + response.headers["content-type"])
 
 
@@ -1688,6 +1731,8 @@ def nsi_soap_parse_query_reply(soap_xml):
     """Parses SOAP QUERY reply
     Returns: dictionary of Reservation tags, key ConnectionId, values interesting subset.
     """
+    log = logger.bind()
+
     # Find all Reservation tags
     tree = None
     soap_file = BytesIO(soap_xml)
@@ -1701,7 +1746,7 @@ def nsi_soap_parse_query_reply(soap_xml):
 
     rescount = 1
     for res in tree.findall(FIND_ANYWHERE_PREFIX + S_RESERVATION_TAG):
-        # logger.debug print(f"#FOUND Reservation {res.tag} - {res.text} --- {res.attrib}")
+        # logger.debug log.debug(f"#FOUND Reservation {res.tag} - {res.text} --- {res.attrib}")
 
         reservation_dict = {FASTUID_ID_KEY: rescount}
         rescount += 1
@@ -1742,6 +1787,8 @@ def nsi_soap_parse_reserve_reply(soap_xml):
     """Parses SOAP RESERVE reply
     Returns: ConnectionId as string
     """
+    log = logger.bind()
+
     # Parse XML
     tree = None
     soap_file = BytesIO(soap_xml)
@@ -1767,7 +1814,7 @@ def nsi_soap_parse_reserve_reply(soap_xml):
     else:
         faultstring = tag.text
 
-    print("nsi_soap_parse_reserve_reply: Got error?", faultstring)
+    log.debug("nsi_soap_parse_reserve_reply: Got error?", faultstring=faultstring)
 
     retdict = {}
     retdict[S_FAULTSTRING_TAG] = faultstring
@@ -1805,6 +1852,8 @@ def nsi_soap_parse_correlationid_reply(soap_xml):
     Returns: dict with S_FAULTSTRING_TAG and S_CORRELATION_ID_TAG as keys, values string
     if S_FAULTSTRING_TAG is not None, there was a faulstring tag.
     """
+    log = logger.bind()
+
     # Parse XML
     tree = None
     soap_file = BytesIO(soap_xml)
@@ -1822,7 +1871,7 @@ def nsi_soap_parse_correlationid_reply(soap_xml):
     else:
         faultstring = tag.text
 
-    print("nsi_soap_parse_correlationid_reply: Got error?", faultstring)
+    log.debug("nsi_soap_parse_correlationid_reply: Got error?", faultstring=faultstring)
 
     retdict = {}
     retdict[S_FAULTSTRING_TAG] = faultstring
@@ -1834,6 +1883,8 @@ def nsi_soap_parse_reserve_callback(soap_xml):
     """Parses SOAP RESERVE async callback
     Returns: dictionary with relevant fields
     """
+    log = logger.bind()
+
     # Parse XML
     tree = None
     soap_file = BytesIO(soap_xml)
@@ -1857,9 +1908,9 @@ def nsi_soap_parse_reserve_callback(soap_xml):
     tag = tree.find(FIND_ANYWHERE_PREFIX + S_RESERVE_CONFIRMED_TAG)
     callback_state_str = tag.tag
 
-    # print("nsi_soap_parse_reserve_callback: Finding", tag)
-    # print("nsi_soap_parse_reserve_callback: Finding", tree.find(FIND_ANYWHERE_PREFIX+"nsi_ctypes:reserveConfirmed"))
-    # print("nsi_soap_parse_reserve_callback: Finding", tree.find(FIND_ANYWHERE_PREFIX+"reserveConfirmed"))
+    # log.debug("nsi_soap_parse_reserve_callback: Finding", tag)
+    # log.debug("nsi_soap_parse_reserve_callback: Finding", tree.find(FIND_ANYWHERE_PREFIX+"nsi_ctypes:reserveConfirmed"))
+    # log.debug("nsi_soap_parse_reserve_callback: Finding", tree.find(FIND_ANYWHERE_PREFIX+"reserveConfirmed"))
 
     #
     # Get source STP
@@ -1880,7 +1931,7 @@ def nsi_soap_parse_reserve_callback(soap_xml):
     else:
         faultstring = tag.text
 
-    print("nsi_soap_parse_reserve_callback: SOAP faultString:", faultstring)
+    log.debug("nsi_soap_parse_reserve_callback: SOAP faultString:", faultstring=faultstring)
 
     retdict = {}
     retdict[S_FAULTSTRING_TAG] = faultstring
@@ -1897,6 +1948,8 @@ def nsi_soap_parse_query_recursive_callback(soap_xml):
     """Parses SOAP QUERY-RECURSIVE async callback
     Returns: dictionary with relevant fields
     """
+    log = logger.bind()
+
     # Parse XML
     tree = None
     soap_file = BytesIO(soap_xml)
@@ -1929,10 +1982,10 @@ def nsi_soap_parse_query_recursive_callback(soap_xml):
     children = {}
     tag = tree.find(FIND_ANYWHERE_PREFIX + S_CHILDREN_TAG)
     if tag is None:
-        print("nsi_soap_parse_query_recursive_callback: No children tag")
+        log.debug("nsi_soap_parse_query_recursive_callback: No children tag")
     else:
         for tag2 in tag.iterfind(FIND_ANYWHERE_PREFIX + S_CHILD_TAG):
-            print("nsi_soap_parse_query_recursive_callback: Found child", tag2)
+            log.debug("nsi_soap_parse_query_recursive_callback: Found child", tag2=tag2)
             child_dict = {}
             tag3 = tag2.find(FIND_ANYWHERE_PREFIX + S_CONNECTION_ID_TAG)
             child_connectionid_str = tag3.text
@@ -1970,7 +2023,7 @@ def nsi_soap_parse_query_recursive_callback(soap_xml):
     else:
         faultstring = tag.text
 
-    print("nsi_soap_parse_query_recursive_callback: SOAP PARSE CALLBACK FOR CONNECTIONID:", faultstring)
+    log.debug("nsi_soap_parse_query_recursive_callback: SOAP PARSE CALLBACK FOR CONNECTIONID:", faultstring=faultstring)
 
     retdict = {}
     retdict[S_FAULTSTRING_TAG] = faultstring
@@ -1981,7 +2034,7 @@ def nsi_soap_parse_query_recursive_callback(soap_xml):
     retdict[S_DEST_STP_TAG] = dest_stp_str
     retdict[S_CHILDREN_TAG] = children
 
-    print("nsi_soap_parse_query_recursive_callback: Found children", children)
+    log.debug("nsi_soap_parse_query_recursive_callback: Found children", children=children)
 
     return retdict
 
@@ -1991,4 +2044,4 @@ def nsi_soap_parse_query_recursive_callback(soap_xml):
 # nsi_comm_init("static")
 
 # dds_documents_dict = nsi_get_dds_documents("https://dds.ana.dlp.surfnet.nl/dds/documents/")
-# print("FINAL DOCS", dds_documents_dict)
+# log.debug("FINAL DOCS", dds_documents_dict)
