@@ -120,7 +120,9 @@ def nsi_load_dds_documents():
     aura.state.global_soap_provider_url = orchestrator_dict["services"][SOAP_PROVIDER_MIME_TYPE]
 
     log.debug("nsi_load_dds_documents: Found Aggregator ID", global_provider_nsa_id=aura.state.global_provider_nsa_id)
-    log.debug("nsi_load_dds_documents: Found Aggregator SOAP", global_soap_provider_url=aura.state.global_soap_provider_url)
+    log.debug(
+        "nsi_load_dds_documents: Found Aggregator SOAP", global_soap_provider_url=aura.state.global_soap_provider_url
+    )
 
     worldwide_stps = {}
     worldwide_sdp_list = []

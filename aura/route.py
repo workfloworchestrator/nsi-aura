@@ -597,7 +597,12 @@ def fastapi_nsi_reserve(epida: int, epidz: int, linkid: int) -> list[AnyComponen
             str(settings.SERVER_URL_PREFIX) + "reserve-commit/?connid=" + reserve_reply_dict["connectionId"]
         )
 
-        log.debug("ARNO: fastapi_nsi_reserve: URLS", root_url=root_url, query_rec_url=query_rec_url, sim_reply_to_url=sim_reply_to_url)
+        log.debug(
+            "ARNO: fastapi_nsi_reserve: URLS",
+            root_url=root_url,
+            query_rec_url=query_rec_url,
+            sim_reply_to_url=sim_reply_to_url,
+        )
 
     except Exception:
         traceback.print_exc()
