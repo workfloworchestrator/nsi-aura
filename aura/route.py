@@ -180,7 +180,7 @@ def fastapi_reload_topos() -> list[AnyComponent]:
         # - global_provider_nsa_id
         # - global_soap_provider_url
         #
-        dds_documents_dict = nsi_load_dds_documents()
+        dds_documents_dict, worldwide_stps, worldwide_sdps = nsi_load_dds_documents()
 
         # Display info about reload to user:
         # DDS knows all, so also who is our Orchestrator/Safnari

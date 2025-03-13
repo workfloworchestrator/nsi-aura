@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from apscheduler.triggers.interval import IntervalTrigger
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastui import prebuilt_html
@@ -21,9 +21,23 @@ from aura.frontend.database import router as database_router
 from aura.frontend.home import router as home_router
 from aura.frontend.nsi import router as nsi_router
 from aura.frontend.reservations import router as reservations_router
+from aura.job import nsi_poll_dds_job, scheduler
 from aura.log import init as log_init
 
+#
+# scheduler
+#
+scheduler.start()
+# TODO: remove replace_existing after fixing running __init__ twice
+scheduler.add_job(nsi_poll_dds_job, trigger=IntervalTrigger(minutes=1), coalesce=True, replace_existing=True)
+#
+# logging
+#
 log_init()
+
+#
+# application
+#
 app = FastAPI()
 
 # make sure the folder named 'static' exists in the project,

@@ -51,15 +51,28 @@ class STP(SQLModel, table=True):
     """NSI Service Termination Point."""
 
     id: int | None = Field(default=None, primary_key=True)
-    organisationId: str  # ORGID ":" DATE (see GFD.202)
-    networkId: str  # <STP identifier> ::= <networkId> “:” <localId> <label> (see GDF.237)
-    localId: str
+    stpId: str
     vlanRange: str  # our labels are VLAN's
     description: str | None
 
     @property
+    def organisationId(self) -> str:
+        _, _, _, fqdn, date, *opaque_part = self.stpId.split(":")
+        return fqdn + ":" + date
+
+    @property
+    def networkId(self) -> str:
+        _, _, _, fqdn, date, *opaque_part = self.stpId.split(":")
+        return opaque_part[0]
+
+    @property
+    def localId(self) -> str:
+        _, _, _, fqdn, date, *opaque_part = self.stpId.split(":")
+        return ":".join(opaque_part[1:])
+
+    @property
     def urn_base(self):
-        return f"urn:ogf:network:{self.organisationId}:{self.networkId}:{self.localId}"
+        return f"urn:ogf:network:{self.stpId}"
 
     @property
     def urn(self):

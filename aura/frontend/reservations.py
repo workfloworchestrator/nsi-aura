@@ -93,7 +93,7 @@ def search_view() -> SelectSearchResponse:
         stps = session.query(STP).all()
     endpoints = defaultdict(list)
     for stp in stps:
-        endpoints[stp.description].append({"value": str(stp.id), "label": stp.localId})
+        endpoints[stp.description].append({"value": str(stp.id), "label": stp.stpId})
     options = [{"label": k, "options": v} for k, v in endpoints.items()]
     return SelectSearchResponse(options=options)
 

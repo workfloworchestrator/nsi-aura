@@ -25,7 +25,6 @@ import aura.state
 from aura.model import Discovery, Endpoint, NetworkLink, Reservation, Span
 from aura.nsi_comm import *
 from aura.settings import settings
-from aura.util import update_service_termination_points_from_dds
 
 #
 # NSI-AuRA = NSI ANA ultimate Requester Agent
@@ -143,10 +142,10 @@ def nsi_load_dds_documents():
     nsi_reload_topology_into_links_model(worldwide_sdp_list)
 
     # update ServiceTerminationPoint's in database
-    update_service_termination_points_from_dds(worldwide_stps)
+    # update_service_termination_points_from_dds(worldwide_stps)
 
     aura.state.ONLINE = True
-    return dds_documents_dict
+    return dds_documents_dict, worldwide_stps, worldwide_sdp_list
 
 
 def nsi_reload_topology_into_endpoints_model(stps):

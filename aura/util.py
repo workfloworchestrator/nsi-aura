@@ -24,38 +24,25 @@ def update_service_termination_points_from_dds(stps: dict[str : dict[str, str]])
     """Update ServiceTerminationPoint table with topology information from DDS."""
     with Session.begin() as session:
         for stp in stps.keys():
-            _, _, _, fqdn, date, *opaque_part = stp.split(":")
-            organisationId = fqdn + ":" + date
-            networkId = ":".join(opaque_part[:-1])
-            localId = opaque_part[-1]
+            stpId = stp.replace("urn:ogf:network:", "")
             log = logger.bind(
-                organisationId=organisationId,
-                networkId=networkId,
-                localId=localId,
+                stpId=stpId,
                 vlanRange=stps[stp]["vlanranges"],
                 description=stps[stp]["name"],
             )
-            existing_stp = (
-                session.query(STP)
-                .filter(
-                    STP.organisationId == organisationId,
-                    STP.networkId == networkId,
-                    STP.localId == localId,
-                )
-                .one_or_none()
-            )
+            existing_stp = session.query(STP).filter(STP.stpId == stpId).one_or_none()
             if existing_stp is None:
                 log.info("add new STP")
                 session.add(
                     STP(
-                        organisationId=organisationId,
-                        networkId=networkId,
-                        localId=localId,
+                        stpId=stpId,
                         vlanRange=stps[stp]["vlanranges"],
                         description=stps[stp]["name"],
                     )
                 )
-            else:
+            elif existing_stp.vlanRange != stps[stp]["vlanranges"] or existing_stp.description != stps[stp]["name"]:
                 log.info("update existing STP")
                 existing_stp.vlanRange = stps[stp]["vlanranges"]
                 existing_stp.description = stps[stp]["name"]
+            else:
+                log.debug("STP did not change")

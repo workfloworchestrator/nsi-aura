@@ -21,6 +21,7 @@ from pytz import utc
 
 from aura.db import Session
 from aura.model import STP, Reservation
+from aura.nsi_aura import nsi_load_dds_documents
 from aura.nsi_comm import (
     nsi_send_provision,
     nsi_send_release,
@@ -28,6 +29,7 @@ from aura.nsi_comm import (
     nsi_send_reserve_commit,
     nsi_send_terminate,
 )
+from aura.util import update_service_termination_points_from_dds
 
 # Advanced Python Scheduler
 # scheduler = AsyncIOScheduler(event_loop=asyncio.get_running_loop(), timezone=utc)
@@ -37,7 +39,6 @@ scheduler = BackgroundScheduler(
     job_defaults={"coalesce": False, "max_instances": 1, "misfire_grace_time": None},
     timezone=utc,
 )
-scheduler.start()
 
 
 logger = structlog.get_logger()
@@ -47,6 +48,12 @@ def new_correlation_id_on_reservation(reservation_id: int) -> None:
     with Session.begin() as session:
         reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
         reservation.correlationId = uuid4()
+
+
+def nsi_poll_dds_job() -> None:
+    """Poll the DDS for topology documents and update STP and SDP."""  # TODO implement SDP calculation and update
+    dds_documents_dict, worldwide_stps, worldwide_sdps = nsi_load_dds_documents()
+    update_service_termination_points_from_dds(worldwide_stps)
 
 
 def nsi_send_reserve_job(reservation_id: int) -> None:
