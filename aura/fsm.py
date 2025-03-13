@@ -68,6 +68,7 @@ class ConnectionStateMachine(AuraStateMachine):
     nsi_send_reserve = ConnectionNew.to(ConnectionReserveChecking)
     nsi_receive_reserve_confirmed = ConnectionReserveChecking.to(ConnectionReserveHeld)
     nsi_receive_reserve_failed = ConnectionReserveChecking.to(ConnectionReserveFailed)
+    connection_error = ConnectionReserveChecking.to(ConnectionReserveFailed)
     nsi_receive_reserve_timeout = ConnectionReserveHeld.to(ConnectionReserveTimeout)
     nsi_send_reserve_commit = ConnectionReserveHeld.to(ConnectionReserveCommitting)
     nsi_receive_reserve_commit_confirmed = ConnectionReserveCommitting.to(ConnectionReserveCommitted)

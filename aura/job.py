@@ -20,6 +20,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from pytz import utc
 
 from aura.db import Session
+from aura.fsm import ConnectionStateMachine
 from aura.model import STP, Reservation
 from aura.nsi_aura import nsi_load_dds_documents
 from aura.nsi_comm import (
@@ -62,10 +63,19 @@ def nsi_send_reserve_job(reservation_id: int) -> None:
         reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
         source_stp = session.query(STP).filter(STP.id == reservation.sourceStpId).one()  # TODO: replace with relation
         dest_stp = session.query(STP).filter(STP.id == reservation.destStpId).one()  # TODO: replace with relation
-    retdict = nsi_send_reserve(reservation, source_stp, dest_stp)  # TODO: need error handling post soap failure
-    with Session.begin() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
-        reservation.connectionId = UUID(retdict["connectionId"])  # TODO: make nsi_comm return a UUID
+    try:
+        retdict = nsi_send_reserve(reservation, source_stp, dest_stp)  # TODO: need error handling post soap failure
+    except OSError as e:
+        log = logger.bind(reservationId=reservation.id, globalReservationId=str(reservation.globalReservationId))
+        log.warning(str(e))
+        with Session.begin() as session:
+            reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
+            csm = ConnectionStateMachine(reservation)
+            csm.connection_error()
+    else:
+        with Session.begin() as session:
+            reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
+            reservation.connectionId = UUID(retdict["connectionId"])  # TODO: make nsi_comm return a UUID
 
 
 def nsi_send_reserve_commit_job(reservation_id: int) -> None:
