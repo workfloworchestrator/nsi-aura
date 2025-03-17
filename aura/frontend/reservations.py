@@ -15,7 +15,7 @@
 import asyncio
 from collections import defaultdict
 from datetime import datetime
-from typing import Annotated, AsyncIterable
+from typing import Annotated, AsyncIterable, Self
 from uuid import uuid4
 
 import structlog
@@ -25,7 +25,7 @@ from fastui import components as c
 from fastui.components.display import DisplayLookup
 from fastui.events import BackEvent, GoToEvent, PageEvent
 from fastui.forms import SelectSearchResponse, fastui_form
-from pydantic import Field
+from pydantic import Field, model_validator
 from starlette.responses import StreamingResponse
 from statemachine.exceptions import TransitionNotAllowed
 
@@ -41,6 +41,7 @@ from aura.job import (
 )
 from aura.model import STP, Bandwidth, Log, Reservation, Vlan
 from aura.settings import settings
+from aura.util import free_vlan_ranges
 
 router = APIRouter()
 from fastui.base import BaseModel
@@ -84,6 +85,18 @@ class ReservationInputForm(BaseModel):
         title="end time",
         description="optional end time of connection, leave empty for indefinite",
     )
+
+    @model_validator(mode="after")
+    def free_vlan_on_stp(self) -> Self:
+        """Check that the sourceVlan and destVlan are free on the chosen SourceSTP and destSTP."""
+        form = []
+        if self.sourceVlan not in (free_vlans := free_vlan_ranges(int(self.sourceSTP))):
+            form.append({"type": "invalid_vlan", "loc": ["sourceVlan"], "msg": f"free VLANs: {free_vlans}"})
+        if self.destVlan not in (free_vlans := free_vlan_ranges(int(self.destSTP))):
+            form.append({"type": "invalid_vlan", "loc": ["destVlan"], "msg": f"free VLANs: {free_vlans}"})
+        if form:
+            raise HTTPException(status_code=422, detail={"form": form})
+        return self
 
 
 @router.get("/search_endpoints", response_model=SelectSearchResponse)

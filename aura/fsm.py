@@ -64,6 +64,21 @@ class ConnectionStateMachine(AuraStateMachine):
     ConnectionReserveTimeout = State("ConnectionReserveTimeout", "CONNECTION_RESERVE_TIMEOUT")
     ConnectionTerminating = State("ConnectionTerminating", "CONNECTION_TERMINATING")
 
+    active_state_values = [
+        ConnectionProvisioned.value,
+        ConnectionReleased.value,
+        ConnectionActive.value,
+        ConnectionInActive.value,
+        ConnectionFailed.value,
+        ConnectionReserveChecking.value,
+        ConnectionReserveHeld.value,
+        ConnectionReserveCommitting.value,
+        ConnectionReserveCommitted.value,
+        ConnectionProvisioning.value,
+        ConnectionReleasing.value,
+        ConnectionTerminating.value,
+    ]
+
     # fmt: off
     nsi_send_reserve = ConnectionNew.to(ConnectionReserveChecking)
     nsi_receive_reserve_confirmed = ConnectionReserveChecking.to(ConnectionReserveHeld)

@@ -13,9 +13,12 @@
 # limitations under the License.
 
 import structlog
+from sqlalchemy import Select, select
 
 from aura.db import Session
-from aura.model import STP
+from aura.fsm import ConnectionStateMachine
+from aura.model import STP, Reservation
+from aura.vlan import VlanRanges
 
 logger = structlog.get_logger()
 
@@ -46,3 +49,31 @@ def update_service_termination_points_from_dds(stps: dict[str : dict[str, str]])
                 existing_stp.description = stps[stp]["name"]
             else:
                 log.debug("STP did not change")
+
+
+def vlan_ranges(stpId: int) -> VlanRanges:
+    """All VLAN ranges on STP identified by stpId."""
+    with Session() as session:
+        return VlanRanges(session.query(STP.vlanRange).filter(STP.id == stpId).scalar())
+
+
+def in_use_vlan_ranges(select_statement: Select) -> list[int]:
+    """Already in use VLAN ranges on STP identified by stpId."""
+    with Session() as session:
+        return (
+            session.execute(select_statement.filter(Reservation.state.in_(ConnectionStateMachine.active_state_values)))
+            .scalars()
+            .all()
+        )
+
+
+def free_vlan_ranges(stpId: int) -> VlanRanges:
+    """Free VLAN ranges on STP identified by stpId."""
+    free_vlan_ranges = vlan_ranges(stpId)
+    with Session() as session:
+        for vlan in (
+            in_use_vlan_ranges(select(Reservation.sourceVlan).filter(Reservation.sourceStpId == stpId))  # fmt: skip
+            + in_use_vlan_ranges(select(Reservation.destVlan).filter(Reservation.destStpId == stpId))
+        ):
+            free_vlan_ranges = free_vlan_ranges - vlan if vlan in free_vlan_ranges else free_vlan_ranges
+    return free_vlan_ranges
