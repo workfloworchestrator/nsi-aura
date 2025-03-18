@@ -33,10 +33,10 @@ from aura.db import Session
 from aura.frontend.util import app_page, button_with_modal
 from aura.fsm import ConnectionStateMachine
 from aura.job import (
-    gui_release_connection_job,
-    gui_terminate_connection_job,
     nsi_send_provision_job,
+    nsi_send_release_job,
     nsi_send_reserve_job,
+    nsi_send_terminate_job,
     scheduler,
 )
 from aura.model import STP, Bandwidth, Log, Reservation, Vlan
@@ -341,8 +341,8 @@ async def reservation_terminate(id: int) -> list[AnyComponent]:
         with Session.begin() as session:
             reservation = session.query(Reservation).filter(Reservation.id == id).one()
             csm = ConnectionStateMachine(reservation)
-            csm.gui_terminate_connection()
-        scheduler.add_job(gui_terminate_connection_job, args=[id])
+            csm.nsi_send_terminate()
+        scheduler.add_job(nsi_send_terminate_job, args=[id])
         return [
             c.FireEvent(event=PageEvent(name="modal-terminate-reservation", clear=True)),
             c.FireEvent(event=GoToEvent(url=f"/reservations/{id}/log")),
@@ -358,8 +358,8 @@ async def reservation_release(id: int) -> list[AnyComponent]:
         with Session.begin() as session:
             reservation = session.query(Reservation).filter(Reservation.id == id).one()
             csm = ConnectionStateMachine(reservation)
-            csm.gui_release_connection()
-        scheduler.add_job(gui_release_connection_job, args=[id])
+            csm.nsi_send_release()
+        scheduler.add_job(nsi_send_release_job, args=[id])
         return [
             c.FireEvent(event=PageEvent(name="modal-release-reservation", clear=True)),
             c.FireEvent(event=GoToEvent(url=f"/reservations/{id}/log")),
@@ -374,7 +374,7 @@ async def reservation_provision(id: int) -> list[AnyComponent]:
     try:
         with Session.begin() as session:
             reservation = session.query(Reservation).filter(Reservation.id == id).one()
-            ConnectionStateMachine(reservation).gui_provision_connection()
+            ConnectionStateMachine(reservation).nsi_send_provision()
         scheduler.add_job(nsi_send_provision_job, args=[id])
         return [
             c.FireEvent(event=PageEvent(name="modal-provision-reservation", clear=True)),

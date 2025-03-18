@@ -36,7 +36,6 @@ async def nsi_callback(request: Request):
     """Receive and process NSI async callback."""
     from aura.db import Session
 
-    log = logger.bind(module=__name__, job=nsi_callback.__name__)
     body = nsi_util_xml_to_dict(await request.body())
     with Session.begin() as session:
         try:
@@ -52,7 +51,7 @@ async def nsi_callback(request: Request):
             else:
                 correlationId = body["Header"]["nsiHeader"]["correlationId"]
                 reservation = session.query(Reservation).filter(Reservation.correlationId == correlationId).one()
-            log = log.bind(
+            log = logger.bind(
                 reservationId=reservation.id,
                 correlationId=str(reservation.correlationId),
                 connectionId=str(reservation.connectionId),

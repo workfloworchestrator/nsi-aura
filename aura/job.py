@@ -92,13 +92,11 @@ def nsi_send_provision_job(reservation_id: int) -> None:
     retdict = nsi_send_provision(reservation)  # TODO: need error handling on failed post soap
 
 
-def gui_terminate_connection_job(reservation_id: int) -> None:
+def nsi_send_terminate_job(reservation_id: int) -> None:
     new_correlation_id_on_reservation(reservation_id)
     with Session() as session:
         reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
     log = logger.bind(
-        module=__name__,
-        job=nsi_send_provision.__name__,
         reservationId=reservation.id,
         correlationId=str(reservation.correlationId),
         connectionId=str(reservation.connectionId),
@@ -132,7 +130,7 @@ def gui_terminate_connection_job(reservation_id: int) -> None:
 #         log.info("send reserve abort successful")
 
 
-def gui_release_connection_job(reservation_id: int) -> None:
+def nsi_send_release_job(reservation_id: int) -> None:
     new_correlation_id_on_reservation(reservation_id)
     with Session() as session:
         reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()

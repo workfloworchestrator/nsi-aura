@@ -47,7 +47,6 @@ class ConnectionStateMachine(AuraStateMachine):
     """
 
     ConnectionNew = State("ConnectionNew", "CONNECTION_NEW", initial=True)
-    # ConnectionModify = State("ConnectionModify", "CONNECTION_MODIFY")
     ConnectionProvisioned = State("ConnectionProvisioned", "CONNECTION_PROVISIONED")
     ConnectionReleased = State("ConnectionReleased", "CONNECTION_RELEASED")
     ConnectionActive = State("ConnectionActive", "CONNECTION_ACTIVE")
@@ -92,38 +91,28 @@ class ConnectionStateMachine(AuraStateMachine):
     nsi_receive_reserve_timeout = ConnectionReserveHeld.to(ConnectionReserveTimeout)
     nsi_send_reserve_commit = ConnectionReserveHeld.to(ConnectionReserveCommitting)
     nsi_receive_reserve_commit_confirmed = ConnectionReserveCommitting.to(ConnectionReserveCommitted)
-    nsi_send_provision = ConnectionReserveCommitted.to(ConnectionProvisioning)
+    nsi_send_provision = (
+        ConnectionInActive.to(ConnectionProvisioning)
+        | ConnectionReserveCommitted.to(ConnectionProvisioning)
+    )
     nsi_receive_provision_confirmed = ConnectionProvisioning.to(ConnectionProvisioned)
+    nsi_send_release = ConnectionActive.to(ConnectionReleasing)
     nsi_receive_release_confirmed = ConnectionReleasing.to(ConnectionReleased)
     nsi_receive_data_plane_up = ConnectionProvisioned.to(ConnectionActive)
     nsi_receive_data_plane_down = ConnectionReleased.to(ConnectionInActive)
-    gui_delete_connection = ConnectionTerminated.to(ConnectionDeleted)
     nsi_receive_error_event = (
         ConnectionActive.to(ConnectionFailed)
         | ConnectionProvisioned.to(ConnectionFailed)
     )
-    gui_release_connection = ConnectionActive.to(ConnectionReleasing)
-    gui_provision_connection = ConnectionInActive.to(ConnectionProvisioning)
-    gui_terminate_connection = (
+    nsi_send_terminate = (
         ConnectionReserveTimeout.to(ConnectionTerminating)
         | ConnectionInActive.to(ConnectionTerminating)
         | ConnectionFailed.to(ConnectionTerminating)
         | ConnectionReserveFailed.to(ConnectionTerminating)
     )
     nsi_receive_terminate_confirmed = ConnectionTerminating.to(ConnectionTerminated)
+    gui_delete_connection = ConnectionTerminated.to(ConnectionDeleted)
     # fmt: on
-
-    # Cannot add job as part of transition because it is possible (but not likely) that the state is not stored before
-    # the job wants to make the following transition and will fail
-    #
-    # def on_nsi_send_reserve(self):
-    #     scheduler.add_job(nsi_send_reserve_job, args=[self.model.id])
-    #
-    # def on_nsi_send_reserve_commit(self):
-    #     scheduler.add_job(nsi_send_reserve_commit_job, args=[self.model.id])
-    #
-    # def on_nsi_send_provision(self):
-    #     scheduler.add_job(nsi_send_provision_job, args=[self.model.id])
 
 
 if __name__ == "__main__":
