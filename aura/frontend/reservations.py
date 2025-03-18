@@ -15,7 +15,7 @@
 import asyncio
 from collections import defaultdict
 from datetime import datetime
-from typing import Annotated, AsyncIterable, Self
+from typing import Annotated, AsyncIterable, Optional, Self
 from uuid import uuid4
 
 import structlog
@@ -48,44 +48,24 @@ from fastui.base import BaseModel
 
 logger = structlog.get_logger()
 
+#
+# input form type definitions
+#
+descriptionType = Annotated[str, Field(title="connection description")]
+sourceVlanType = Annotated[Vlan, Field(title="source VLAN ID", description="value between 2 and 4094")]
+destVlanType = Annotated[Vlan, Field(title="destination VLAN ID", description="value between 2 and 4094")]
+bandwidthType = Annotated[Bandwidth, Field(title="connection bandwidth", description="in Mbits/s")]
+startTimeType = Annotated[
+    Optional[datetime],
+    Field(default=None, title="start time", description="optional start time of connection, leave empty to start now"),
+]
+endTimeType = Annotated[
+    Optional[datetime],
+    Field(default=None, title="end time", description="optional end time of connection, leave empty for indefinite"),
+]
 
-class ReservationInputForm(BaseModel):
-    """Input form with all connection input fields with validation, where possible."""
 
-    description: str = Field(
-        title="connection description",
-    )
-    sourceSTP: str = Field(
-        title="source endpoint",
-        json_schema_extra={"search_url": "/api/reservations/search_endpoints"},
-    )
-    sourceVlan: Vlan = Field(
-        title="source VLAN ID",
-        description="value between 2 and 4094",
-    )
-    destSTP: str = Field(
-        title="destination endpoint",
-        json_schema_extra={"search_url": "/api/reservations/search_endpoints"},
-    )
-    destVlan: Vlan = Field(
-        title="destination VLAN ID",
-        description="value between 2 and 4094",
-    )
-    bandwidth: Bandwidth = Field(
-        title="connection bandwidth",
-        description="in Mbits/s",
-    )
-    startTime: datetime | None = Field(
-        default=None,
-        title="start time",
-        description="optional start time of connection, leave empty to start now",
-    )
-    endTime: datetime | None = Field(
-        default=None,
-        title="end time",
-        description="optional end time of connection, leave empty for indefinite",
-    )
-
+class ValidatedBaseModel(BaseModel):
     @model_validator(mode="after")
     def free_vlan_on_stp(self) -> Self:
         """Check that the sourceVlan and destVlan are free on the chosen SourceSTP and destSTP."""
@@ -97,6 +77,48 @@ class ReservationInputForm(BaseModel):
         if form:
             raise HTTPException(status_code=422, detail={"form": form})
         return self
+
+
+def generate_stp_field(title="give me a title", value=None, label=None) -> Field:
+    json_schema_extra = {"search_url": "/api/reservations/search_endpoints"}
+    if value and label:
+        json_schema_extra["initial"] = {"value": value, "label": label}
+    return Field(title=title, json_schema_extra=json_schema_extra)
+
+
+class ReservationInputForm(ValidatedBaseModel):
+    """Input form with all connection input fields with validation, where possible."""
+
+    description: descriptionType
+    sourceSTP: Annotated[str, generate_stp_field("destination endpoint")]
+    sourceVlan: destVlanType
+    destSTP: Annotated[str, generate_stp_field("destination endpoint")]
+    destVlan: destVlanType
+    bandwidth: bandwidthType
+    startTime: startTimeType
+    endTime: endTimeType
+
+
+def generate_modify_form(reservation_id: int) -> ValidatedBaseModel:
+    with Session() as session:
+        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
+
+    class ReservationModifyForm(ValidatedBaseModel):
+        """Input form with all connection input fields with validation, where possible."""
+
+        description: descriptionType = reservation.description
+        # sourceSTP: sourceSTPType = str(reservation.sourceStp)
+        sourceSTP: str = generate_stp_field("source endpoint", str(reservation.sourceStpId), reservation.sourceStp)
+        sourceVlan: destVlanType = reservation.sourceVlan
+        # destSTP: destSTPType = str(reservation.destStp)
+        destSTP: str = generate_stp_field("destination endpoint", str(reservation.destStpId), reservation.destStp)
+        # destSTP: Annotated[str, generate_dest_stp_field()]
+        destVlan: destVlanType = reservation.destVlan
+        bandwidth: bandwidthType = reservation.bandwidth
+        startTime: startTimeType = reservation.startTime
+        endTime: endTimeType = reservation.endTime
+
+    return ReservationModifyForm
 
 
 @router.get("/search_endpoints", response_model=SelectSearchResponse)
@@ -113,8 +135,8 @@ def search_view() -> SelectSearchResponse:
 
 @router.get("/new", response_model=FastUI, response_model_exclude_none=True)
 def input_form() -> list[AnyComponent]:
-    """Render input form."""
-    submit_url = "/api/reservations/new"
+    """Render new input form."""
+    submit_url = "/api/reservations/create"
     return app_page(
         *tabs(),
         c.ModelForm(model=ReservationInputForm, submit_url=submit_url, display_mode="page"),
@@ -122,14 +144,14 @@ def input_form() -> list[AnyComponent]:
     )
 
 
-@router.post("/new", response_model=FastUI, response_model_exclude_none=True)
+@router.post("/create", response_model=FastUI, response_model_exclude_none=True)
 def reservation_post(form: Annotated[ReservationInputForm, fastui_form(ReservationInputForm)]):
     """Store values from input form in reservation database and start NSI reserve job."""
     reservation = Reservation(
         globalReservationId=uuid4(),
         description=form.description,
-        sourceStpId=int(form.sourceSTP),
-        destStpId=int(form.destSTP),
+        sourceStpId=str(form.sourceSTP),
+        destStpId=str(form.destSTP),
         sourceVlan=Vlan(form.sourceVlan),
         destVlan=Vlan(form.destVlan),
         bandwidth=form.bandwidth,
@@ -292,22 +314,24 @@ async def reservation_log(id: int) -> list[AnyComponent]:
     )
 
 
+@router.get("/{id}/modify", response_model=FastUI, response_model_exclude_none=True)
+def modify_form(id: int) -> list[AnyComponent]:
+    """Render modify input form."""
+    submit_url = "/api/reservations/create"
+    return app_page(
+        *tabs(),
+        c.ModelForm(model=generate_modify_form(id), submit_url=submit_url, display_mode="page"),
+        title="Modify reservation",
+    )
+
+
 @router.post("/{id}/reserve-again", response_model=FastUI, response_model_exclude_none=True)
 async def reservation_retry_reserve(id: int) -> list[AnyComponent]:
-    """Reserve reservation with given id again."""
-    try:
-        with Session.begin() as session:
-            reservation = session.query(Reservation).filter(Reservation.id == id).one()
-            csm = ConnectionStateMachine(reservation)
-            csm.gui_reserve_again()
-            csm.nsi_send_reserve()
-        scheduler.add_job(nsi_send_reserve_job, args=[id])
-        return [
-            c.FireEvent(event=PageEvent(name="modal-reserve-again-reservation", clear=True)),
-            c.FireEvent(event=GoToEvent(url=f"/reservations/{id}/log")),
-        ]
-    except TransitionNotAllowed as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    """Reserve reservation with given id again by loading the modify page."""
+    return [
+        c.FireEvent(event=PageEvent(name="modal-reserve-again-reservation", clear=True)),
+        c.FireEvent(event=GoToEvent(url=f"/reservations/{id}/modify")),
+    ]
 
 
 @router.post("/{id}/terminate", response_model=FastUI, response_model_exclude_none=True)

@@ -47,6 +47,7 @@ class ConnectionStateMachine(AuraStateMachine):
     """
 
     ConnectionNew = State("ConnectionNew", "CONNECTION_NEW", initial=True)
+    # ConnectionModify = State("ConnectionModify", "CONNECTION_MODIFY")
     ConnectionProvisioned = State("ConnectionProvisioned", "CONNECTION_PROVISIONED")
     ConnectionReleased = State("ConnectionReleased", "CONNECTION_RELEASED")
     ConnectionActive = State("ConnectionActive", "CONNECTION_ACTIVE")
@@ -80,7 +81,11 @@ class ConnectionStateMachine(AuraStateMachine):
     ]
 
     # fmt: off
-    nsi_send_reserve = ConnectionNew.to(ConnectionReserveChecking)
+    nsi_send_reserve = (
+        ConnectionNew.to(ConnectionReserveChecking)
+        | ConnectionReserveFailed.to(ConnectionReserveChecking)
+        | ConnectionTerminated.to(ConnectionReserveChecking)
+    )
     nsi_receive_reserve_confirmed = ConnectionReserveChecking.to(ConnectionReserveHeld)
     nsi_receive_reserve_failed = ConnectionReserveChecking.to(ConnectionReserveFailed)
     connection_error = ConnectionReserveChecking.to(ConnectionReserveFailed)
@@ -106,10 +111,6 @@ class ConnectionStateMachine(AuraStateMachine):
         | ConnectionReserveFailed.to(ConnectionTerminating)
     )
     nsi_receive_terminate_confirmed = ConnectionTerminating.to(ConnectionTerminated)
-    gui_reserve_again = (
-        ConnectionReserveFailed.to(ConnectionNew)
-        | ConnectionTerminated.to(ConnectionNew)
-    )
     # fmt: on
 
     # Cannot add job as part of transition because it is possible (but not likely) that the state is not stored before
