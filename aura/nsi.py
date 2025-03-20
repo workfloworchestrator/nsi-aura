@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import datetime
-from datetime import timedelta, timezone, datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import structlog

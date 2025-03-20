@@ -19,7 +19,7 @@ from fastui.events import GoToEvent
 
 from aura.db import Session
 from aura.frontend.util import app_page
-from aura.model import STP, Reservation, SDP
+from aura.model import SDP, STP, Reservation
 
 router = APIRouter()
 
