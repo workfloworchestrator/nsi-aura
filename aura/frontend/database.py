@@ -19,7 +19,7 @@ from fastui.events import GoToEvent
 
 from aura.db import Session
 from aura.frontend.util import app_page
-from aura.model import STP, Reservation
+from aura.model import STP, Reservation, SDP
 
 router = APIRouter()
 
@@ -42,10 +42,9 @@ def fastapi_database_tables() -> list[AnyComponent]:
 
 @router.get("/stp", response_model=FastUI, response_model_exclude_none=True)
 def fastapi_database_tables() -> list[AnyComponent]:
-    """Display all database tables and their contents."""
+    """Display STP table content."""
     with Session() as session:
         stps = session.query(STP).all()
-        reservations = session.query(Reservation).all()
     return app_page(
         *tabs(),
         c.Table(
@@ -54,6 +53,22 @@ def fastapi_database_tables() -> list[AnyComponent]:
             class_name="+ table-sm small",
         ),
         title="STP",
+    )
+
+
+@router.get("/sdp", response_model=FastUI, response_model_exclude_none=True)
+def fastapi_database_tables() -> list[AnyComponent]:
+    """Display SDP table content."""
+    with Session() as session:
+        sdps = session.query(SDP).all()
+    return app_page(
+        *tabs(),
+        c.Table(
+            data_model=SDP,
+            data=sdps,
+            class_name="+ table-sm small",
+        ),
+        title="SDP",
     )
 
 
@@ -70,6 +85,11 @@ def tabs() -> list[AnyComponent]:
                     components=[c.Text(text="STP")],
                     on_click=GoToEvent(url="/database/stp"),
                     active="startswith:/database/stp",
+                ),
+                c.Link(
+                    components=[c.Text(text="SDP")],
+                    on_click=GoToEvent(url="/database/sdp"),
+                    active="startswith:/database/sdp",
                 ),
             ],
             mode="tabs",
