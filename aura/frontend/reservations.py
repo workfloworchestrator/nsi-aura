@@ -41,7 +41,7 @@ from aura.job import (
 )
 from aura.model import STP, Bandwidth, Log, Reservation, Vlan
 from aura.settings import settings
-from aura.util import free_vlan_ranges
+from aura.vlan import free_vlan_ranges
 
 router = APIRouter()
 from fastui.base import BaseModel

@@ -79,6 +79,27 @@ class STP(SQLModel, table=True):
         return f"{self.urn_base}?vlan={self.vlanRange}"
 
 
+class SDP(SQLModel, table=True):
+    """NSI Service Demarcation Point."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    sdpId: str
+    inboundPort: str
+    outboundPort: str
+    inboundAlias: str
+    outboundAlias: str
+    vlanRange: str  # our labels are VLAN's
+    description: str | None
+
+    @property
+    def urn_base(self):
+        return f"urn:ogf:network:{self.sdpId}"
+
+    @property
+    def urn(self):
+        return f"{self.urn_base}?vlan={self.vlanRange}"
+
+
 # On some installs we get confusion between Link(DataModel) and the Link HTML component
 class NetworkLink(BaseModel):
     id: int

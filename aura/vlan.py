@@ -20,7 +20,12 @@ from collections import abc
 from functools import reduce, total_ordering
 from typing import AbstractSet, Any, Iterable, Iterator, List, Optional, Sequence, Tuple, Union, cast
 
+from sqlalchemy import Select, select
+
+from aura.db import Session
+from aura.fsm import ConnectionStateMachine
 from aura.functional import expand_ranges, to_ranges
+from aura.model import STP, Reservation
 
 
 @total_ordering
@@ -247,3 +252,35 @@ class VlanRanges(abc.Set):
 
         """
         return reduce(operator.__or__, others, self)
+
+
+def all_vlan_ranges(stpId: int) -> VlanRanges:
+    """All VLAN ranges on STP identified by stpId."""
+    with Session() as session:
+        return VlanRanges(session.query(STP.vlanRange).filter(STP.id == stpId).scalar())
+
+
+def _select_in_use_vlan_ranges(select_statement: Select) -> list[int]:
+    """Already in use VLAN ranges on STP identified by stpId."""
+    with Session() as session:
+        return (
+            session.execute(select_statement.filter(Reservation.state.in_(ConnectionStateMachine.active_state_values)))
+            .scalars()
+            .all()
+        )
+
+
+def in_use_vlan_ranges(stpId: int) -> VlanRanges:
+    """Free VLAN ranges on STP identified by stpId."""
+    return VlanRanges(
+        _select_in_use_vlan_ranges(select(Reservation.sourceVlan).filter(Reservation.sourceStpId == stpId))
+        + _select_in_use_vlan_ranges(select(Reservation.destVlan).filter(Reservation.destStpId == stpId))
+    )
+
+
+def free_vlan_ranges(stpId: int) -> VlanRanges:
+    """Free VLAN ranges on STP identified by stpId."""
+    free_vlan_ranges = all_vlan_ranges(stpId)
+    for vlan in in_use_vlan_ranges(stpId):
+        free_vlan_ranges = free_vlan_ranges - vlan if vlan in free_vlan_ranges else free_vlan_ranges
+    return free_vlan_ranges
