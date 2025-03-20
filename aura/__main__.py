@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import UTC, datetime, timedelta
+
 import uvicorn
 from apscheduler.triggers.interval import IntervalTrigger
 from fastapi import FastAPI
@@ -35,8 +37,14 @@ log_init()
 # scheduler
 #
 scheduler.start()
-# TODO: remove replace_existing after fixing running __init__ twice
-scheduler.add_job(nsi_poll_dds_job, trigger=IntervalTrigger(minutes=1), coalesce=True)
+# run poll job every minute starting on the next whole minute and do not let jobs queue up
+scheduler.add_job(
+    nsi_poll_dds_job,
+    trigger=IntervalTrigger(
+        minutes=1, start_date=datetime.now(UTC).replace(second=0, microsecond=0) + timedelta(minutes=1)
+    ),
+    coalesce=True,
+)
 
 #
 # application
