@@ -20,7 +20,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from pytz import utc
 
 from aura.db import Session
-from aura.dds import TOPOLOGY_MIME_TYPE, get_dds_documents, parse_topology, update_topology
+from aura.dds import TOPOLOGY_MIME_TYPE, get_dds_documents, topology_to_stps, update_sdps, update_stps
 from aura.fsm import ConnectionStateMachine
 from aura.model import STP, Reservation
 from aura.nsi import nsi_send_provision, nsi_send_release, nsi_send_reserve, nsi_send_reserve_commit, nsi_send_terminate
@@ -47,10 +47,11 @@ def new_correlation_id_on_reservation(reservation_id: int) -> None:
 
 
 def nsi_poll_dds_job() -> None:
-    """Poll the DDS for topology documents and update STP and SDP."""  # TODO implement SDP calculation and update
+    """Poll the DDS for topology documents and update STP and SDP."""
     documents = get_dds_documents(settings.ANAGRAM_DDS_URL)
     for xml in documents[TOPOLOGY_MIME_TYPE].values():
-        update_topology(*parse_topology(nsi_util_xml_to_dict(xml)))
+        update_stps(topology_to_stps(nsi_util_xml_to_dict(xml)))
+    update_sdps()
 
 
 def nsi_send_reserve_job(reservation_id: int) -> None:

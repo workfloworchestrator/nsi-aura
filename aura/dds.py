@@ -45,8 +45,8 @@ def to_list(index: str, collection: dict) -> list:
     return [element[index] for element in collection]
 
 
-def parse_topology(topology: dict) -> tuple[list[STP], list[SDP]]:
-    """Parse dict representation of NSI topology document and return the lists of STP and SDP."""
+def topology_to_stps(topology: dict) -> list[STP]:
+    """Parse dict representation of NSI topology document and return the lists of STP."""
     log = logger.bind(topology=topology["id"])
 
     bidirectionalPorts = to_dict("id", topology["BidirectionalPort"])
@@ -55,7 +55,6 @@ def parse_topology(topology: dict) -> tuple[list[STP], list[SDP]]:
     outboundPorts = to_dict("id", relations[HAS_OUTBOUND_PORT]["PortGroup"])
 
     stps = []
-    sdps = []
     for bidirectionalPortId in bidirectionalPorts:
         for unidirectionalPortId in to_list("id", bidirectionalPorts[bidirectionalPortId]["PortGroup"]):
             if unidirectionalPortId in inboundPorts:
@@ -68,35 +67,39 @@ def parse_topology(topology: dict) -> tuple[list[STP], list[SDP]]:
             log.warning(f"LabelGroups on in- and outbound ports of {unidirectionalPortId} do not match")
         # the following breaks when the port has multiple relations, then Relation will be a list instead of a dict
         if "Relation" in inboundPort and inboundPort["Relation"]["type"] == IS_ALIAS:
-            sdps.append(
-                SDP(
-                    sdpId=strip_urn(bidirectionalPortId),
-                    inboundPort=strip_urn(inboundPort["id"]),
-                    outboundPort=strip_urn(outboundPort["id"]),
-                    inboundAlias=strip_urn(inboundPort["Relation"]["PortGroup"]["id"]),
-                    outboundAlias=strip_urn(outboundPort["Relation"]["PortGroup"]["id"]),
-                    vlanRange=inboundPort["LabelGroup"],
-                    description=bidirectionalPorts[bidirectionalPortId]["name"],
-                )
-            )
-            log.debug(f"found SDP {bidirectionalPortId}")
+            inboundPortId = strip_urn(inboundPort["id"])
+            inboundAliasId = strip_urn(inboundPort["Relation"]["PortGroup"]["id"])
         else:
-            stps.append(
-                STP(
-                    stpId=strip_urn(bidirectionalPortId),
-                    vlanRange=inboundPort["LabelGroup"],
-                    description=bidirectionalPorts[bidirectionalPortId]["name"],
-                )
+            inboundPortId = inboundAliasId = None
+        if "Relation" in outboundPort and outboundPort["Relation"]["type"] == IS_ALIAS:
+            outboundPortId = strip_urn(outboundPort["id"])
+            outboundAliasId = strip_urn(outboundPort["Relation"]["PortGroup"]["id"])
+        else:
+            outboundPortId = outboundAliasId = None
+        stps.append(
+            STP(
+                stpId=strip_urn(bidirectionalPortId),
+                inboundPort=inboundPortId,
+                outboundPort=outboundPortId,
+                inboundAlias=inboundAliasId,
+                outboundAlias=outboundAliasId,
+                vlanRange=inboundPort["LabelGroup"],
+                description=bidirectionalPorts[bidirectionalPortId]["name"],
             )
-            log.debug(f"found STP {bidirectionalPortId}")
-    return stps, sdps
+        )
+        log.debug(f"found STP {bidirectionalPortId}: {stps[-1]}")
+    return stps
 
 
-def update_topology(stps: list[STP], sdps: list[SDP]) -> None:
-    """Update STP and SDP tables with topology information from DDS."""
+def update_stps(stps: list[STP]) -> None:
+    """Update STP table with topology information from DDS."""
     for new_stp in stps:
         log = logger.bind(
             stpId=new_stp.stpId,
+            inboundPort=new_stp.inboundPort,
+            outboundPort=new_stp.outboundPort,
+            inboundAlias=new_stp.inboundAlias,
+            outboundAlias=new_stp.outboundAlias,
             vlanRange=new_stp.vlanRange,
             description=new_stp.description,
         )
@@ -105,44 +108,80 @@ def update_topology(stps: list[STP], sdps: list[SDP]) -> None:
             if existing_stp is None:
                 log.info("add new STP")
                 session.add(new_stp)
-            elif existing_stp.vlanRange != new_stp.vlanRange or existing_stp.description != new_stp.description:
+            elif (
+                existing_stp.inboundPort != new_stp.inboundPort
+                or existing_stp.outboundPort != new_stp.outboundPort
+                or existing_stp.inboundAlias != new_stp.inboundAlias
+                or existing_stp.outboundAlias != new_stp.outboundAlias
+                or existing_stp.vlanRange != new_stp.vlanRange
+                or existing_stp.description != new_stp.description
+            ):
                 log.info("update existing STP")
+                existing_stp.inboundPort = new_stp.inboundPort
+                existing_stp.outboundPort = new_stp.outboundPort
+                existing_stp.inboundAlias = new_stp.inboundAlias
+                existing_stp.outboundAlias = new_stp.outboundAlias
                 existing_stp.vlanRange = new_stp.vlanRange
                 existing_stp.description = new_stp.description
             else:
                 log.debug("STP did not change")
-    for new_sdp in sdps:
+    # TODO: implement disabling vanished STP
+
+
+def has_alias(stp: STP):
+    return stp.inboundAlias is not None and stp.outboundAlias is not None
+
+
+def update_sdps() -> None:
+    """Update SDP table."""
+
+    def is_sdp(a: STP, z: STP):
+        return (
+            has_alias(a)
+            and has_alias(z)
+            and a.inboundAlias == z.outboundPort
+            and a.outboundAlias == z.inboundPort
+            and z.inboundAlias == a.outboundPort
+            and z.outboundAlias == a.inboundPort
+        )
+
+    with Session() as session:
+        stps = session.query(STP).all()
+    # find connected STPs
+    sdps = []
+    for a in stps:
+        for z in stps:
+            if is_sdp(a, z):
+                sdps.append((a, z))
+                stps.remove(z)  # remove STP at other side of SDP as candidate
+    # process found SDPs
+    for stp_a, stp_z in sdps:
+        description = f"{stp_a.description} <-> {stp_z.description}"
         log = logger.bind(
-            sdpId=new_sdp.sdpId,
-            inboundPort=new_sdp.inboundPort,
-            outboundPort=new_sdp.outboundPort,
-            inboundAlias=new_sdp.inboundAlias,
-            outboundAlias=new_sdp.outboundAlias,
-            vlanRange=new_sdp.vlanRange,
-            description=new_sdp.description,
+            stpAId=stp_a.stpId,
+            stpZId=stp_z.stpId,
+            vlanRange=stp_a.vlanRange,  # TODO: should store a and z overlapping range only
+            description=description,
         )
         with Session.begin() as session:
-            existing_sdp = session.query(SDP).filter(SDP.sdpId == new_sdp.sdpId).one_or_none()
+            existing_sdp = session.query(SDP).filter((SDP.stpAId == stp_a.id) & (SDP.stpZId == stp_z.id)).one_or_none()
             if existing_sdp is None:
                 log.info("add new SDP")
-                session.add(new_sdp)
-            elif (
-                existing_sdp.inboundPort != new_sdp.inboundPort
-                or existing_sdp.outboundPort != new_sdp.outboundPort
-                or existing_sdp.inboundAlias != new_sdp.inboundAlias
-                or existing_sdp.outboundAlias != new_sdp.outboundAlias
-                or existing_sdp.vlanRange != new_sdp.vlanRange
-                or existing_sdp.description != new_sdp.description
-            ):
+                session.add(
+                    SDP(
+                        stpAId=stp_a.id,
+                        stpZId=stp_z.id,
+                        vlanRange=stp_a.vlanRange,  # TODO: should store a and z overlapping range only
+                        description=description,
+                    )
+                )
+            elif existing_sdp.vlanRange != stp_a.vlanRange or existing_sdp.description != description:
                 log.info("update existing SDP")
-                existing_sdp.inboundPort = new_sdp.inboundPort
-                existing_sdp.outboundPort = new_sdp.outboundPort
-                existing_sdp.inboundAlias = new_sdp.inboundAlias
-                existing_sdp.outboundAlias = new_sdp.outboundAlias
-                existing_sdp.vlanRange = new_sdp.vlanRange
-                existing_sdp.description = new_sdp.description
+                existing_sdp.vlanRange = stp_a.vlanRange  # TODO: should store a and z overlapping range only
+                existing_sdp.description = description
             else:
                 log.debug("SDP did not change")
+    # TODO: implement disabling vanished SDP
 
 
 def get_dds_documents(url: HttpUrl) -> dict[str, dict[str, bytes]]:
@@ -344,6 +383,5 @@ if __name__ == "__main__":
             },
         ],
     }
-    stps, sdps = parse_topology(example)
+    stps = topology_to_stps(example)
     logger.debug(stps)
-    logger.debug(sdps)

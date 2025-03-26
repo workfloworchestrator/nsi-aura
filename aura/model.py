@@ -52,6 +52,10 @@ class STP(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     stpId: str
+    inboundPort: str | None
+    outboundPort: str | None
+    inboundAlias: str | None
+    outboundAlias: str | None
     vlanRange: str  # our labels are VLAN's
     description: str | None
 
@@ -83,11 +87,8 @@ class SDP(SQLModel, table=True):
     """NSI Service Demarcation Point."""
 
     id: int | None = Field(default=None, primary_key=True)
-    sdpId: str
-    inboundPort: str
-    outboundPort: str
-    inboundAlias: str
-    outboundAlias: str
+    stpAId: int
+    stpZId: int
     vlanRange: str  # our labels are VLAN's
     description: str | None
 
@@ -120,6 +121,7 @@ class Reservation(SQLModel, table=True):
     endTime: datetime | None
     sourceStpId: int = mapped_column()
     destStpId: int = mapped_column()
+    sdpId: int = mapped_column()  # TODO: replace with Reservation/SDP relation table for 1:n
     sourceVlan: Vlan
     destVlan: Vlan
     bandwidth: Bandwidth
@@ -135,6 +137,8 @@ class Reservation(SQLModel, table=True):
     @property
     def destStp(self) -> str:
         return self._destStp
+
+    # TODO: add sdp computed field
 
 
 # workaround to use column_property with SQLModel by injecting the scalar subquery after the class definition

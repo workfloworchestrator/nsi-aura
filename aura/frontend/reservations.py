@@ -30,6 +30,7 @@ from starlette.responses import StreamingResponse
 from statemachine.exceptions import TransitionNotAllowed
 
 from aura.db import Session
+from aura.dds import has_alias
 from aura.frontend.util import app_page, button_with_modal
 from aura.fsm import ConnectionStateMachine
 from aura.job import (
@@ -39,7 +40,7 @@ from aura.job import (
     nsi_send_terminate_job,
     scheduler,
 )
-from aura.model import STP, Bandwidth, Log, Reservation, Vlan
+from aura.model import SDP, STP, Bandwidth, Log, Reservation, Vlan
 from aura.settings import settings
 from aura.vlan import free_vlan_ranges
 
@@ -80,7 +81,14 @@ class ValidatedBaseModel(BaseModel):
 
 
 def generate_stp_field(title="give me a title", value=None, label=None) -> Field:
-    json_schema_extra = {"search_url": "/api/reservations/search_endpoints"}
+    json_schema_extra = {"search_url": "/api/reservations/endpoints"}
+    if value and label:
+        json_schema_extra["initial"] = {"value": value, "label": label}
+    return Field(title=title, json_schema_extra=json_schema_extra)
+
+
+def generate_sdp_field(title="give me a title", value=None, label=None) -> Field:
+    json_schema_extra = {"search_url": "/api/reservations/demarcation_points"}
     if value and label:
         json_schema_extra["initial"] = {"value": value, "label": label}
     return Field(title=title, json_schema_extra=json_schema_extra)
@@ -90,11 +98,12 @@ class ReservationInputForm(ValidatedBaseModel):
     """Input form with all connection input fields with validation, where possible."""
 
     description: descriptionType
-    sourceSTP: Annotated[str, generate_stp_field("destination endpoint")]
+    sourceSTP: Annotated[str, generate_stp_field("source endpoint")]
     sourceVlan: destVlanType
     destSTP: Annotated[str, generate_stp_field("destination endpoint")]
     destVlan: destVlanType
     bandwidth: bandwidthType
+    demarcationPoint: Annotated[str, generate_sdp_field("demarcation point")]
     startTime: startTimeType
     endTime: endTimeType
 
@@ -115,21 +124,34 @@ def generate_modify_form(reservation_id: int) -> ValidatedBaseModel:
         # destSTP: Annotated[str, generate_dest_stp_field()]
         destVlan: destVlanType = reservation.destVlan
         bandwidth: bandwidthType = reservation.bandwidth
+        demarcationPoint: str = generate_sdp_field("demarcation point", str(reservation.sdpId), "FIXME")  # FIXME
         startTime: startTimeType = reservation.startTime
         endTime: endTimeType = reservation.endTime
 
     return ReservationModifyForm
 
 
-@router.get("/search_endpoints", response_model=SelectSearchResponse)
-def search_view() -> SelectSearchResponse:
+@router.get("/endpoints", response_model=SelectSearchResponse)
+def endpoints() -> SelectSearchResponse:
     """Get list of endpoints from database suitable for input form drop down."""
     with Session() as session:
-        stps = session.query(STP).all()
+        stps = [stp for stp in session.query(STP).all() if not has_alias(stp)]  # do not include STP part of SDP
     endpoints = defaultdict(list)
     for stp in stps:
         endpoints[stp.description].append({"value": str(stp.id), "label": stp.stpId})
     options = [{"label": k, "options": v} for k, v in endpoints.items()]
+    return SelectSearchResponse(options=options)
+
+
+@router.get("/demarcation_points", response_model=SelectSearchResponse)
+def demarcation_points() -> SelectSearchResponse:
+    """Get list of sdp's from database suitable for input form drop down."""
+    with Session() as session:
+        sdps = session.query(SDP).all()
+    demarcation_points = defaultdict(list)
+    for sdp in sdps:
+        demarcation_points[sdp.description].append({"value": str(sdp.id), "label": sdp.description})
+    options = [{"label": k, "options": v} for k, v in demarcation_points.items()]
     return SelectSearchResponse(options=options)
 
 
@@ -150,8 +172,9 @@ def reservation_post(form: Annotated[ReservationInputForm, fastui_form(Reservati
     reservation = Reservation(
         globalReservationId=uuid4(),
         description=form.description,
-        sourceStpId=str(form.sourceSTP),
-        destStpId=str(form.destSTP),
+        sourceStpId=int(form.sourceSTP),
+        destStpId=int(form.destSTP),
+        sdpId=int(form.demarcationPoint),
         sourceVlan=Vlan(form.sourceVlan),
         destVlan=Vlan(form.destVlan),
         bandwidth=form.bandwidth,
