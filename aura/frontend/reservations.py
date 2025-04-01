@@ -111,6 +111,7 @@ class ReservationInputForm(ValidatedBaseModel):
 def generate_modify_form(reservation_id: int) -> ValidatedBaseModel:
     with Session() as session:
         reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
+        sdp = session.query(SDP).filter(SDP.id == reservation.sdpId).one()
 
     class ReservationModifyForm(ValidatedBaseModel):
         """Input form with all connection input fields with validation, where possible."""
@@ -124,7 +125,7 @@ def generate_modify_form(reservation_id: int) -> ValidatedBaseModel:
         # destSTP: Annotated[str, generate_dest_stp_field()]
         destVlan: destVlanType = reservation.destVlan
         bandwidth: bandwidthType = reservation.bandwidth
-        demarcationPoint: str = generate_sdp_field("demarcation point", str(reservation.sdpId), "FIXME")  # FIXME
+        demarcationPoint: str = generate_sdp_field("demarcation point", str(reservation.sdpId), sdp.description)
         startTime: startTimeType = reservation.startTime
         endTime: endTimeType = reservation.endTime
 
