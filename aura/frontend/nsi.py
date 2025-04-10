@@ -13,13 +13,14 @@
 # limitations under the License.
 
 import structlog
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from statemachine.exceptions import TransitionNotAllowed
 
 from aura.fsm import ConnectionStateMachine
 from aura.job import nsi_send_provision_job, nsi_send_reserve_commit_job, scheduler
 from aura.model import Reservation
-from aura.nsi_comm import nsi_util_xml_to_dict
+from aura.nsi_comm import acknowledgement_templstr, generate_acknowledgement_xml, nsi_util_xml_to_dict
+from aura.settings import settings
 
 router = APIRouter()
 
@@ -32,7 +33,7 @@ def soap_action(request: Request, action: str) -> bool:
 
 
 @router.post("/callback/")
-async def nsi_callback(request: Request):
+async def nsi_callback(request: Request) -> Response:
     """Receive and process NSI async callback."""
     from aura.db import Session
 
@@ -113,3 +114,8 @@ async def nsi_callback(request: Request):
             scheduler.add_job(nsi_send_provision_job, args=[reservation_id])
         # case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveAbortConfirmed"':
         #     scheduler.add_job(nsi_send_reserve_commit_job(), args=[reservation_id])
+
+    nsi_acknowledgement = generate_acknowledgement_xml(
+        acknowledgement_templstr, body["Header"]["nsiHeader"]["correlationId"], settings.PROVIDER_NSA_ID
+    )
+    return Response(content=nsi_acknowledgement, media_type="application/xml")

@@ -51,6 +51,7 @@ query_recursive_templstr = None
 terminate_templstr = None
 release_templstr = None
 reserve_timeout_ack_templstr = None
+acknowledgement_templstr = None
 
 
 def prettyprint(element, **kwargs):
@@ -281,6 +282,13 @@ reserve_timeout_ack_keys = [
     "#PROVIDER-NSA-ID#",  # urn:ogf:network:example.domain:2001:nsa:supa
 ]
 
+# ACKNOWLEDGEMENT
+NSI_ACKNOWLEDGEMENT_TEMPLATE_XMLFILE = "GenericAcknowledgement.xml"
+
+acknowledgement_keys = [
+    "#CORRELATION-ID#",  # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
+    "#PROVIDER-NSA-ID#",  # urn:ogf:network:example.domain:2001:nsa:supa
+]
 
 # QUERY
 NSI_QUERY_SUMMARY_SYNC_TEMPLATE_XMLFILE = "QuerySummarySync.xml"
@@ -452,6 +460,21 @@ def generate_reserve_timeout_ack_xml(message_templstr, correlation_uuid_py, repl
     return message_xml
 
 
+def generate_acknowledgement_xml(message_templstr, correlation_uuid_py, provider_nsa_id):
+    # Generate values
+    correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
+
+    message_dict = {}
+    message_dict["#CORRELATION-ID#"] = correlation_urn
+    message_dict["#PROVIDER-NSA-ID#"] = provider_nsa_id
+
+    message_xml = message_templstr
+    for message_key in acknowledgement_keys:
+        message_xml = message_xml.replace(message_key, message_dict[message_key])
+
+    return message_xml
+
+
 def generate_query_summary_sync_xml(message_templstr, correlation_uuid_py, reply_to_url, provider_nsa_id):
     # Generate values
     log = logger.bind()
@@ -519,6 +542,7 @@ def nsi_comm_init(templ_absdir):
     global terminate_templstr
     global release_templstr
     global reserve_timeout_ack_templstr
+    global acknowledgement_templstr
 
     # RESERVE
     reserve_templpath = os.path.join(templ_absdir, NSI_RESERVE_TEMPLATE_XMLFILE)
@@ -582,6 +606,13 @@ def nsi_comm_init(templ_absdir):
     # Read RESERVE_TIMEOUT_ACK template code
     with open(reserve_timeout_ack_templpath) as reserve_timeout_ack_templfile:
         reserve_timeout_ack_templstr = reserve_timeout_ack_templfile.read()
+
+    # ACKNOWLEDGEMENT
+    acknowledgement_templpath = os.path.join(templ_absdir, NSI_ACKNOWLEDGEMENT_TEMPLATE_XMLFILE)
+
+    # Read ACKNOWLEDGEMENT template code
+    with open(acknowledgement_templpath) as acknowledgement_templfile:
+        acknowledgement_templstr = acknowledgement_templfile.read()
 
 
 def nsi_util_get_and_parse_xml(url):
