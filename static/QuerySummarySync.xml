@@ -1,21 +1,18 @@
 <?xml version="1.0"?>
-<soap:Envelope xmlns:ctypes="http://schemas.ogf.org/nsi/2013/12/connection/types" xmlns:header="http://schemas.ogf.org/nsi/2013/12/framework/headers" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+<soap:Envelope xmlns:ctypes="http://schemas.ogf.org/nsi/2013/12/connection/types"
+               xmlns:header="http://schemas.ogf.org/nsi/2013/12/framework/headers"
+               xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
   <soap:Header>
     <header:nsiHeader>
       <protocolVersion>application/vnd.ogf.nsi.cs.v2.provider+soap</protocolVersion>
       <correlationId>#CORRELATION-ID#</correlationId>
       <requesterNSA>urn:ogf:network:anaeng.global:2024:nsa:nsi-aura</requesterNSA>
       <providerNSA>#PROVIDER-NSA-ID#</providerNSA>
-      <replyTo>#REPLY-TO-URL#</replyTo>
     </header:nsiHeader>
   </soap:Header>
   <soap:Body>
     <ctypes:querySummarySync>
-      <!--
-      <connectionId>af7e02ef-608a-42d7-89b3-9f701051a58e</connectionId>
-      <ifModifiedSince>2022-09-01T14:50:46.767879+00:00</ifModifiedSince>
-      <globalReservationId>76cc6c3c-a126-4174-8016-11f00012ec1d</globalReservationId>
-      -->
+      <connectionId>#CONNECTION-ID#</connectionId>
     </ctypes:querySummarySync>
   </soap:Body>
 </soap:Envelope>

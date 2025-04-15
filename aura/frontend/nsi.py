@@ -17,7 +17,7 @@ from fastapi import APIRouter, Request, Response
 from statemachine.exceptions import TransitionNotAllowed
 
 from aura.fsm import ConnectionStateMachine
-from aura.job import nsi_send_provision_job, nsi_send_reserve_commit_job, scheduler
+from aura.job import nsi_send_reserve_commit_job, scheduler
 from aura.model import Reservation
 from aura.nsi_comm import acknowledgement_templstr, generate_acknowledgement_xml, nsi_util_xml_to_dict
 from aura.settings import settings
@@ -40,6 +40,7 @@ async def nsi_callback(request: Request) -> Response:
     body = nsi_util_xml_to_dict(await request.body())
     with Session.begin() as session:
         try:
+            # TODO: add PassedEndTime
             if soap_action(request, '"http://schemas.ogf.org/nsi/2013/12/connection/service/errorEvent"'):
                 connectionId = body["Body"]["errorEvent"]["connectionId"]
                 reservation = session.query(Reservation).filter(Reservation.connectionId == connectionId).one()
@@ -74,12 +75,10 @@ async def nsi_callback(request: Request) -> Response:
                     csm.nsi_send_reserve_commit()  # TODO: decide if we want to auto commit or not
                 # case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveAbortConfirmed"':
                 #     log.info("reserve abort confirmed from nsi provider")
-                #     csm.nsi_receive_reserve_abort_confirmed()
-                #     csm.nsi_send_reserve()  # TODO: decide if we want to auto provision or not
+                #     csm.nsi_receive_reserve_abort_confirmed()  # TODO: decide if we want to abort a modify or not
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveCommitConfirmed"':
                     log.info("reserve commit confirmed from nsi provider")
                     csm.nsi_receive_reserve_commit_confirmed()
-                    csm.nsi_send_provision()  # TODO: decide if we want to auto provision or not
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/provisionConfirmed"':
                     log.info("provision confirmed from nsi provider")
                     csm.nsi_receive_provision_confirmed()
@@ -110,8 +109,8 @@ async def nsi_callback(request: Request) -> Response:
     match request.headers["soapaction"]:
         case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveConfirmed"':
             scheduler.add_job(nsi_send_reserve_commit_job, args=[reservation_id])
-        case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveCommitConfirmed"':
-            scheduler.add_job(nsi_send_provision_job, args=[reservation_id])
+        # case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveCommitConfirmed"':
+        #     scheduler.add_job(nsi_send_provision_job, args=[reservation_id])
         # case '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveAbortConfirmed"':
         #     scheduler.add_job(nsi_send_reserve_commit_job(), args=[reservation_id])
 

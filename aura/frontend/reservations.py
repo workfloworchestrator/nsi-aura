@@ -15,6 +15,7 @@
 import asyncio
 from collections import defaultdict
 from datetime import datetime
+from pprint import pformat
 from typing import Annotated, AsyncIterable, Optional, Self
 from uuid import uuid4
 
@@ -26,12 +27,14 @@ from fastui.components.display import DisplayLookup
 from fastui.events import BackEvent, GoToEvent, PageEvent
 from fastui.forms import SelectSearchResponse, fastui_form
 from pydantic import Field, model_validator
+from requests import RequestException
 from starlette.responses import StreamingResponse
 from statemachine.exceptions import TransitionNotAllowed
 
 from aura.db import Session
 from aura.dds import has_alias
-from aura.frontend.util import app_page, button_with_modal
+from aura.exception import AuraException
+from aura.frontend.util import app_page, button_with_modal, to_aura_connection_state
 from aura.fsm import ConnectionStateMachine
 from aura.job import (
     nsi_send_provision_job,
@@ -41,6 +44,7 @@ from aura.job import (
     scheduler,
 )
 from aura.model import SDP, STP, Bandwidth, Log, Reservation, Vlan
+from aura.nsi import nsi_send_query_summary_sync
 from aura.settings import settings
 from aura.vlan import free_vlan_ranges
 
@@ -257,7 +261,7 @@ def reservation_details(id: int) -> list[AnyComponent]:
                 modal="Are you sure you want to Provision this reservation?",
                 url=f"/api/reservations/{reservation.id}/provision",
             )
-            if csm.current_state == ConnectionStateMachine.ConnectionInActive
+            if csm.current_state == ConnectionStateMachine.ConnectionReserveCommitted
             else []
         ),
         *(
@@ -282,8 +286,21 @@ def reservation_details(id: int) -> list[AnyComponent]:
             )
             if csm.current_state == ConnectionStateMachine.ConnectionReserveTimeout
             or csm.current_state == ConnectionStateMachine.ConnectionFailed
-            or csm.current_state == ConnectionStateMachine.ConnectionInActive
+            or csm.current_state == ConnectionStateMachine.ConnectionReserveCommitted
             or csm.current_state == ConnectionStateMachine.ConnectionReserveFailed
+            else []
+        ),
+        *(
+            [
+                c.Button(
+                    text="Verify",
+                    on_click=GoToEvent(url=f"/reservations/{reservation.id}/verify"),
+                    class_name="+ ms-2",
+                )
+            ]
+            if csm.current_state != ConnectionStateMachine.ConnectionNew
+            and csm.current_state != ConnectionStateMachine.ConnectionReserveChecking
+            and csm.current_state != ConnectionStateMachine.ConnectionReserveFailed
             else []
         ),
         title="Reservation details",
@@ -356,6 +373,65 @@ async def reservation_retry_reserve(id: int) -> list[AnyComponent]:
         c.FireEvent(event=PageEvent(name="modal-reserve-again-reservation", clear=True)),
         c.FireEvent(event=GoToEvent(url=f"/reservations/{id}/modify")),
     ]
+
+
+@router.get("/{id}/verify", response_model=FastUI, response_model_exclude_none=True)
+async def reservation_verify(id: int) -> list[AnyComponent]:
+    """Verify reservation with given id."""
+    with Session() as session:
+        reservation = session.query(Reservation).filter(Reservation.id == id).one()
+    # new_correlation_id_on_reservation()  # TODO: is this safe?
+    components = [
+        c.Paragraph(
+            text=f"Reservation description '{reservation.description}' with id {reservation.id}",
+            class_name="fw-bold fs-5",
+        )
+    ]
+    try:
+        reply_dict = nsi_send_query_summary_sync(reservation)
+        if "reservation" in reply_dict["Body"]["querySummarySyncConfirmed"]:
+            nsi_connection_states = reply_dict["Body"]["querySummarySyncConfirmed"]["reservation"]["connectionStates"]
+        else:
+            raise AuraException("NSI provider: reservation not found")
+    except (RequestException, ConnectionError, AuraException) as exception:
+        components.append(c.Heading(text="Error", level=4))
+        components.append(c.Paragraph(text=f"Cannot get NSI connection states: {exception!s}"))
+    else:
+        connection_state = to_aura_connection_state(nsi_connection_states)
+        components.append(c.Heading(text="NSI Connection States", level=4))
+        components.append(c.Code(text=pformat(nsi_connection_states)))
+        components.append(c.Heading(text="Verification Result", level=4))
+        if reservation.state == connection_state:
+            components.append(c.Paragraph(text=f"{reservation.state} matches NSI connection states"))
+        else:
+            components.append(c.Paragraph(text=f"{reservation.state} should be {connection_state}"))
+            components.append(
+                c.Button(text="Fix State", on_click=GoToEvent(url=f"/reservations/{id}/set_state/{connection_state}"))
+            )
+    components.append(c.Button(text="Back", on_click=GoToEvent(url=f"/reservations/{id}/"), class_name="+ ms-2"))
+    return app_page(
+        *components,
+        title="Verify connection state",
+    )
+
+
+@router.get("/{id}/set_state/{new_state}", response_model=FastUI, response_model_exclude_none=True)
+async def reservation_set_state(id: int, new_state: str) -> list[AnyComponent]:
+    """Set reservation with given id to connection_state."""
+    if new_state not in ConnectionStateMachine.states_map.keys():
+        raise HTTPException(status_code=400, detail="unknown connection state")
+    with Session.begin() as session:
+        reservation = session.query(Reservation).filter(Reservation.id == id).one()
+        old_state = reservation.state
+        reservation.state = new_state
+        logger.info(
+            f"force reservation from state {old_state} to {new_state}",
+            old_state=old_state,
+            new_state=new_state,
+            reservationId=reservation.id,
+            connectionId=str(reservation.connectionId),
+        )
+    return [c.FireEvent(event=GoToEvent(url=f"/reservations/{id}/verify"))]
 
 
 @router.post("/{id}/terminate", response_model=FastUI, response_model_exclude_none=True)

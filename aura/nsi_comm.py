@@ -299,7 +299,7 @@ NSI_QUERY_SUMMARY_SYNC_TEMPLATE_XMLFILE = "QuerySummarySync.xml"
 #     <globalReservationId>76cc6c3c-a126-4174-8016-11f00012ec1d</globalReservationId>
 query_summary_sync_keys = [
     "#CORRELATION-ID#",  # urn:uuid:a3eb6740-7227-473b-af6f-6705d489407c
-    "#REPLY-TO-URL#",  # http://127.0.0.1:7080/NSI/services/RequesterService2
+    "#CONNECTION-ID#",  # note: no urn prefix: 2d71c50b-a6ff-46e5-8e37-567470ba832a
     "#PROVIDER-NSA-ID#",  # urn:ogf:network:example.domain:2001:nsa:supa
 ]
 
@@ -475,7 +475,7 @@ def generate_acknowledgement_xml(message_templstr, correlation_uuid_py, provider
     return message_xml
 
 
-def generate_query_summary_sync_xml(message_templstr, correlation_uuid_py, reply_to_url, provider_nsa_id):
+def generate_query_summary_sync_xml(message_templstr, correlation_uuid_py, connid_str, provider_nsa_id):
     # Generate values
     log = logger.bind()
 
@@ -483,7 +483,7 @@ def generate_query_summary_sync_xml(message_templstr, correlation_uuid_py, reply
 
     message_dict = {}
     message_dict["#CORRELATION-ID#"] = correlation_urn
-    message_dict["#REPLY-TO-URL#"] = reply_to_url
+    message_dict["#CONNECTION-ID#"] = connid_str
     message_dict["#PROVIDER-NSA-ID#"] = provider_nsa_id
 
     message_xml = message_templstr
@@ -765,6 +765,50 @@ def nsi_util_parse_xml(xml):
 #                                                        'version': '1',
 #                                                        'versionConsistent': 'true'}}}}
 #
+# {'Body': {'querySummarySyncConfirmed': {'lastModified': '2025-04-10T15:46:41.233Z',
+#                                         'reservation': {'connectionId': UUID('aae5c739-a735-4a94-bb18-2640a43f718e'),
+#                                                         'connectionStates': {'dataPlaneStatus': {'active': 'true',
+#                                                                                                  'version': '1',
+#                                                                                                  'versionConsistent': 'true'},
+#                                                                              'lifecycleState': 'Created',
+#                                                                              'provisionState': 'Provisioned',
+#                                                                              'reservationState': 'ReserveStart'},
+#                                                         'criteria': {'children': {'child': [{'connectionId': UUID('19672f49-1dba-4e4f-8251-73fa8eea140f'),
+#                                                                                              'order': '0',
+#                                                                                              'p2ps': {'capacity': '1000',
+#                                                                                                       'destSTP': 'urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:ana-moxy:link-to-surf-1?vlan=1360',
+#                                                                                                       'directionality': 'Bidirectional',
+#                                                                                                       'sourceSTP': 'urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:ana-moxy:hpc-1?vlan=3762',
+#                                                                                                       'symmetricPath': 'true'},
+#                                                                                              'providerNSA': 'urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:nsa:supa',
+#                                                                                              'serviceType': 'http://services.ogf.org/nsi/2013/12/descriptions/EVTS.A-GOLE'},
+#                                                                                             {'connectionId': UUID('f30fd726-cd86-41ee-8876-6199090b8b21'),
+#                                                                                              'order': '1',
+#                                                                                              'p2ps': {'capacity': '1000',
+#                                                                                                       'destSTP': 'urn:ogf:network:surf.ana.dlp.surfnet.nl:2024:ana-surf:university-1?vlan=444',
+#                                                                                                       'directionality': 'Bidirectional',
+#                                                                                                       'sourceSTP': 'urn:ogf:network:surf.ana.dlp.surfnet.nl:2024:ana-surf:ana-link-1?vlan=1360',
+#                                                                                                       'symmetricPath': 'true'},
+#                                                                                              'providerNSA': 'urn:ogf:network:surf.ana.dlp.surfnet.nl:2024:nsa:supa',
+#                                                                                              'serviceType': 'http://services.ogf.org/nsi/2013/12/descriptions/EVTS.A-GOLE'}]},
+#                                                                      'p2ps': {'capacity': '1000',
+#                                                                               'destSTP': 'urn:ogf:network:surf.ana.dlp.surfnet.nl:2024:ana-surf:university-1?vlan=444',
+#                                                                               'directionality': 'Bidirectional',
+#                                                                               'sourceSTP': 'urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:ana-moxy:hpc-1?vlan=3762',
+#                                                                               'symmetricPath': 'true'},
+#                                                                      'schedule': {'endTime': datetime.datetime(2045, 3, 16, 15, 32, 21, 30175, tzinfo=datetime.timezone.utc),
+#                                                                                   'startTime': datetime.datetime(2025, 4, 10, 15, 32, 21, 30155, tzinfo=datetime.timezone.utc)},
+#                                                                      'serviceType': 'http://services.ogf.org/nsi/2013/12/descriptions/EVTS.A-GOLE',
+#                                                                      'version': '1'},
+#                                                         'description': 'test '
+#                                                                        '001',
+#                                                         'requesterNSA': 'urn:ogf:network:anaeng.global:2024:nsa:nsi-aura'}}},
+#  'Header': {'nsiHeader': {'correlationId': UUID('d665fb22-2ffc-499d-b2b4-9804f3becb4c'),
+#                           'protocolVersion': 'application/vnd.ogf.nsi.cs.v2.provider+soap',
+#                           'providerNSA': 'urn:ogf:network:ana.dlp.surfnet.nl:2024:nsa:safnari',
+#                           'requesterNSA': 'urn:ogf:network:anaeng.global:2024:nsa:nsi-aura'}}}
+
+
 def nsi_util_element_to_dict(node, attributes=True):
     """Convert an lxml.etree node tree into a dict."""
     result = {}
@@ -1635,6 +1679,8 @@ def nsi_util_post_soap(url, soapreqmsg):
         cert=(settings.NSI_AURA_CERTIFICATE, settings.NSI_AURA_PRIVATE_KEY),
     )
     log.debug(response.status_code)
+    if response.status_code != 200:
+        response.raise_for_status()
     log.debug(f"#CONTENT TYPE# {response.headers['content-type']}")
     if content_type_is_valid_soap(response.headers["content-type"]):
         return response.content

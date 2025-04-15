@@ -11,10 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Any
 
 from fastui import AnyComponent
 from fastui import components as c
 from fastui.events import GoToEvent, PageEvent
+
+from aura.fsm import ConnectionStateMachine
 
 # do not know why, but otherwise FastUI will complain
 c.Link.model_rebuild()
@@ -118,3 +121,52 @@ def button_with_modal(name: str, button: str, title: str, modal: str, url: str) 
             open_trigger=PageEvent(name=name),
         ),
     ]
+
+
+def to_aura_connection_state(nsi_connection_states: dict[str:Any]) -> str:
+    aura_connection_state = "UNKNOWN"
+    if nsi_connection_states["lifecycleState"] == "Terminated":
+        aura_connection_state = ConnectionStateMachine.ConnectionTerminated.value
+    elif nsi_connection_states["lifecycleState"] == "Terminating":
+        aura_connection_state = ConnectionStateMachine.ConnectionTerminating.value
+    elif nsi_connection_states["lifecycleState"] == "Failed":
+        aura_connection_state = ConnectionStateMachine.ConnectionFailed.value
+    elif nsi_connection_states["lifecycleState"] == "PassedEndTime":
+        pass  # TODO: implement NSI lifecycleState is PassedEndTime
+    elif nsi_connection_states["reservationState"] == "ReserveChecking":  # NSI lifecycleState is Created
+        aura_connection_state = ConnectionStateMachine.ConnectionReserveChecking.value
+    elif nsi_connection_states["reservationState"] == "ReserveHeld":
+        aura_connection_state = ConnectionStateMachine.ConnectionReserveHeld.value
+    elif nsi_connection_states["reservationState"] == "ReserveCommitting":
+        aura_connection_state = ConnectionStateMachine.ConnectionReserveCommitting.value
+    elif nsi_connection_states["reservationState"] == "ReserveFailed":
+        aura_connection_state = ConnectionStateMachine.ConnectionReserveFailed.value
+    elif nsi_connection_states["reservationState"] == "ReserveTimeout":
+        aura_connection_state = ConnectionStateMachine.ConnectionReserveTimeout.value
+    elif nsi_connection_states["reservationState"] == "ReserveAborting":
+        pass  # TODO: NSI reservationState is ReserveAborting not handled yet until modify is implemented
+    elif nsi_connection_states["provisionState"] == "Provisioning":  # NSI reservationState is ReserveStart
+        aura_connection_state = ConnectionStateMachine.ConnectionProvisioning.value
+    elif nsi_connection_states["provisionState"] == "Releasing":
+        aura_connection_state = ConnectionStateMachine.ConnectionReleasing.value
+    elif (
+        nsi_connection_states["provisionState"] == "Provisioned"
+        and nsi_connection_states["dataPlaneStatus"]["active"] == "true"
+    ):
+        aura_connection_state = ConnectionStateMachine.ConnectionActive.value
+    elif (
+        nsi_connection_states["provisionState"] == "Provisioned"
+        and nsi_connection_states["dataPlaneStatus"]["active"] == "false"
+    ):
+        aura_connection_state = ConnectionStateMachine.ConnectionProvisioned.value
+    elif (
+        nsi_connection_states["provisionState"] == "Released"
+        and nsi_connection_states["dataPlaneStatus"]["active"] == "true"
+    ):
+        aura_connection_state = ConnectionStateMachine.ConnectionReleased.value
+    elif (
+        nsi_connection_states["provisionState"] == "Released"
+        and nsi_connection_states["dataPlaneStatus"]["active"] == "false"
+    ):
+        aura_connection_state = ConnectionStateMachine.ConnectionReserveCommitted.value
+    return aura_connection_state

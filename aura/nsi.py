@@ -23,6 +23,7 @@ from aura.nsi_comm import (
     URN_STP_NAME,
     URN_STP_VLAN,
     generate_provision_xml,
+    generate_query_summary_sync_xml,
     generate_release_xml,
     generate_reserve_abort_xml,
     generate_reserve_commit_xml,
@@ -34,6 +35,7 @@ from aura.nsi_comm import (
     nsi_util_post_soap,
     nsi_util_xml_to_dict,
     provision_templstr,
+    query_summary_sync_templstr,
     release_templstr,
     reserve_abort_templstr,
     reserve_commit_templstr,
@@ -144,6 +146,17 @@ def nsi_send_terminate(reservation: Reservation) -> dict[str, Any]:
         terminate_templstr,
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
+        str(reservation.connectionId),
+        settings.PROVIDER_NSA_ID,
+    )
+    soap_xml = nsi_util_post_soap(settings.PROVIDER_NSA_URL, soap_xml)
+    return nsi_util_xml_to_dict(soap_xml)
+
+
+def nsi_send_query_summary_sync(reservation: Reservation) -> dict[str, Any]:
+    soap_xml = generate_query_summary_sync_xml(
+        query_summary_sync_templstr,
+        reservation.correlationId,
         str(reservation.connectionId),
         settings.PROVIDER_NSA_ID,
     )

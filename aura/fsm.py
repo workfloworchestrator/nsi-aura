@@ -50,7 +50,6 @@ class ConnectionStateMachine(AuraStateMachine):
     ConnectionProvisioned = State("ConnectionProvisioned", "CONNECTION_PROVISIONED")
     ConnectionReleased = State("ConnectionReleased", "CONNECTION_RELEASED")
     ConnectionActive = State("ConnectionActive", "CONNECTION_ACTIVE")
-    ConnectionInActive = State("ConnectionInActive", "CONNECTION_INACTIVE")
     ConnectionFailed = State("ConnectionFailed", "CONNECTION_FAILED")
     ConnectionTerminated = State("ConnectionTerminated", "CONNECTION_TERMINATED")
     ConnectionDeleted = State("ConnectionDeleted", "CONNECTION_DELETED", final=True)
@@ -68,7 +67,6 @@ class ConnectionStateMachine(AuraStateMachine):
         ConnectionProvisioned.value,
         ConnectionReleased.value,
         ConnectionActive.value,
-        ConnectionInActive.value,
         ConnectionFailed.value,
         ConnectionReserveChecking.value,
         ConnectionReserveHeld.value,
@@ -91,22 +89,19 @@ class ConnectionStateMachine(AuraStateMachine):
     nsi_receive_reserve_timeout = ConnectionReserveHeld.to(ConnectionReserveTimeout)
     nsi_send_reserve_commit = ConnectionReserveHeld.to(ConnectionReserveCommitting)
     nsi_receive_reserve_commit_confirmed = ConnectionReserveCommitting.to(ConnectionReserveCommitted)
-    nsi_send_provision = (
-        ConnectionInActive.to(ConnectionProvisioning)
-        | ConnectionReserveCommitted.to(ConnectionProvisioning)
-    )
+    nsi_send_provision = ConnectionReserveCommitted.to(ConnectionProvisioning)
     nsi_receive_provision_confirmed = ConnectionProvisioning.to(ConnectionProvisioned)
     nsi_send_release = ConnectionActive.to(ConnectionReleasing)
     nsi_receive_release_confirmed = ConnectionReleasing.to(ConnectionReleased)
     nsi_receive_data_plane_up = ConnectionProvisioned.to(ConnectionActive)
-    nsi_receive_data_plane_down = ConnectionReleased.to(ConnectionInActive)
+    nsi_receive_data_plane_down = ConnectionReleased.to(ConnectionReserveCommitted)
     nsi_receive_error_event = (
         ConnectionActive.to(ConnectionFailed)
         | ConnectionProvisioned.to(ConnectionFailed)
     )
     nsi_send_terminate = (
         ConnectionReserveTimeout.to(ConnectionTerminating)
-        | ConnectionInActive.to(ConnectionTerminating)
+        | ConnectionReserveCommitted.to(ConnectionTerminating)
         | ConnectionFailed.to(ConnectionTerminating)
         | ConnectionReserveFailed.to(ConnectionTerminating)
     )
@@ -117,6 +112,18 @@ class ConnectionStateMachine(AuraStateMachine):
 
 if __name__ == "__main__":
     """Generate images for the statemachine(s)."""
-    from statemachine.contrib.diagram import DotGraphMachine
+    # from statemachine.contrib.diagram import DotGraphMachine
+    #
+    # DotGraphMachine(ConnectionStateMachine)().write_png("images/ConnectionStateMachine.png")
 
-    DotGraphMachine(ConnectionStateMachine)().write_png("images/ConnectionStateMachine.png")
+    from graphviz import Digraph
+
+    def plot_fsm(fsm: StateMachine, name: str) -> None:
+        """Generate image that visualizes a state machine."""
+        dg = Digraph(name=name, comment=name)
+        for s in fsm.states:
+            for t in s.transitions:
+                dg.edge(t.source.value, t.target.value, label=t.event)
+        dg.render(filename=name, directory="images", cleanup=True, format="png")
+
+    plot_fsm(ConnectionStateMachine, "ConnectionStateMachine")
