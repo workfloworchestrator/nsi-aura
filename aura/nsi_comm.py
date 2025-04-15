@@ -515,18 +515,17 @@ def generate_query_recursive_xml(message_templstr, correlation_uuid_py, reply_to
 # Library
 #
 
+requests_session_adapter = requests.adapters.HTTPAdapter(max_retries=Retry(connect=3, backoff_factor=0.1))
+session = requests.Session()
+session.mount("http://", requests_session_adapter)
+session.mount("https://", requests_session_adapter)
+
 
 def nsi_comm_init(templ_absdir):
     """Initialise NSI communications."""
     # Getting Max Retry errors? Due to passphrase protected private key
     # https://stackoverflow.com/questions/23013220/max-retries-exceeded-with-url-in-requests
     log = logger.bind()
-
-    retry = Retry(connect=3, backoff_factor=0.5)
-    adapter = requests.adapters.HTTPAdapter(max_retries=retry)
-    session = requests.Session()
-    session.mount("http://", adapter)
-    session.mount("https://", adapter)
 
     # TODO: this is currently called from aura/__init__.py which causes it to be called twice.
     log.debug("NSI-COMM-INIT: loading templates")
@@ -626,9 +625,17 @@ def nsi_util_get_xml(url):
     log = logger.bind()
 
     # throws Exception to higher layer for display to user
-    log.debug("SENDING HTTP REQUEST FOR XML", url=url)
+    log.debug("SENDING HTTP REQUEST FOR XML", url=str(url))
     # 2024-11-08: SuPA moxy currently has self-signed certificate
-    r = requests.get(url, verify=False, cert=(settings.NSI_AURA_CERTIFICATE, settings.NSI_AURA_PRIVATE_KEY))
+    r = session.get(
+        url,
+        verify=(
+            settings.CERTIFICATES_DIRECTORY
+            if settings.VERIFY_REQUESTS and settings.CERTIFICATES_DIRECTORY
+            else settings.VERIFY_REQUESTS
+        ),
+        cert=(settings.NSI_AURA_CERTIFICATE, settings.NSI_AURA_PRIVATE_KEY),
+    )
     # logger.debug log.debug(r.status_code)
     # logger.debug log.debug(r.headers['content-type'])
     # logger.debug log.debug(r.encoding)
@@ -645,7 +652,7 @@ def nsi_util_get_xml(url):
     content_type = content_type.lower()  # UTF-8 and utf-8
     if content_type == "application/xml" or content_type.startswith("text/xml"):
         return r.content
-    log.debug(url + " did not return XML, but " + r.headers["content-type"])
+    log.debug(str(url) + " did not return XML, but " + r.headers["content-type"])
     return None
 
 
@@ -1671,11 +1678,15 @@ def nsi_util_post_soap(url, soapreqmsg):
     body = soapreqmsg
 
     # 2024-11-08: SuPA moxy currently has self-signed certificate
-    response = requests.post(
+    response = session.post(
         url,
         data=body,
         headers=headers,
-        verify=False,
+        verify=(
+            settings.CERTIFICATES_DIRECTORY
+            if settings.VERIFY_REQUESTS and settings.CERTIFICATES_DIRECTORY
+            else settings.VERIFY_REQUESTS
+        ),
         cert=(settings.NSI_AURA_CERTIFICATE, settings.NSI_AURA_PRIVATE_KEY),
     )
     log.debug(response.status_code)

@@ -52,6 +52,14 @@ class Settings(BaseSettings):
     NSI_AURA_CERTIFICATE: FilePath = FilePath("aura-certificate.pem")
     NSI_AURA_PRIVATE_KEY: FilePath = FilePath("aura-private-key.pem")
 
+    # directory with CA files to verify DDS and NSI provider certificates
+    # remember to rehash the certificates inside this directory with: openssl rehash .
+    # when unset the default Python requests module CA bundle is used
+    CERTIFICATES_DIRECTORY: DirectoryPath | None = None
+
+    # requests certificate verification, only disable while debugging!
+    VERIFY_REQUESTS: bool = True
+
     # database directory, may be relative or absolute
     DATABASE_DIRECTORY: DirectoryPath = DirectoryPath("db")
 
@@ -77,7 +85,7 @@ class Settings(BaseSettings):
 
     # Logging
     SQL_LOGGING: bool = False
-    LOG_LEVEL: str = "INFO"
+    LOG_LEVEL: str = "DEBUG"
 
 
 settings = Settings(_env_file="aura.env")
