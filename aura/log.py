@@ -136,10 +136,32 @@ def init() -> None:
                     "propagate": True,
                 },
                 # Set `level` to `INFO` or `DEBUG` here for detailed SQLAlchemy logging.
-                "sqlalchemy.engine": {"handlers": ["default"], "level": "WARNING", "propagate": False},
-                # "uvicorn.error": {
-                #     "propagate": False
-                # }
+                "sqlalchemy.engine": {
+                    "handlers": ["default"],
+                    "level": "WARNING",
+                    "propagate": False,
+                },
+                # APScheduler loglevel `INFO` is still to noisy, change to WARNING instead.
+                "apscheduler.scheduler": {
+                    "handlers": ["default"],
+                    "level": settings.LOG_LEVEL if settings.LOG_LEVEL != "INFO" else "WARNING",
+                    "propagate": False,
+                },
+                "apscheduler.jobstores": {
+                    "handlers": ["default"],
+                    "level": settings.LOG_LEVEL if settings.LOG_LEVEL != "INFO" else "WARNING",
+                    "propagate": False,
+                },
+                "apscheduler.executors": {
+                    "handlers": ["default"],
+                    "level": settings.LOG_LEVEL if settings.LOG_LEVEL != "INFO" else "WARNING",
+                    "propagate": False,
+                },
+                "apscheduler": {
+                    "handlers": ["default"],
+                    "level": settings.LOG_LEVEL if settings.LOG_LEVEL != "INFO" else "WARNING",
+                    "propagate": False,
+                },
                 "uvicorn.access": {
                     "handlers": ["default", "file", "database"],
                     "level": settings.LOG_LEVEL,
