@@ -20,7 +20,7 @@ from pydantic import HttpUrl
 
 from aura.db import Session
 from aura.model import SDP, STP
-from aura.nsi_comm import nsi_util_get_xml, nsi_util_xml_to_dict
+from aura.nsi import nsi_util_get_xml, nsi_util_xml_to_dict
 
 logger = structlog.get_logger()
 

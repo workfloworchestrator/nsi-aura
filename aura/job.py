@@ -23,8 +23,14 @@ from aura.db import Session
 from aura.dds import TOPOLOGY_MIME_TYPE, get_dds_documents, topology_to_stps, update_sdps, update_stps
 from aura.fsm import ConnectionStateMachine
 from aura.model import STP, Reservation
-from aura.nsi import nsi_send_provision, nsi_send_release, nsi_send_reserve, nsi_send_reserve_commit, nsi_send_terminate
-from aura.nsi_comm import nsi_util_xml_to_dict
+from aura.nsi import (
+    nsi_send_provision,
+    nsi_send_release,
+    nsi_send_reserve,
+    nsi_send_reserve_commit,
+    nsi_send_terminate,
+    nsi_util_xml_to_dict,
+)
 from aura.settings import settings
 
 # Advanced Python Scheduler

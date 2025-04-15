@@ -19,7 +19,7 @@ from statemachine.exceptions import TransitionNotAllowed
 from aura.fsm import ConnectionStateMachine
 from aura.job import nsi_send_reserve_commit_job, scheduler
 from aura.model import Reservation
-from aura.nsi_comm import acknowledgement_templstr, generate_acknowledgement_xml, nsi_util_xml_to_dict
+from aura.nsi import acknowledgement_templstr, generate_acknowledgement_xml, nsi_util_xml_to_dict
 from aura.settings import settings
 
 router = APIRouter()

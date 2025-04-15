@@ -15,9 +15,3 @@
 #
 # initialise NSI communications
 #
-from os import getcwd, path
-
-from aura.nsi_comm import nsi_comm_init
-
-# TODO: replace with Settings.STATIC_DIRECTORY, but need to fix import order first
-nsi_comm_init(path.join(getcwd(), "static"))
