@@ -129,6 +129,7 @@ dmypy.json
 *.crt
 *.pem
 *.key
+*.0
 
 # aura log file
 aura.log
