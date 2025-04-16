@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID, uuid4
@@ -58,7 +57,7 @@ TOPOLOGY_POSTFIX_MIME_TYPE = "vnd.ogf.nsi.topology.v2+xml"
 #
 # /discovery XML from SuPA
 #
-## Metadata
+# Metadata
 NSA_TAG = "{http://schemas.ogf.org/nsi/2014/02/discovery/nsa}nsa"
 NSA_ID_ATTRIB = "id"
 NSA_VERSION_ATTRIB = "version"
@@ -131,7 +130,7 @@ NSI_RESERVATION_TIMEOUT_STATE = "ReserveTimeout"
 
 # NSI RESERVE SOAP reply
 #
-## S_CONNECTION_ID_TAG='connectionId'
+# S_CONNECTION_ID_TAG='connectionId'
 
 # NSI RESERVE COMMIT SOAP reply
 #
@@ -287,78 +286,78 @@ query_recursive_keys = [
 # Templates
 #
 # RESERVE
-reserve_templpath = os.path.join(settings.STATIC_DIRECTORY, NSI_RESERVE_TEMPLATE_XMLFILE)
+reserve_template_path = settings.STATIC_DIRECTORY / NSI_RESERVE_TEMPLATE_XMLFILE
 
 # Read Reserve template code
-with open(reserve_templpath) as reserve_templfile:
-    reserve_templstr = reserve_templfile.read()
+with reserve_template_path.open() as reserve_template_file:
+    reserve_template = reserve_template_file.read()
 
 # RESERVE-COMMIT
-reserve_commit_templpath = os.path.join(settings.STATIC_DIRECTORY, NSI_RESERVE_COMMIT_TEMPLATE_XMLFILE)
+reserve_commit_template_path = settings.STATIC_DIRECTORY / NSI_RESERVE_COMMIT_TEMPLATE_XMLFILE
 
 # Read Reserve Commit template code
-with open(reserve_commit_templpath) as reserve_commit_templfile:
-    reserve_commit_templstr = reserve_commit_templfile.read()
+with reserve_commit_template_path.open() as reserve_commit_template_file:
+    reserve_commit_template = reserve_commit_template_file.read()
 
 # RESERVE-ABORT
-reserve_abort_templpath = os.path.join(settings.STATIC_DIRECTORY, NSI_RESERVE_ABORT_TEMPLATE_XMLFILE)
+reserve_abort_template_path = settings.STATIC_DIRECTORY / NSI_RESERVE_ABORT_TEMPLATE_XMLFILE
 
 # Read Reserve Abort template code
-with open(reserve_abort_templpath) as reserve_abort_templfile:
-    reserve_abort_templstr = reserve_abort_templfile.read()
+with reserve_abort_template_path.open() as reserve_abort_template_file:
+    reserve_abort_template = reserve_abort_template_file.read()
 
 # PROVISION
-provision_templpath = os.path.join(settings.STATIC_DIRECTORY, NSI_PROVISION_TEMPLATE_XMLFILE)
+provision_template_path = settings.STATIC_DIRECTORY / NSI_PROVISION_TEMPLATE_XMLFILE
 
 # Read Reserve template code
-with open(provision_templpath) as provision_templfile:
-    provision_templstr = provision_templfile.read()
+with provision_template_path.open() as provision_template_file:
+    provision_template = provision_template_file.read()
 
 # QUERY SUMMARY SYNC
-query_summary_sync_templpath = os.path.join(settings.STATIC_DIRECTORY, NSI_QUERY_SUMMARY_SYNC_TEMPLATE_XMLFILE)
+query_summary_sync_template_path = settings.STATIC_DIRECTORY / NSI_QUERY_SUMMARY_SYNC_TEMPLATE_XMLFILE
 
 # Read Reserve template code
-with open(query_summary_sync_templpath) as query_summary_sync_templfile:
-    query_summary_sync_templstr = query_summary_sync_templfile.read()
+with query_summary_sync_template_path.open() as query_summary_sync_template_file:
+    query_summary_sync_template = query_summary_sync_template_file.read()
 
 # QUERY RECURSIVE to get path details
-query_recursive_templpath = os.path.join(settings.STATIC_DIRECTORY, NSI_QUERY_RECURSIVE_TEMPLATE_XMLFILE)
+query_recursive_template_path = settings.STATIC_DIRECTORY / NSI_QUERY_RECURSIVE_TEMPLATE_XMLFILE
 
 # Read RESERVE_TIMEOUT_ACK template code
-with open(query_recursive_templpath) as query_recursive_templfile:
-    query_recursive_templstr = query_recursive_templfile.read()
+with query_recursive_template_path.open() as query_recursive_template_file:
+    query_recursive_template = query_recursive_template_file.read()
 
 # TERMINATE
-terminate_templpath = os.path.join(settings.STATIC_DIRECTORY, NSI_TERMINATE_TEMPLATE_XMLFILE)
+terminate_template_path = settings.STATIC_DIRECTORY / NSI_TERMINATE_TEMPLATE_XMLFILE
 
 # Read TERMINATE template code
-with open(terminate_templpath) as terminate_templfile:
-    terminate_templstr = terminate_templfile.read()
+with terminate_template_path.open() as terminate_template_file:
+    terminate_template = terminate_template_file.read()
 
 # RELEASE
-release_templpath = os.path.join(settings.STATIC_DIRECTORY, NSI_RELEASE_TEMPLATE_XMLFILE)
+release_template_path = settings.STATIC_DIRECTORY / NSI_RELEASE_TEMPLATE_XMLFILE
 
 # Read RELEASE template code
-with open(release_templpath) as release_templfile:
-    release_templstr = release_templfile.read()
+with release_template_path.open() as release_template_file:
+    release_template = release_template_file.read()
 
 # RESERVE_TIMEOUT_ACK
-reserve_timeout_ack_templpath = os.path.join(settings.STATIC_DIRECTORY, NSI_RESERVE_TIMEOUT_ACK_TEMPLATE_XMLFILE)
+reserve_timeout_ack_template_path = settings.STATIC_DIRECTORY / NSI_RESERVE_TIMEOUT_ACK_TEMPLATE_XMLFILE
 
 # Read RESERVE_TIMEOUT_ACK template code
-with open(reserve_timeout_ack_templpath) as reserve_timeout_ack_templfile:
-    reserve_timeout_ack_templstr = reserve_timeout_ack_templfile.read()
+with reserve_timeout_ack_template_path.open() as reserve_timeout_ack_template_file:
+    reserve_timeout_ack_template = reserve_timeout_ack_template_file.read()
 
 # ACKNOWLEDGEMENT
-acknowledgement_templpath = os.path.join(settings.STATIC_DIRECTORY, NSI_ACKNOWLEDGEMENT_TEMPLATE_XMLFILE)
+acknowledgement_template_path = settings.STATIC_DIRECTORY / NSI_ACKNOWLEDGEMENT_TEMPLATE_XMLFILE
 
 # Read ACKNOWLEDGEMENT template code
-with open(acknowledgement_templpath) as acknowledgement_templfile:
-    acknowledgement_templstr = acknowledgement_templfile.read()
+with acknowledgement_template_path.open() as acknowledgement_template_file:
+    acknowledgement_template = acknowledgement_template_file.read()
 
 
 def generate_reserve_xml(
-    message_templstr: str,
+    message_template: str,
     correlation_uuid_py: UUID,
     reply_to_url: str,
     connection_descr: str,
@@ -387,7 +386,7 @@ def generate_reserve_xml(
         "#PROVIDER-NSA-ID#": provider_nsa_id,
     }
 
-    message_xml = message_templstr
+    message_xml = message_template
     for message_key in message_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
@@ -395,7 +394,7 @@ def generate_reserve_xml(
 
 
 def generate_reserve_commit_xml(
-    message_templstr: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
+    message_template: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
 ) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
@@ -407,7 +406,7 @@ def generate_reserve_commit_xml(
         "#PROVIDER-NSA-ID#": provider_nsa_id,
     }
 
-    message_xml = message_templstr
+    message_xml = message_template
     for message_key in reserve_commit_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
@@ -415,7 +414,7 @@ def generate_reserve_commit_xml(
 
 
 def generate_reserve_abort_xml(
-    message_templstr: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
+    message_template: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
 ) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
@@ -427,7 +426,7 @@ def generate_reserve_abort_xml(
         "#PROVIDER-NSA-ID#": provider_nsa_id,
     }
 
-    message_xml = message_templstr
+    message_xml = message_template
     for message_key in reserve_commit_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
@@ -435,7 +434,7 @@ def generate_reserve_abort_xml(
 
 
 def generate_provision_xml(
-    message_templstr: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
+    message_template: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
 ) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
@@ -447,7 +446,7 @@ def generate_provision_xml(
         "#PROVIDER-NSA-ID#": provider_nsa_id,
     }
 
-    message_xml = message_templstr
+    message_xml = message_template
     for message_key in provision_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
@@ -455,7 +454,7 @@ def generate_provision_xml(
 
 
 def generate_terminate_xml(
-    message_templstr: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
+    message_template: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
 ) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
@@ -467,7 +466,7 @@ def generate_terminate_xml(
         "#PROVIDER-NSA-ID#": provider_nsa_id,
     }
 
-    message_xml = message_templstr
+    message_xml = message_template
     for message_key in terminate_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
@@ -475,7 +474,7 @@ def generate_terminate_xml(
 
 
 def generate_release_xml(
-    message_templstr: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
+    message_template: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
 ) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
@@ -487,7 +486,7 @@ def generate_release_xml(
         "#PROVIDER-NSA-ID#": provider_nsa_id,
     }
 
-    message_xml = message_templstr
+    message_xml = message_template
     for message_key in terminate_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
@@ -495,7 +494,7 @@ def generate_release_xml(
 
 
 def generate_reserve_timeout_ack_xml(
-    message_templstr: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
+    message_template: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
 ) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
@@ -507,14 +506,14 @@ def generate_reserve_timeout_ack_xml(
         "#PROVIDER-NSA-ID#": provider_nsa_id,
     }
 
-    message_xml = message_templstr
+    message_xml = message_template
     for message_key in terminate_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
     return message_xml.encode()
 
 
-def generate_acknowledgement_xml(message_templstr: str, correlation_uuid_py: UUID, provider_nsa_id: str) -> bytes:
+def generate_acknowledgement_xml(message_template: str, correlation_uuid_py: UUID, provider_nsa_id: str) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
@@ -523,7 +522,7 @@ def generate_acknowledgement_xml(message_templstr: str, correlation_uuid_py: UUI
         "#PROVIDER-NSA-ID#": provider_nsa_id,
     }
 
-    message_xml = message_templstr
+    message_xml = message_template
     for message_key in acknowledgement_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
@@ -531,7 +530,7 @@ def generate_acknowledgement_xml(message_templstr: str, correlation_uuid_py: UUI
 
 
 def generate_query_summary_sync_xml(
-    message_templstr: str, correlation_uuid_py: UUID, connid_str: str, provider_nsa_id: str
+    message_template: str, correlation_uuid_py: UUID, connid_str: str, provider_nsa_id: str
 ) -> bytes:
     # Generate values
     log = logger.bind()
@@ -544,7 +543,7 @@ def generate_query_summary_sync_xml(
         "#PROVIDER-NSA-ID#": provider_nsa_id,
     }
 
-    message_xml = message_templstr
+    message_xml = message_template
     for message_key in query_summary_sync_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
@@ -553,7 +552,7 @@ def generate_query_summary_sync_xml(
 
 
 def generate_query_recursive_xml(
-    message_templstr: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
+    message_template: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
 ) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
@@ -565,7 +564,7 @@ def generate_query_recursive_xml(
         "#PROVIDER-NSA-ID#": provider_nsa_id,
     }
 
-    message_xml = message_templstr
+    message_xml = message_template
     for message_key in terminate_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
@@ -809,13 +808,14 @@ def nsi_util_xml_to_dict(xml: bytes) -> dict[Any, Any]:
 # SOAP functions
 #
 def content_type_is_valid_soap(content_type: str) -> bool:
-    """Returns True if HTTP Content-Type indicates SOAP."""
+    """Validate that HTTP Content-Type indicates SOAP."""
     ct = content_type.lower()
     return ct == "application/xml" or ct.startswith("text/xml")  # "text/xml;charset=utf-8" "text/xml; charset=UTF-8"
 
 
 def nsi_util_post_soap(url: HttpUrl, soapreqmsg: bytes) -> bytes:
-    """Does HTTP POST of soapreqmsg to URL
+    """Execute a HTTP POST of the supplied soapreqmsg to URL.
+
     Returns: response.content, a SOAP reply.
     """
     log = logger.bind()
@@ -848,7 +848,8 @@ def nsi_util_post_soap(url: HttpUrl, soapreqmsg: bytes) -> bytes:
 
 
 def nsi_soap_parse_reserve_reply(soap_xml: bytes) -> dict[str, Any]:
-    """Parses SOAP RESERVE reply
+    """Parse SOAP RESERVE reply.
+
     Returns: ConnectionId as string.
     """
     log = logger.bind()
@@ -910,7 +911,8 @@ def nsi_soap_parse_query_recursive_reply(soap_xml: bytes) -> dict[str, Any]:
 
 
 def nsi_soap_parse_correlationid_reply(soap_xml: bytes) -> dict[str, Any]:
-    """Parses SOAP PROVISION reply
+    """Parse SOAP PROVISION reply.
+
     Returns: dict with S_FAULTSTRING_TAG and S_CORRELATION_ID_TAG as keys, values string
     if S_FAULTSTRING_TAG is not None, there was a faulstring tag.
     """
@@ -952,7 +954,7 @@ def nsi_send_reserve(reservation: Reservation, source_stp: STP, dest_stp: STP) -
     )
     log.info("send reserve to nsi provider")
     reserve_xml = generate_reserve_xml(
-        reserve_templstr,
+        reserve_template,
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         reservation.description,
@@ -982,7 +984,7 @@ def nsi_send_reserve_commit(reservation: Reservation) -> dict[str, str]:
     )
     log.info("send reserve commit to nsi provider")
     soap_xml = generate_reserve_commit_xml(
-        reserve_commit_templstr,
+        reserve_commit_template,
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         str(reservation.connectionId),
@@ -1002,7 +1004,7 @@ def nsi_send_provision(reservation: Reservation) -> dict[str, str]:
     )
     log.info("send provision to nsi provider")
     soap_xml = generate_provision_xml(
-        provision_templstr,
+        provision_template,
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         str(reservation.connectionId),
@@ -1016,7 +1018,7 @@ def nsi_send_provision(reservation: Reservation) -> dict[str, str]:
 
 def nsi_send_reserve_abort(reservation: Reservation) -> dict[str, Any]:
     soap_xml = generate_reserve_abort_xml(
-        reserve_abort_templstr,
+        reserve_abort_template,
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         str(reservation.connectionId),
@@ -1028,7 +1030,7 @@ def nsi_send_reserve_abort(reservation: Reservation) -> dict[str, Any]:
 
 def nsi_send_release(reservation: Reservation) -> dict[str, Any]:
     soap_xml = generate_release_xml(
-        release_templstr,
+        release_template,
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         str(reservation.connectionId),
@@ -1040,7 +1042,7 @@ def nsi_send_release(reservation: Reservation) -> dict[str, Any]:
 
 def nsi_send_terminate(reservation: Reservation) -> dict[str, Any]:
     soap_xml = generate_terminate_xml(
-        terminate_templstr,
+        terminate_template,
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         str(reservation.connectionId),
@@ -1052,7 +1054,7 @@ def nsi_send_terminate(reservation: Reservation) -> dict[str, Any]:
 
 def nsi_send_query_summary_sync(reservation: Reservation) -> dict[str, Any]:
     soap_xml = generate_query_summary_sync_xml(
-        query_summary_sync_templstr,
+        query_summary_sync_template,
         reservation.correlationId,
         str(reservation.connectionId),
         settings.PROVIDER_NSA_ID,

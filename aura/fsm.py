@@ -63,7 +63,7 @@ class ConnectionStateMachine(AuraStateMachine):
     ConnectionReserveTimeout = State("ConnectionReserveTimeout", "CONNECTION_RESERVE_TIMEOUT")
     ConnectionTerminating = State("ConnectionTerminating", "CONNECTION_TERMINATING")
 
-    active_state_values = [
+    active_state_values = (
         ConnectionProvisioned.value,
         ConnectionReleased.value,
         ConnectionActive.value,
@@ -75,7 +75,7 @@ class ConnectionStateMachine(AuraStateMachine):
         ConnectionProvisioning.value,
         ConnectionReleasing.value,
         ConnectionTerminating.value,
-    ]
+    )
 
     # fmt: off
     nsi_send_reserve = (

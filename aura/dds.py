@@ -71,7 +71,7 @@ def topology_to_stps(topology: dict) -> list[STP]:
         outboundAliasId: str | None = None
         if inboundPort and outboundPort:
             if inboundPort["LabelGroup"] != outboundPort["LabelGroup"]:
-                log.warning(f"LabelGroups on in- and outbound ports of {unidirectionalPortId} do not match")
+                log.warning(f"LabelGroups on in- and outbound ports of {bidirectionalPortId} do not match")
             # the following breaks when the port has multiple relations, then Relation will be a list instead of a dict
             if "Relation" in inboundPort and inboundPort["Relation"]["type"] == IS_ALIAS:
                 inboundPortId = strip_urn(inboundPort["id"])

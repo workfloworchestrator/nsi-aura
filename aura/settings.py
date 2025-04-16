@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     # NSI Orchestrator
     #
     # GLOBAL_ORCHESTRATOR_URL='https://supa.moxy.ana.dlp.surfnet.nl:443'
-    ## Test with bad URL
+    # Test with bad URL
     # GLOBAL_ORCHESTRATOR_URL='https://nosupa.moxy.ana.dlp.surfnet.nl'
     # GLOBAL_ORCHESTRATOR_DISCOVERY_PATH='/discovery'
 

@@ -19,7 +19,7 @@ from statemachine.exceptions import TransitionNotAllowed
 from aura.fsm import ConnectionStateMachine
 from aura.job import nsi_send_reserve_commit_job, scheduler
 from aura.model import Reservation
-from aura.nsi import acknowledgement_templstr, generate_acknowledgement_xml, nsi_util_xml_to_dict
+from aura.nsi import acknowledgement_template, generate_acknowledgement_xml, nsi_util_xml_to_dict
 from aura.settings import settings
 
 router = APIRouter()
@@ -115,6 +115,6 @@ async def nsi_callback(request: Request) -> Response:
         #     scheduler.add_job(nsi_send_reserve_commit_job(), args=[reservation_id])
 
     nsi_acknowledgement = generate_acknowledgement_xml(
-        acknowledgement_templstr, body["Header"]["nsiHeader"]["correlationId"], settings.PROVIDER_NSA_ID
+        acknowledgement_template, body["Header"]["nsiHeader"]["correlationId"], settings.PROVIDER_NSA_ID
     )
     return Response(content=nsi_acknowledgement, media_type="application/xml")

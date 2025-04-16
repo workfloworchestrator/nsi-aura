@@ -13,11 +13,15 @@
 # limitations under the License.
 
 
-class AuraException(Exception):
-    """Base class for all Aura related exceptions.
+class AuraBaseError(Exception):
+    """Base class for all Aura related errors."""
 
-    For now the only Aura specific exception.
-    """
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
+class AuraNsiError(AuraBaseError):
+    """Aura NSI related errors."""
 
     def __init__(self, message: str) -> None:
         super().__init__(message)

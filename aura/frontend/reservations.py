@@ -16,13 +16,14 @@ import asyncio
 from collections import defaultdict
 from datetime import datetime
 from pprint import pformat
-from typing import Annotated, AsyncIterable, Optional, Self, Callable, Any
+from typing import Annotated, Any, AsyncIterable, Optional, Self
 from uuid import uuid4
 
 import structlog
 from fastapi import APIRouter, HTTPException
 from fastui import AnyComponent, FastUI
 from fastui import components as c
+from fastui.base import BaseModel
 from fastui.components.display import DisplayLookup
 from fastui.events import BackEvent, GoToEvent, PageEvent
 from fastui.forms import SelectSearchResponse, fastui_form
@@ -33,7 +34,7 @@ from statemachine.exceptions import TransitionNotAllowed
 
 from aura.db import Session
 from aura.dds import has_alias
-from aura.exception import AuraException
+from aura.exception import AuraNsiError
 from aura.frontend.util import app_page, button_with_modal, to_aura_connection_state
 from aura.fsm import ConnectionStateMachine
 from aura.job import (
@@ -48,7 +49,6 @@ from aura.nsi import nsi_send_query_summary_sync
 from aura.vlan import free_vlan_ranges
 
 router = APIRouter()
-from fastui.base import BaseModel
 
 logger = structlog.get_logger()
 
@@ -83,14 +83,14 @@ class ValidatedBaseModel(BaseModel):
         return self
 
 
-def generate_stp_field(title: str ="give me a title", value: str | None =None, label: str | None=None) -> Any:
+def generate_stp_field(title: str = "give me a title", value: str | None = None, label: str | None = None) -> Any:
     json_schema_extra = {"search_url": "/api/reservations/endpoints"}
     if value and label:
         json_schema_extra["initial"] = {"value": value, "label": label}  # type: ignore
     return Field(title=title, json_schema_extra=json_schema_extra)  # type: ignore
 
 
-def generate_sdp_field(title: str="give me a title", value: str | None=None, label: str | None=None) -> Any:
+def generate_sdp_field(title: str = "give me a title", value: str | None = None, label: str | None = None) -> Any:
     json_schema_extra = {"search_url": "/api/reservations/demarcation_points"}
     if value and label:
         json_schema_extra["initial"] = {"value": value, "label": label}  # type: ignore
@@ -395,8 +395,8 @@ async def reservation_verify(id: int) -> list[AnyComponent]:
         if "reservation" in reply_dict["Body"]["querySummarySyncConfirmed"]:
             nsi_connection_states = reply_dict["Body"]["querySummarySyncConfirmed"]["reservation"]["connectionStates"]
         else:
-            raise AuraException("NSI provider: reservation not found")
-    except (RequestException, ConnectionError, AuraException) as exception:
+            raise AuraNsiError("NSI provider: reservation not found")
+    except (RequestException, ConnectionError, AuraNsiError) as exception:
         components.append(c.Heading(text="Error", level=4))
         components.append(c.Paragraph(text=f"Cannot get NSI connection states: {exception!s}"))
     else:
