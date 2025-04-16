@@ -123,7 +123,7 @@ def button_with_modal(name: str, button: str, title: str, modal: str, url: str) 
     ]
 
 
-def to_aura_connection_state(nsi_connection_states: dict[str:Any]) -> str:
+def to_aura_connection_state(nsi_connection_states: dict[str, Any]) -> str:
     aura_connection_state = "UNKNOWN"
     if nsi_connection_states["lifecycleState"] == "Terminated":
         aura_connection_state = ConnectionStateMachine.ConnectionTerminated.value

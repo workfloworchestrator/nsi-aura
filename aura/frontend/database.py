@@ -25,7 +25,7 @@ router = APIRouter()
 
 
 @router.get("/reservation", response_model=FastUI, response_model_exclude_none=True)
-def fastapi_database_tables() -> list[AnyComponent]:
+def database_table_reservation() -> list[AnyComponent]:
     """Display all database tables and their contents."""
     with Session() as session:
         reservations = session.query(Reservation).all()
@@ -41,7 +41,7 @@ def fastapi_database_tables() -> list[AnyComponent]:
 
 
 @router.get("/stp", response_model=FastUI, response_model_exclude_none=True)
-def fastapi_database_tables() -> list[AnyComponent]:
+def database_table_stp() -> list[AnyComponent]:
     """Display STP table content."""
     with Session() as session:
         stps = session.query(STP).all()
@@ -57,7 +57,7 @@ def fastapi_database_tables() -> list[AnyComponent]:
 
 
 @router.get("/sdp", response_model=FastUI, response_model_exclude_none=True)
-def fastapi_database_tables() -> list[AnyComponent]:
+def database_table_sdp() -> list[AnyComponent]:
     """Display SDP table content."""
     with Session() as session:
         sdps = session.query(SDP).all()

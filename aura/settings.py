@@ -79,7 +79,7 @@ class Settings(BaseSettings):
 
     # NOTE: HttpUrl class will automatically add trailing / when converting to str
     @property
-    def NSA_BASE_URL(self):
+    def NSA_BASE_URL(self) -> HttpUrl:
         """External base URL of this NSA."""
         return HttpUrl(f"{self.NSA_SCHEME}://{self.NSA_HOST}:{self.NSA_PORT}{self.NSA_PATH_PREFIX}")
 

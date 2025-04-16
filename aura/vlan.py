@@ -257,14 +257,14 @@ class VlanRanges(abc.Set):
 def all_vlan_ranges(stpId: int) -> VlanRanges:
     """All VLAN ranges on STP identified by stpId."""
     with Session() as session:
-        return VlanRanges(session.query(STP.vlanRange).filter(STP.id == stpId).scalar())
+        return VlanRanges(session.query(STP.vlanRange).filter(STP.id == stpId).scalar())  # type: ignore[call-overload]
 
 
 def _select_in_use_vlan_ranges(select_statement: Select) -> list[int]:
     """Already in use VLAN ranges on STP identified by stpId."""
     with Session() as session:
         return (
-            session.execute(select_statement.filter(Reservation.state.in_(ConnectionStateMachine.active_state_values)))
+            session.execute(select_statement.filter(Reservation.state.in_(ConnectionStateMachine.active_state_values)))  # type: ignore
             .scalars()
             .all()
         )
@@ -273,8 +273,8 @@ def _select_in_use_vlan_ranges(select_statement: Select) -> list[int]:
 def in_use_vlan_ranges(stpId: int) -> VlanRanges:
     """Free VLAN ranges on STP identified by stpId."""
     return VlanRanges(
-        _select_in_use_vlan_ranges(select(Reservation.sourceVlan).filter(Reservation.sourceStpId == stpId))
-        + _select_in_use_vlan_ranges(select(Reservation.destVlan).filter(Reservation.destStpId == stpId))
+        _select_in_use_vlan_ranges(select(Reservation.sourceVlan).filter(Reservation.sourceStpId == stpId))  # type: ignore
+        + _select_in_use_vlan_ranges(select(Reservation.destVlan).filter(Reservation.destStpId == stpId))  # type: ignore
     )
 
 

@@ -14,6 +14,7 @@
   </soap:Header>
   <soap:Body>
     <ctypes:reserve>
+      <globalReservationId>#GLOBAL-RESERVATION-ID#</globalReservationId>
       <description>#CONNECTION-DESCRIPTION#</description>
       <criteria version="1">
         <schedule>

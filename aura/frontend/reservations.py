@@ -16,7 +16,7 @@ import asyncio
 from collections import defaultdict
 from datetime import datetime
 from pprint import pformat
-from typing import Annotated, AsyncIterable, Optional, Self
+from typing import Annotated, AsyncIterable, Optional, Self, Callable, Any
 from uuid import uuid4
 
 import structlog
@@ -45,7 +45,6 @@ from aura.job import (
 )
 from aura.model import SDP, STP, Bandwidth, Log, Reservation, Vlan
 from aura.nsi import nsi_send_query_summary_sync
-from aura.settings import settings
 from aura.vlan import free_vlan_ranges
 
 router = APIRouter()
@@ -75,27 +74,27 @@ class ValidatedBaseModel(BaseModel):
     def free_vlan_on_stp(self) -> Self:
         """Check that the sourceVlan and destVlan are free on the chosen SourceSTP and destSTP."""
         form = []
-        if self.sourceVlan not in (free_vlans := free_vlan_ranges(int(self.sourceSTP))):
+        if self.sourceVlan not in (free_vlans := free_vlan_ranges(int(self.sourceSTP))):  # type: ignore[attr-defined]
             form.append({"type": "invalid_vlan", "loc": ["sourceVlan"], "msg": f"free VLANs: {free_vlans}"})
-        if self.destVlan not in (free_vlans := free_vlan_ranges(int(self.destSTP))):
+        if self.destVlan not in (free_vlans := free_vlan_ranges(int(self.destSTP))):  # type: ignore[attr-defined]
             form.append({"type": "invalid_vlan", "loc": ["destVlan"], "msg": f"free VLANs: {free_vlans}"})
         if form:
             raise HTTPException(status_code=422, detail={"form": form})
         return self
 
 
-def generate_stp_field(title="give me a title", value=None, label=None) -> Field:
+def generate_stp_field(title: str ="give me a title", value: str | None =None, label: str | None=None) -> Any:
     json_schema_extra = {"search_url": "/api/reservations/endpoints"}
     if value and label:
-        json_schema_extra["initial"] = {"value": value, "label": label}
-    return Field(title=title, json_schema_extra=json_schema_extra)
+        json_schema_extra["initial"] = {"value": value, "label": label}  # type: ignore
+    return Field(title=title, json_schema_extra=json_schema_extra)  # type: ignore
 
 
-def generate_sdp_field(title="give me a title", value=None, label=None) -> Field:
+def generate_sdp_field(title: str="give me a title", value: str | None=None, label: str | None=None) -> Any:
     json_schema_extra = {"search_url": "/api/reservations/demarcation_points"}
     if value and label:
-        json_schema_extra["initial"] = {"value": value, "label": label}
-    return Field(title=title, json_schema_extra=json_schema_extra)
+        json_schema_extra["initial"] = {"value": value, "label": label}  # type: ignore
+    return Field(title=title, json_schema_extra=json_schema_extra)  # type: ignore
 
 
 class ReservationInputForm(ValidatedBaseModel):
@@ -114,8 +113,8 @@ class ReservationInputForm(ValidatedBaseModel):
 
 def generate_modify_form(reservation_id: int) -> ValidatedBaseModel:
     with Session() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
-        sdp = session.query(SDP).filter(SDP.id == reservation.sdpId).one()
+        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()  # type: ignore[arg-type]
+        sdp = session.query(SDP).filter(SDP.id == reservation.sdpId).one()  # type: ignore[arg-type]
 
     class ReservationModifyForm(ValidatedBaseModel):
         """Input form with all connection input fields with validation, where possible."""
@@ -133,7 +132,7 @@ def generate_modify_form(reservation_id: int) -> ValidatedBaseModel:
         startTime: startTimeType = reservation.startTime
         endTime: endTimeType = reservation.endTime
 
-    return ReservationModifyForm
+    return ReservationModifyForm  # type: ignore[return-value]
 
 
 @router.get("/endpoints", response_model=SelectSearchResponse)
@@ -172,10 +171,12 @@ def input_form() -> list[AnyComponent]:
 
 
 @router.post("/create", response_model=FastUI, response_model_exclude_none=True)
-def reservation_post(form: Annotated[ReservationInputForm, fastui_form(ReservationInputForm)]):
+def reservation_post(form: Annotated[ReservationInputForm, fastui_form(ReservationInputForm)]) -> list[Any]:
     """Store values from input form in reservation database and start NSI reserve job."""
     reservation = Reservation(
+        connectionId=None,
         globalReservationId=uuid4(),
+        correlationId=uuid4(),
         description=form.description,
         sourceStpId=int(form.sourceSTP),
         destStpId=int(form.destSTP),
@@ -207,10 +208,11 @@ async def reservations() -> list[AnyComponent]:
 @router.get("/{id}/", response_model=FastUI, response_model_exclude_none=True)
 def reservation_details(id: int) -> list[AnyComponent]:
     """Display reservation details and action buttons."""
-    root_url = str(settings.SERVER_URL_PREFIX) + ""  # back to landing
     with Session() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == id).one_or_none()
-        csm = ConnectionStateMachine(reservation)
+        reservation = session.query(Reservation).filter(Reservation.id == id).one_or_none()  # type: ignore[arg-type]
+    if reservation is None:
+        return app_page(title=f"No reservation with id {id}.")
+    csm = ConnectionStateMachine(reservation)
     heading = reservation.description
     return app_page(
         c.Heading(level=3, text=heading),
@@ -314,7 +316,7 @@ async def reservation_log_stream(id: int) -> AsyncIterable[str]:
         await asyncio.sleep(0.5)
         with Session() as session:
             messages = (
-                session.query(Log.message, Log.timestamp)
+                session.query(Log.message, Log.timestamp)  # type: ignore[call-overload]
                 .filter(Log.reservation_id == id)
                 .filter(Log.timestamp > last_timestamp)
                 .all()
@@ -322,7 +324,7 @@ async def reservation_log_stream(id: int) -> AsyncIterable[str]:
         for message, timestamp in messages:
             lines.append(c.Div(components=[c.Text(text=f"{timestamp.isoformat()} - {message}")]))
             last_timestamp = timestamp
-        m = FastUI(root=lines)
+        m = FastUI(root=lines)  # type: ignore[arg-type]
         yield f"data: {m.model_dump_json(by_alias=True, exclude_none=True)}\n\n"
 
 
@@ -378,8 +380,9 @@ async def reservation_retry_reserve(id: int) -> list[AnyComponent]:
 @router.get("/{id}/verify", response_model=FastUI, response_model_exclude_none=True)
 async def reservation_verify(id: int) -> list[AnyComponent]:
     """Verify reservation with given id."""
+    components: list[Any]
     with Session() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == id).one()
+        reservation = session.query(Reservation).filter(Reservation.id == id).one()  # type: ignore[arg-type]
     # new_correlation_id_on_reservation()  # TODO: is this safe?
     components = [
         c.Paragraph(
@@ -421,7 +424,7 @@ async def reservation_set_state(id: int, new_state: str) -> list[AnyComponent]:
     if new_state not in ConnectionStateMachine.states_map.keys():
         raise HTTPException(status_code=400, detail="unknown connection state")
     with Session.begin() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == id).one()
+        reservation = session.query(Reservation).filter(Reservation.id == id).one()  # type: ignore[arg-type]
         old_state = reservation.state
         reservation.state = new_state
         logger.info(
@@ -439,7 +442,7 @@ async def reservation_terminate(id: int) -> list[AnyComponent]:
     """Terminate reservation with given id."""
     try:
         with Session.begin() as session:
-            reservation = session.query(Reservation).filter(Reservation.id == id).one()
+            reservation = session.query(Reservation).filter(Reservation.id == id).one()  # type: ignore[arg-type]
             csm = ConnectionStateMachine(reservation)
             csm.nsi_send_terminate()
         scheduler.add_job(nsi_send_terminate_job, args=[id])
@@ -456,7 +459,7 @@ async def reservation_release(id: int) -> list[AnyComponent]:
     """Release reservation with given id."""
     try:
         with Session.begin() as session:
-            reservation = session.query(Reservation).filter(Reservation.id == id).one()
+            reservation = session.query(Reservation).filter(Reservation.id == id).one()  # type: ignore[arg-type]
             csm = ConnectionStateMachine(reservation)
             csm.nsi_send_release()
         scheduler.add_job(nsi_send_release_job, args=[id])
@@ -473,7 +476,7 @@ async def reservation_provision(id: int) -> list[AnyComponent]:
     """Provision reservation with given id."""
     try:
         with Session.begin() as session:
-            reservation = session.query(Reservation).filter(Reservation.id == id).one()
+            reservation = session.query(Reservation).filter(Reservation.id == id).one()  # type: ignore[arg-type]
             ConnectionStateMachine(reservation).nsi_send_provision()
         scheduler.add_job(nsi_send_provision_job, args=[id])
         return [

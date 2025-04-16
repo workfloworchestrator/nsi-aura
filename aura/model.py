@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from annotated_types import Ge, Gt, Le, doc
@@ -75,11 +75,11 @@ class STP(SQLModel, table=True):
         return ":".join(opaque_part[1:])
 
     @property
-    def urn_base(self):
+    def urn_base(self) -> str:
         return f"urn:ogf:network:{self.stpId}"
 
     @property
-    def urn(self):
+    def urn(self) -> str:
         return f"{self.urn_base}?vlan={self.vlanRange}"
 
 
@@ -91,14 +91,6 @@ class SDP(SQLModel, table=True):
     stpZId: int
     vlanRange: str  # our labels are VLAN's
     description: str | None
-
-    @property
-    def urn_base(self):
-        return f"urn:ogf:network:{self.sdpId}"
-
-    @property
-    def urn(self):
-        return f"{self.urn_base}?vlan={self.vlanRange}"
 
 
 # On some installs we get confusion between Link(DataModel) and the Link HTML component
@@ -114,8 +106,8 @@ class NetworkLink(BaseModel):
 class Reservation(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     connectionId: UUID | None
-    globalReservationId: UUID | None
-    correlationId: UUID | None
+    globalReservationId: UUID
+    correlationId: UUID
     description: str
     startTime: datetime | None
     endTime: datetime | None
@@ -128,15 +120,15 @@ class Reservation(SQLModel, table=True):
     state: str  # Statemachine default state field name
     # state: str = Field(default=ConnectionStateMachine.ConnectionNew.value) # need to fix circular imports to use this
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
-    def sourceStp(self) -> str:
-        return self._sourceStp
+    def sourceStp(self) -> Any:
+        return self._sourceStp  # type: ignore[attr-defined]
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
-    def destStp(self) -> str:
-        return self._destStp
+    def destStp(self) -> Any:
+        return self._destStp  # type: ignore[attr-defined]
 
     # TODO: add sdp computed field
 

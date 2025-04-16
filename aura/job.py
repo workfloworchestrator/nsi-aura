@@ -48,7 +48,7 @@ logger = structlog.get_logger()
 
 def new_correlation_id_on_reservation(reservation_id: int) -> None:
     with Session.begin() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
+        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()  # type: ignore[arg-type]
         reservation.correlationId = uuid4()
 
 
@@ -63,42 +63,42 @@ def nsi_poll_dds_job() -> None:
 def nsi_send_reserve_job(reservation_id: int) -> None:
     new_correlation_id_on_reservation(reservation_id)
     with Session() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
-        source_stp = session.query(STP).filter(STP.id == reservation.sourceStpId).one()  # TODO: replace with relation
-        dest_stp = session.query(STP).filter(STP.id == reservation.destStpId).one()  # TODO: replace with relation
+        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()  # type: ignore[arg-type]
+        source_stp = session.query(STP).filter(STP.id == reservation.sourceStpId).one()  # type: ignore[arg-type]  # TODO: replace with relation
+        dest_stp = session.query(STP).filter(STP.id == reservation.destStpId).one()  # type: ignore[arg-type]  # TODO: replace with relation
     try:
         retdict = nsi_send_reserve(reservation, source_stp, dest_stp)  # TODO: need error handling post soap failure
     except OSError as e:
         log = logger.bind(reservationId=reservation.id, globalReservationId=str(reservation.globalReservationId))
         log.warning(str(e))
         with Session.begin() as session:
-            reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
+            reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()  # type: ignore[arg-type]
             csm = ConnectionStateMachine(reservation)
             csm.connection_error()
     else:
         with Session.begin() as session:
-            reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
+            reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()  # type: ignore[arg-type]
             reservation.connectionId = UUID(retdict["connectionId"])  # TODO: make nsi_comm return a UUID
 
 
 def nsi_send_reserve_commit_job(reservation_id: int) -> None:
     new_correlation_id_on_reservation(reservation_id)
     with Session() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
-    retdict = nsi_send_reserve_commit(reservation)  # TODO: need error handling on failed post soap
+        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()  # type: ignore[arg-type]
+    nsi_send_reserve_commit(reservation)  # TODO: need error handling on failed post soap
 
 
 def nsi_send_provision_job(reservation_id: int) -> None:
     new_correlation_id_on_reservation(reservation_id)
     with Session() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
-    retdict = nsi_send_provision(reservation)  # TODO: need error handling on failed post soap
+        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()  # type: ignore[arg-type]
+    nsi_send_provision(reservation)  # TODO: need error handling on failed post soap
 
 
 def nsi_send_terminate_job(reservation_id: int) -> None:
     new_correlation_id_on_reservation(reservation_id)
     with Session() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
+        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()  # type: ignore[arg-type]
     log = logger.bind(
         reservationId=reservation.id,
         correlationId=str(reservation.correlationId),
@@ -136,7 +136,7 @@ def nsi_send_terminate_job(reservation_id: int) -> None:
 def nsi_send_release_job(reservation_id: int) -> None:
     new_correlation_id_on_reservation(reservation_id)
     with Session() as session:
-        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()
+        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()  # type: ignore[arg-type]
     log = logger.bind(
         reservationId=reservation.id,
         correlationId=str(reservation.correlationId),

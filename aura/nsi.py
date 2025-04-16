@@ -12,16 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import datetime
 import os
 from datetime import datetime, timedelta, timezone
-from io import BytesIO
 from typing import Any
 from uuid import UUID, uuid4
 
 import requests
 import structlog
 from lxml import etree
+from pydantic import HttpUrl
 from urllib3.util.retry import Retry
 
 from aura.model import STP, Reservation
@@ -156,7 +155,7 @@ S_CHILDREN_TAG = "children"
 S_CHILD_TAG = "child"
 
 
-def generate_uuid():
+def generate_uuid() -> str:
     return uuid4().urn
 
 
@@ -358,30 +357,23 @@ with open(acknowledgement_templpath) as acknowledgement_templfile:
     acknowledgement_templstr = acknowledgement_templfile.read()
 
 
-def stp_dict_to_urn(stp_dict):
-    return stp_dict[URN_STP_NAME] + "?" + URN_STP_VLAN + "=" + str(stp_dict[URN_STP_VLAN])
-
-
 def generate_reserve_xml(
-    message_templstr,
-    correlation_uuid_py,
-    reply_to_url,
-    connection_descr,
-    global_reservation_uuid_py,
-    start_datetime_py,
-    end_datetime_py,
-    source_stp_dict,
-    dest_stp_dict,
-    provider_nsa_id,
-):
+    message_templstr: str,
+    correlation_uuid_py: UUID,
+    reply_to_url: str,
+    connection_descr: str,
+    global_reservation_uuid_py: UUID,
+    start_datetime_py: datetime,
+    end_datetime_py: datetime,
+    source_stp: str,
+    dest_stp: str,
+    provider_nsa_id: str,
+) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
-    global_reservation_urn = URN_UUID_PREFIX + str(global_reservation_uuid_py)
+    global_reservation_urn = global_reservation_uuid_py.urn
     start_time_str = start_datetime_py.isoformat()
     end_time_str = end_datetime_py.isoformat()
-
-    source_stp_str = stp_dict_to_urn(source_stp_dict)
-    dest_stp_str = stp_dict_to_urn(dest_stp_dict)
 
     message_dict = {
         "#CORRELATION-ID#": correlation_urn,
@@ -390,8 +382,8 @@ def generate_reserve_xml(
         "#GLOBAL-RESERVATION-ID#": global_reservation_urn,
         "#CONNECTION-START-TIME#": start_time_str,
         "#CONNECTION-END-TIME#": end_time_str,
-        "#SOURCE-STP#": source_stp_str,
-        "#DEST-STP#": dest_stp_str,
+        "#SOURCE-STP#": source_stp,
+        "#DEST-STP#": dest_stp,
         "#PROVIDER-NSA-ID#": provider_nsa_id,
     }
 
@@ -399,10 +391,12 @@ def generate_reserve_xml(
     for message_key in message_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
-    return message_xml
+    return message_xml.encode()
 
 
-def generate_reserve_commit_xml(message_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id):
+def generate_reserve_commit_xml(
+    message_templstr: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
+) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
@@ -417,10 +411,12 @@ def generate_reserve_commit_xml(message_templstr, correlation_uuid_py, reply_to_
     for message_key in reserve_commit_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
-    return message_xml
+    return message_xml.encode()
 
 
-def generate_reserve_abort_xml(message_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id):
+def generate_reserve_abort_xml(
+    message_templstr: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
+) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
@@ -435,10 +431,12 @@ def generate_reserve_abort_xml(message_templstr, correlation_uuid_py, reply_to_u
     for message_key in reserve_commit_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
-    return message_xml
+    return message_xml.encode()
 
 
-def generate_provision_xml(message_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id):
+def generate_provision_xml(
+    message_templstr: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
+) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
@@ -453,10 +451,12 @@ def generate_provision_xml(message_templstr, correlation_uuid_py, reply_to_url, 
     for message_key in provision_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
-    return message_xml
+    return message_xml.encode()
 
 
-def generate_terminate_xml(message_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id):
+def generate_terminate_xml(
+    message_templstr: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
+) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
@@ -471,10 +471,12 @@ def generate_terminate_xml(message_templstr, correlation_uuid_py, reply_to_url, 
     for message_key in terminate_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
-    return message_xml
+    return message_xml.encode()
 
 
-def generate_release_xml(message_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id):
+def generate_release_xml(
+    message_templstr: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
+) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
@@ -489,10 +491,12 @@ def generate_release_xml(message_templstr, correlation_uuid_py, reply_to_url, co
     for message_key in terminate_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
-    return message_xml
+    return message_xml.encode()
 
 
-def generate_reserve_timeout_ack_xml(message_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id):
+def generate_reserve_timeout_ack_xml(
+    message_templstr: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
+) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
@@ -507,10 +511,10 @@ def generate_reserve_timeout_ack_xml(message_templstr, correlation_uuid_py, repl
     for message_key in terminate_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
-    return message_xml
+    return message_xml.encode()
 
 
-def generate_acknowledgement_xml(message_templstr, correlation_uuid_py, provider_nsa_id):
+def generate_acknowledgement_xml(message_templstr: str, correlation_uuid_py: UUID, provider_nsa_id: str) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
@@ -523,10 +527,12 @@ def generate_acknowledgement_xml(message_templstr, correlation_uuid_py, provider
     for message_key in acknowledgement_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
-    return message_xml
+    return message_xml.encode()
 
 
-def generate_query_summary_sync_xml(message_templstr, correlation_uuid_py, connid_str, provider_nsa_id):
+def generate_query_summary_sync_xml(
+    message_templstr: str, correlation_uuid_py: UUID, connid_str: str, provider_nsa_id: str
+) -> bytes:
     # Generate values
     log = logger.bind()
 
@@ -543,10 +549,12 @@ def generate_query_summary_sync_xml(message_templstr, correlation_uuid_py, conni
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
     log.debug("QUERY_XML", message_xml=message_xml)
-    return message_xml
+    return message_xml.encode()
 
 
-def generate_query_recursive_xml(message_templstr, correlation_uuid_py, reply_to_url, connid_str, provider_nsa_id):
+def generate_query_recursive_xml(
+    message_templstr: str, correlation_uuid_py: UUID, reply_to_url: str, connid_str: str, provider_nsa_id: str
+) -> bytes:
     # Generate values
     correlation_urn = URN_UUID_PREFIX + str(correlation_uuid_py)
 
@@ -561,7 +569,7 @@ def generate_query_recursive_xml(message_templstr, correlation_uuid_py, reply_to
     for message_key in terminate_keys:
         message_xml = message_xml.replace(message_key, message_dict[message_key])
 
-    return message_xml
+    return message_xml.encode()
 
 
 #
@@ -574,27 +582,20 @@ session.mount("http://", requests_session_adapter)
 session.mount("https://", requests_session_adapter)
 
 
-def nsi_util_get_and_parse_xml(url):
-    xml = nsi_util_get_xml(url)
-    if xml is None:
-        return xml
-    return nsi_util_parse_xml(xml)
-
-
-def nsi_util_get_xml(url):
+def nsi_util_get_xml(url: HttpUrl) -> bytes | None:
     log = logger.bind()
 
     # throws Exception to higher layer for display to user
     log.debug("SENDING HTTP REQUEST FOR XML", url=str(url))
     # 2024-11-08: SuPA moxy currently has self-signed certificate
     r = session.get(
-        url,
+        str(url),
         verify=(
-            settings.CERTIFICATES_DIRECTORY
+            str(settings.CERTIFICATES_DIRECTORY)
             if settings.VERIFY_REQUESTS and settings.CERTIFICATES_DIRECTORY
             else settings.VERIFY_REQUESTS
         ),
-        cert=(settings.NSI_AURA_CERTIFICATE, settings.NSI_AURA_PRIVATE_KEY),
+        cert=(str(settings.NSI_AURA_CERTIFICATE), str(settings.NSI_AURA_PRIVATE_KEY)),
     )
     # logger.debug log.debug(r.status_code)
     # logger.debug log.debug(r.headers['content-type'])
@@ -614,15 +615,6 @@ def nsi_util_get_xml(url):
         return r.content
     log.debug(str(url) + " did not return XML, but " + r.headers["content-type"])
     return None
-
-
-def nsi_util_parse_xml(xml):
-    """Parse XML
-    return etree
-    """
-    xml_file = BytesIO(xml)
-    tree = etree.parse(xml_file)
-    return tree
 
 
 #
@@ -776,8 +768,8 @@ def nsi_util_parse_xml(xml):
 #                           'requesterNSA': 'urn:ogf:network:anaeng.global:2024:nsa:nsi-aura'}}}
 
 
-def nsi_util_element_to_dict(node, attributes=True):
-    """Convert an lxml.etree node tree into a dict."""
+def nsi_util_element_to_dict(node: Any, attributes: bool = True) -> dict[str, Any]:
+    """Convert a lxml.etree node tree into a dict."""
     result = {}
     if attributes:
         for item in node.attrib.items():
@@ -792,11 +784,11 @@ def nsi_util_element_to_dict(node, attributes=True):
             if key in ("connectionId", "correlationId"):
                 value = UUID(element.text)
             elif key in ("timeStamp", "startTime", "endTime"):
-                value = datetime.fromisoformat(element.text)
+                value = datetime.fromisoformat(element.text)  # type: ignore[assignment]
             else:
                 value = element.text
         else:
-            value = nsi_util_element_to_dict(element)
+            value = nsi_util_element_to_dict(element)  # type: ignore[assignment]
         # Create a list of values for multiple identical keys
         if key in result:
             if type(result[key]) is list:
@@ -816,15 +808,15 @@ def nsi_util_xml_to_dict(xml: bytes) -> dict[Any, Any]:
 #
 # SOAP functions
 #
-def content_type_is_valid_soap(content_type):
-    """Returns True if HTTP Content-Type indicates SOAP"""
+def content_type_is_valid_soap(content_type: str) -> bool:
+    """Returns True if HTTP Content-Type indicates SOAP."""
     ct = content_type.lower()
     return ct == "application/xml" or ct.startswith("text/xml")  # "text/xml;charset=utf-8" "text/xml; charset=UTF-8"
 
 
-def nsi_util_post_soap(url, soapreqmsg):
+def nsi_util_post_soap(url: HttpUrl, soapreqmsg: bytes) -> bytes:
     """Does HTTP POST of soapreqmsg to URL
-    Returns: response.content, a SOAP reply
+    Returns: response.content, a SOAP reply.
     """
     log = logger.bind()
 
@@ -834,15 +826,15 @@ def nsi_util_post_soap(url, soapreqmsg):
 
     # 2024-11-08: SuPA moxy currently has self-signed certificate
     response = session.post(
-        url,
+        str(url),
         data=body,
         headers=headers,
         verify=(
-            settings.CERTIFICATES_DIRECTORY
+            str(settings.CERTIFICATES_DIRECTORY)
             if settings.VERIFY_REQUESTS and settings.CERTIFICATES_DIRECTORY
             else settings.VERIFY_REQUESTS
         ),
-        cert=(settings.NSI_AURA_CERTIFICATE, settings.NSI_AURA_PRIVATE_KEY),
+        cert=(str(settings.NSI_AURA_CERTIFICATE), str(settings.NSI_AURA_PRIVATE_KEY)),
     )
     log.debug(response.status_code)
     if response.status_code != 200:
@@ -852,25 +844,23 @@ def nsi_util_post_soap(url, soapreqmsg):
         return response.content
     # log.debug(response.encoding)
     # log.debug(response.content)
-    raise Exception(url + " did not return XML, but" + response.headers["content-type"])
+    raise Exception(str(url) + " did not return XML, but" + response.headers["content-type"])
 
 
-def nsi_soap_parse_reserve_reply(soap_xml):
+def nsi_soap_parse_reserve_reply(soap_xml: bytes) -> dict[str, Any]:
     """Parses SOAP RESERVE reply
-    Returns: ConnectionId as string
+    Returns: ConnectionId as string.
     """
     log = logger.bind()
 
     # Parse XML
-    tree = None
-    soap_file = BytesIO(soap_xml)
-    tree = etree.parse(soap_file)
+    tree = etree.fromstring(soap_xml)
 
     #
     # Get correlationId
     #
     tag = tree.find(FIND_ANYWHERE_PREFIX + S_CORRELATION_ID_TAG)
-    correlation_id_str = tag.text
+    correlation_id_str = tag.text  # type: ignore[union-attr]
 
     #
     # Get connectionId
@@ -878,7 +868,7 @@ def nsi_soap_parse_reserve_reply(soap_xml):
     # TODO: check for error / faultstring
     #
     tag = tree.find(FIND_ANYWHERE_PREFIX + S_CONNECTION_ID_TAG)
-    connection_id_str = tag.text
+    connection_id_str = tag.text  # type: ignore[union-attr]
 
     tag = tree.find(FIND_ANYWHERE_PREFIX + S_FAULTSTRING_TAG)
     if tag is None:
@@ -888,39 +878,38 @@ def nsi_soap_parse_reserve_reply(soap_xml):
 
     log.debug("nsi_soap_parse_reserve_reply: Got error?", faultstring=faultstring)
 
-    retdict = {
+    return {
         S_FAULTSTRING_TAG: faultstring,
         S_CORRELATION_ID_TAG: correlation_id_str,
         S_CONNECTION_ID_TAG: connection_id_str,
     }
-    return retdict
 
 
-def nsi_soap_parse_reserve_commit_reply(soap_xml):
+def nsi_soap_parse_reserve_commit_reply(soap_xml: bytes) -> dict[str, Any]:
     return nsi_soap_parse_correlationid_reply(soap_xml)
 
 
-def nsi_soap_parse_provision_reply(soap_xml):
+def nsi_soap_parse_provision_reply(soap_xml: bytes) -> dict[str, Any]:
     return nsi_soap_parse_correlationid_reply(soap_xml)
 
 
-def nsi_soap_parse_terminate_reply(soap_xml):
+def nsi_soap_parse_terminate_reply(soap_xml: bytes) -> dict[str, Any]:
     return nsi_soap_parse_correlationid_reply(soap_xml)
 
 
-def nsi_soap_parse_release_reply(soap_xml):
+def nsi_soap_parse_release_reply(soap_xml: bytes) -> dict[str, Any]:
     return nsi_soap_parse_terminate_reply(soap_xml)
 
 
-def nsi_soap_parse_reserve_timeout_ack_reply(soap_xml):
+def nsi_soap_parse_reserve_timeout_ack_reply(soap_xml: bytes) -> dict[str, Any]:
     return nsi_soap_parse_terminate_reply(soap_xml)
 
 
-def nsi_soap_parse_query_recursive_reply(soap_xml):
+def nsi_soap_parse_query_recursive_reply(soap_xml: bytes) -> dict[str, Any]:
     return nsi_soap_parse_correlationid_reply(soap_xml)
 
 
-def nsi_soap_parse_correlationid_reply(soap_xml):
+def nsi_soap_parse_correlationid_reply(soap_xml: bytes) -> dict[str, Any]:
     """Parses SOAP PROVISION reply
     Returns: dict with S_FAULTSTRING_TAG and S_CORRELATION_ID_TAG as keys, values string
     if S_FAULTSTRING_TAG is not None, there was a faulstring tag.
@@ -928,15 +917,13 @@ def nsi_soap_parse_correlationid_reply(soap_xml):
     log = logger.bind()
 
     # Parse XML
-    tree = None
-    soap_file = BytesIO(soap_xml)
-    tree = etree.parse(soap_file)
+    tree = etree.fromstring(soap_xml)
 
     #
     # Get correlationId
     #
     tag = tree.find(FIND_ANYWHERE_PREFIX + S_CORRELATION_ID_TAG)
-    correlation_id_str = tag.text
+    correlation_id_str = tag.text  # type: ignore[union-attr]
 
     tag = tree.find(FIND_ANYWHERE_PREFIX + S_FAULTSTRING_TAG)
     if tag is None:
@@ -946,11 +933,10 @@ def nsi_soap_parse_correlationid_reply(soap_xml):
 
     log.debug("nsi_soap_parse_correlationid_reply: Got error?", faultstring=faultstring)
 
-    retdict = {
+    return {
         S_FAULTSTRING_TAG: faultstring,
         S_CORRELATION_ID_TAG: correlation_id_str,
     }
-    return retdict
 
 
 #
@@ -970,7 +956,7 @@ def nsi_send_reserve(reservation: Reservation, source_stp: STP, dest_stp: STP) -
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         reservation.description,
-        reservation.globalReservationId.urn,
+        reservation.globalReservationId,
         reservation.startTime.replace(tzinfo=timezone.utc) if reservation.startTime else datetime.now(timezone.utc),
         # start time, TODO: proper timezone handling
         (
@@ -978,8 +964,8 @@ def nsi_send_reserve(reservation: Reservation, source_stp: STP, dest_stp: STP) -
             if reservation.endTime
             else datetime.now(timezone.utc) + timedelta(weeks=1040)
         ),  # end time
-        {URN_STP_NAME: source_stp.urn_base, URN_STP_VLAN: reservation.sourceVlan},
-        {URN_STP_NAME: dest_stp.urn_base, URN_STP_VLAN: reservation.destVlan},
+        f"{source_stp.urn_base}?vlan={reservation.sourceVlan}",
+        f"{dest_stp.urn_base}?vlan={reservation.destVlan}",
         settings.PROVIDER_NSA_ID,
     )
     soap_xml = nsi_util_post_soap(settings.PROVIDER_NSA_URL, reserve_xml)

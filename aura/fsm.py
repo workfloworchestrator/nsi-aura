@@ -11,7 +11,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Any
+from typing import Any, Type
 
 import structlog
 from statemachine import State, StateMachine
@@ -118,7 +118,7 @@ if __name__ == "__main__":
 
     from graphviz import Digraph
 
-    def plot_fsm(fsm: StateMachine, name: str) -> None:
+    def plot_fsm(fsm: Type[StateMachine], name: str) -> None:
         """Generate image that visualizes a state machine."""
         dg = Digraph(name=name, comment=name)
         for s in fsm.states:

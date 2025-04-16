@@ -56,6 +56,8 @@ def topology_to_stps(topology: dict) -> list[STP]:
 
     stps = []
     for bidirectionalPortId in bidirectionalPorts:
+        inboundPort: dict | None = None
+        outboundPort: dict | None = None
         for unidirectionalPortId in to_list("id", bidirectionalPorts[bidirectionalPortId]["PortGroup"]):
             if unidirectionalPortId in inboundPorts:
                 inboundPort = inboundPorts[unidirectionalPortId]
@@ -63,19 +65,20 @@ def topology_to_stps(topology: dict) -> list[STP]:
                 outboundPort = outboundPorts[unidirectionalPortId]
             else:
                 log.warning(f"unidirectional port {unidirectionalPortId} not found")
-        if inboundPort["LabelGroup"] != outboundPort["LabelGroup"]:
-            log.warning(f"LabelGroups on in- and outbound ports of {unidirectionalPortId} do not match")
-        # the following breaks when the port has multiple relations, then Relation will be a list instead of a dict
-        if "Relation" in inboundPort and inboundPort["Relation"]["type"] == IS_ALIAS:
-            inboundPortId = strip_urn(inboundPort["id"])
-            inboundAliasId = strip_urn(inboundPort["Relation"]["PortGroup"]["id"])
-        else:
-            inboundPortId = inboundAliasId = None
-        if "Relation" in outboundPort and outboundPort["Relation"]["type"] == IS_ALIAS:
-            outboundPortId = strip_urn(outboundPort["id"])
-            outboundAliasId = strip_urn(outboundPort["Relation"]["PortGroup"]["id"])
-        else:
-            outboundPortId = outboundAliasId = None
+        inboundPortId: str | None = None
+        outboundPortId: str | None = None
+        inboundAliasId: str | None = None
+        outboundAliasId: str | None = None
+        if inboundPort and outboundPort:
+            if inboundPort["LabelGroup"] != outboundPort["LabelGroup"]:
+                log.warning(f"LabelGroups on in- and outbound ports of {unidirectionalPortId} do not match")
+            # the following breaks when the port has multiple relations, then Relation will be a list instead of a dict
+            if "Relation" in inboundPort and inboundPort["Relation"]["type"] == IS_ALIAS:
+                inboundPortId = strip_urn(inboundPort["id"])
+                inboundAliasId = strip_urn(inboundPort["Relation"]["PortGroup"]["id"])
+            if "Relation" in outboundPort and outboundPort["Relation"]["type"] == IS_ALIAS:
+                outboundPortId = strip_urn(outboundPort["id"])
+                outboundAliasId = strip_urn(outboundPort["Relation"]["PortGroup"]["id"])
         stps.append(
             STP(
                 stpId=strip_urn(bidirectionalPortId),
@@ -83,7 +86,7 @@ def topology_to_stps(topology: dict) -> list[STP]:
                 outboundPort=outboundPortId,
                 inboundAlias=inboundAliasId,
                 outboundAlias=outboundAliasId,
-                vlanRange=inboundPort["LabelGroup"],
+                vlanRange=inboundPort["LabelGroup"] if inboundPort else "",
                 description=bidirectionalPorts[bidirectionalPortId]["name"],
             )
         )
@@ -104,7 +107,7 @@ def update_stps(stps: list[STP]) -> None:
             description=new_stp.description,
         )
         with Session.begin() as session:
-            existing_stp = session.query(STP).filter(STP.stpId == new_stp.stpId).one_or_none()
+            existing_stp = session.query(STP).filter(STP.stpId == new_stp.stpId).one_or_none()  # type: ignore[arg-type]
             if existing_stp is None:
                 log.info("add new STP")
                 session.add(new_stp)
@@ -128,14 +131,14 @@ def update_stps(stps: list[STP]) -> None:
     # TODO: implement disabling vanished STP
 
 
-def has_alias(stp: STP):
+def has_alias(stp: STP) -> bool:
     return stp.inboundAlias is not None and stp.outboundAlias is not None
 
 
 def update_sdps() -> None:
     """Update SDP table."""
 
-    def is_sdp(a: STP, z: STP):
+    def is_sdp(a: STP, z: STP) -> bool:
         return (
             has_alias(a)
             and has_alias(z)
@@ -164,7 +167,7 @@ def update_sdps() -> None:
             description=description,
         )
         with Session.begin() as session:
-            existing_sdp = session.query(SDP).filter((SDP.stpAId == stp_a.id) & (SDP.stpZId == stp_z.id)).one_or_none()
+            existing_sdp = session.query(SDP).filter((SDP.stpAId == stp_a.id) & (SDP.stpZId == stp_z.id)).one_or_none()  # type: ignore[arg-type]
             if existing_sdp is None:
                 log.info("add new SDP")
                 session.add(
@@ -195,14 +198,14 @@ def get_dds_documents(url: HttpUrl) -> dict[str, dict[str, bytes]]:
                                'urn:ogf:network:surf.ana.dlp.surfnet.nl:2024:nsa:supa': b'<ns3:nsa ...'}}
 
     """
-    documents = {TOPOLOGY_MIME_TYPE: {}, DISCOVERY_MIME_TYPE: {}}
+    documents: dict[str, dict[str, bytes]] = {TOPOLOGY_MIME_TYPE: {}, DISCOVERY_MIME_TYPE: {}}
 
     xml = nsi_util_get_xml(url)  # TODO: catch Exception
-    dds = nsi_util_xml_to_dict(xml)
-    for document in dds["documents"]["document"]:
-        zipped = base64.b64decode(document["content"])
-        documents[document["type"]][document["id"]] = zlib.decompress(zipped, 16 + zlib.MAX_WBITS)
-
+    if xml:
+        dds = nsi_util_xml_to_dict(xml)
+        for document in dds["documents"]["document"]:
+            zipped = base64.b64decode(document["content"])
+            documents[document["type"]][document["id"]] = zlib.decompress(zipped, 16 + zlib.MAX_WBITS)
     return documents
 
 
