@@ -24,8 +24,9 @@ from fastapi import APIRouter, HTTPException
 from fastui import AnyComponent, FastUI
 from fastui import components as c
 from fastui.base import BaseModel
+from fastui.components import FireEvent
 from fastui.components.display import DisplayLookup
-from fastui.events import BackEvent, GoToEvent, PageEvent
+from fastui.events import GoToEvent, PageEvent
 from fastui.forms import SelectSearchResponse, fastui_form
 from pydantic import Field, model_validator
 from requests import RequestException
@@ -178,7 +179,7 @@ def input_form() -> list[AnyComponent]:
 
 
 @router.post("/create", response_model=FastUI, response_model_exclude_none=True)
-def reservation_post(form: Annotated[ReservationInputForm, fastui_form(ReservationInputForm)]) -> list[Any]:
+def reservation_post(form: Annotated[ReservationInputForm, fastui_form(ReservationInputForm)]) -> list[FireEvent]:
     """Store values from input form in reservation database and start NSI reserve job."""
     reservation = Reservation(
         connectionId=None,
@@ -241,7 +242,7 @@ def reservation_details(id: int) -> list[AnyComponent]:
         ),
         c.Button(
             text="Back",
-            on_click=BackEvent(),
+            on_click=GoToEvent(url="/reservations"),
             class_name="+ ms-2",
         ),
         c.Button(
@@ -359,7 +360,7 @@ async def reservation_log(id: int) -> list[AnyComponent]:
         ),
         c.Button(
             text="Back",
-            on_click=BackEvent(),
+            on_click=GoToEvent(url=f"/reservations/{id}/"),
             class_name="+ ms-2",
         ),
         title="Streaming logs",
@@ -389,7 +390,7 @@ async def reservation_retry_reserve(id: int) -> list[AnyComponent]:
 @router.get("/{id}/verify", response_model=FastUI, response_model_exclude_none=True)
 async def reservation_verify(id: int) -> list[AnyComponent]:
     """Verify reservation with given id."""
-    components: list[Any]
+    components: list[AnyComponent]
     with Session() as session:
         reservation = session.query(Reservation).filter(Reservation.id == id).one()  # type: ignore[arg-type]
     # new_correlation_id_on_reservation()  # TODO: is this safe, or add this to nsi_send_query_summary_sync()?
