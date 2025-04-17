@@ -15,9 +15,11 @@ from typing import Any
 
 from fastui import AnyComponent
 from fastui import components as c
+from fastui.components.display import DisplayLookup
 from fastui.events import GoToEvent, PageEvent
 
 from aura.fsm import ConnectionStateMachine
+from aura.model import Reservation
 
 # do not know why, but otherwise FastUI will complain
 c.Link.model_rebuild()
@@ -170,3 +172,85 @@ def to_aura_connection_state(nsi_connection_states: dict[str, Any]) -> str:
     ):
         aura_connection_state = ConnectionStateMachine.ConnectionReserveCommitted.value
     return aura_connection_state
+
+
+def reservation_table(reservations: list[Reservation]) -> c.Table:
+    return c.Table(
+        data_model=Reservation,
+        data=reservations,
+        columns=[
+            DisplayLookup(field="id", on_click=GoToEvent(url="/reservations/{id}/")),
+            DisplayLookup(field="description"),
+            DisplayLookup(field="startTime"),
+            DisplayLookup(field="endTime"),
+            DisplayLookup(field="sourceStp"),
+            DisplayLookup(field="sourceVlan"),
+            DisplayLookup(field="destStp"),
+            DisplayLookup(field="destVlan"),
+            DisplayLookup(field="bandwidth"),
+            DisplayLookup(field="state"),
+        ],
+        class_name="+ small",
+    )
+
+
+def reservation_tabs() -> list[AnyComponent]:
+    return [
+        c.LinkList(
+            links=[
+                c.Link(
+                    components=[c.Text(text="Active")],
+                    on_click=GoToEvent(url="/reservations/active"),
+                    active="startswith:/reservations/active",
+                ),
+                c.Link(
+                    components=[c.Text(text="Attention")],
+                    on_click=GoToEvent(url="/reservations/attention"),
+                    active="startswith:/reservations/attention",
+                ),
+                c.Link(
+                    components=[c.Text(text="All")],
+                    on_click=GoToEvent(url="/reservations/all"),
+                    active="startswith:/reservations/all",
+                ),
+                c.Link(
+                    components=[c.Text(text="New")],
+                    on_click=GoToEvent(url="/reservations/new"),
+                    active="startswith:/reservations/new",
+                ),
+            ],
+            mode="tabs",
+            class_name="+ mb-4",
+        ),
+    ]
+
+
+def reservation_header(reservation: Reservation) -> c.Div:
+    return c.Div(
+        class_name="+ container fw-bold fs-6",
+        components=[
+            c.Div(
+                class_name="+ row",
+                components=[
+                    c.Div(class_name="+ col-md-2", components=[c.Text(text="Id:")]),
+                    c.Div(class_name="+ col-md-10", components=[c.Text(text=str(reservation.id))]),
+                ],
+            ),
+            c.Div(
+                class_name="+ row",
+                components=[
+                    c.Div(class_name="+ col-md-2", components=[c.Text(text="Description:")]),
+                    c.Div(class_name="+ col-md-10", components=[c.Text(text=reservation.description)]),
+                ],
+            ),
+            c.Div(
+                class_name="+ row",
+                components=[
+                    c.Div(class_name="+ col-md-2", components=[c.Text(text="Connection ID:")]),
+                    c.Div(class_name="+ col-md-10", components=[c.Text(text=str(reservation.connectionId))]),
+                ],
+            ),
+            # add some margin at bottom size 3
+            c.Div(class_name="+ row mb-3", components=[]),
+        ],
+    )

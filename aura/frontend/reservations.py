@@ -35,7 +35,14 @@ from statemachine.exceptions import TransitionNotAllowed
 from aura.db import Session
 from aura.dds import has_alias
 from aura.exception import AuraNsiError
-from aura.frontend.util import app_page, button_with_modal, to_aura_connection_state
+from aura.frontend.util import (
+    app_page,
+    button_with_modal,
+    reservation_header,
+    reservation_table,
+    reservation_tabs,
+    to_aura_connection_state,
+)
 from aura.fsm import ConnectionStateMachine
 from aura.job import (
     nsi_send_provision_job,
@@ -164,7 +171,7 @@ def input_form() -> list[AnyComponent]:
     """Render new input form."""
     submit_url = "/api/reservations/create"
     return app_page(
-        *tabs(),
+        *reservation_tabs(),
         c.ModelForm(model=ReservationInputForm, submit_url=submit_url, display_mode="page"),
         title="New reservation",
     )
@@ -213,9 +220,7 @@ def reservation_details(id: int) -> list[AnyComponent]:
     if reservation is None:
         return app_page(title=f"No reservation with id {id}.")
     csm = ConnectionStateMachine(reservation)
-    heading = reservation.description
     return app_page(
-        c.Heading(level=3, text=heading),
         c.Details(
             data=reservation,
             fields=[
@@ -336,8 +341,12 @@ async def reservation_log_sse(id: int) -> StreamingResponse:
 @router.get("/{id}/log", response_model=FastUI, response_model_exclude_none=True)
 async def reservation_log(id: int) -> list[AnyComponent]:
     """Show streaming log for reservation with given id."""
+    with Session() as session:
+        reservation = session.query(Reservation).filter(Reservation.id == id).one_or_none()  # type: ignore[arg-type]
+    if reservation is None:
+        return app_page(title=f"No reservation with id {id}.")
     return app_page(
-        *tabs(),
+        reservation_header(reservation),
         c.Div(
             components=[
                 c.ServerLoad(
@@ -353,7 +362,7 @@ async def reservation_log(id: int) -> list[AnyComponent]:
             on_click=BackEvent(),
             class_name="+ ms-2",
         ),
-        title=f"Streaming log {id}",
+        title="Streaming logs",
     )
 
 
@@ -362,7 +371,7 @@ def modify_form(id: int) -> list[AnyComponent]:
     """Render modify input form."""
     submit_url = "/api/reservations/create"
     return app_page(
-        *tabs(),
+        *reservation_tabs(),
         c.ModelForm(model=generate_modify_form(id), submit_url=submit_url, display_mode="page"),
         title="Modify reservation",
     )
@@ -383,13 +392,8 @@ async def reservation_verify(id: int) -> list[AnyComponent]:
     components: list[Any]
     with Session() as session:
         reservation = session.query(Reservation).filter(Reservation.id == id).one()  # type: ignore[arg-type]
-    # new_correlation_id_on_reservation()  # TODO: is this safe?
-    components = [
-        c.Paragraph(
-            text=f"Reservation description '{reservation.description}' with id {reservation.id}",
-            class_name="fw-bold fs-5",
-        )
-    ]
+    # new_correlation_id_on_reservation()  # TODO: is this safe, or add this to nsi_send_query_summary_sync()?
+    components = [reservation_header(reservation)]
     try:
         reply_dict = nsi_send_query_summary_sync(reservation)
         if "reservation" in reply_dict["Body"]["querySummarySyncConfirmed"]:
@@ -493,7 +497,7 @@ def reservations_all() -> list[AnyComponent]:
     with Session() as session:
         reservations = session.query(Reservation).all()
     return app_page(
-        *tabs(),
+        *reservation_tabs(),
         reservation_table(reservations),
         title="All reservations",
     )
@@ -507,7 +511,7 @@ def reservations_active() -> list[AnyComponent]:
             session.query(Reservation).filter(Reservation.state == ConnectionStateMachine.ConnectionActive.value).all()
         )
     return app_page(
-        *tabs(),
+        *reservation_tabs(),
         reservation_table(reservations),
         title="Active reservations",
     )
@@ -527,58 +531,7 @@ def reservations_attention() -> list[AnyComponent]:
             .all()
         )
     return app_page(
-        *tabs(),
+        *reservation_tabs(),
         reservation_table(reservations),
         title="Reservations that need attention",
     )
-
-
-def reservation_table(reservations: list[Reservation]) -> c.Table:
-    return c.Table(
-        data_model=Reservation,
-        data=reservations,
-        columns=[
-            DisplayLookup(field="id", on_click=GoToEvent(url="/reservations/{id}/")),
-            DisplayLookup(field="description"),
-            DisplayLookup(field="startTime"),
-            DisplayLookup(field="endTime"),
-            DisplayLookup(field="sourceStp"),
-            DisplayLookup(field="sourceVlan"),
-            DisplayLookup(field="destStp"),
-            DisplayLookup(field="destVlan"),
-            DisplayLookup(field="bandwidth"),
-            DisplayLookup(field="state"),
-        ],
-        class_name="+ small",
-    )
-
-
-def tabs() -> list[AnyComponent]:
-    return [
-        c.LinkList(
-            links=[
-                c.Link(
-                    components=[c.Text(text="Active")],
-                    on_click=GoToEvent(url="/reservations/active"),
-                    active="startswith:/reservations/active",
-                ),
-                c.Link(
-                    components=[c.Text(text="Attention")],
-                    on_click=GoToEvent(url="/reservations/attention"),
-                    active="startswith:/reservations/attention",
-                ),
-                c.Link(
-                    components=[c.Text(text="All")],
-                    on_click=GoToEvent(url="/reservations/all"),
-                    active="startswith:/reservations/all",
-                ),
-                c.Link(
-                    components=[c.Text(text="New")],
-                    on_click=GoToEvent(url="/reservations/new"),
-                    active="startswith:/reservations/new",
-                ),
-            ],
-            mode="tabs",
-            class_name="+ mb-4",
-        ),
-    ]
