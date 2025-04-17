@@ -393,10 +393,10 @@ async def reservation_verify(id: int) -> list[AnyComponent]:
     components: list[AnyComponent]
     with Session() as session:
         reservation = session.query(Reservation).filter(Reservation.id == id).one()  # type: ignore[arg-type]
-    # new_correlation_id_on_reservation()  # TODO: is this safe, or add this to nsi_send_query_summary_sync()?
     components = [reservation_header(reservation)]
     try:
         reply_dict = nsi_send_query_summary_sync(reservation)
+        # TODO: verify that the body contains a querySummarySyncConfirmed reply
         if "reservation" in reply_dict["Body"]["querySummarySyncConfirmed"]:
             nsi_connection_states = reply_dict["Body"]["querySummarySyncConfirmed"]["reservation"]["connectionStates"]
         else:

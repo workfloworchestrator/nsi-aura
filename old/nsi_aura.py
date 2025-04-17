@@ -112,7 +112,7 @@ def nsi_load_dds_documents():
     """
     log = logger.bind()  # TODO: maek log function specific
 
-    dds_documents_dict = nsi_get_dds_documents(str(settings.ANAGRAM_DDS_URL))
+    dds_documents_dict = nsi_get_dds_documents(str(settings.NSI_DDS_URL))
 
     # DDS knows all, so also who is our Orchestrator/Safnari
     orchestrator_dict = dds_documents_dict["local"]

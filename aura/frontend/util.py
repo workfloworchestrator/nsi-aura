@@ -20,6 +20,7 @@ from fastui.events import GoToEvent, PageEvent
 
 from aura.fsm import ConnectionStateMachine
 from aura.model import Reservation
+from aura.settings import settings
 
 # do not know why, but otherwise FastUI will complain
 c.Link.model_rebuild()
@@ -29,7 +30,7 @@ def app_page(*components: AnyComponent, title: str | None = None) -> list[AnyCom
     return [
         c.PageTitle(text=f"AURA — {title}" if title else "AURA PoC"),
         c.Navbar(
-            title="AURA PoC",
+            title=settings.SITE_TITLE,
             title_event=GoToEvent(url="/"),
             start_links=[
                 c.Link(

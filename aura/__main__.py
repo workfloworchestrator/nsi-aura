@@ -27,6 +27,7 @@ from aura.frontend.nsi import router as nsi_router
 from aura.frontend.reservations import router as reservations_router
 from aura.job import nsi_poll_dds_job, scheduler
 from aura.log import init as log_init
+from aura.settings import settings
 
 #
 # logging
@@ -77,4 +78,4 @@ async def html_landing() -> HTMLResponse:
     return HTMLResponse(prebuilt_html(title="AURA PoC"))
 
 
-uvicorn.run(app, port=8000)  # TODO: make parameters configurable
+uvicorn.run(app, host=settings.NSI_AURA_HOST, port=settings.NSI_AURA_PORT)

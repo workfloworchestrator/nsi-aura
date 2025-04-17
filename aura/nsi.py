@@ -968,9 +968,9 @@ def nsi_send_reserve(reservation: Reservation, source_stp: STP, dest_stp: STP) -
         ),  # end time
         f"{source_stp.urn_base}?vlan={reservation.sourceVlan}",
         f"{dest_stp.urn_base}?vlan={reservation.destVlan}",
-        settings.PROVIDER_NSA_ID,
+        settings.NSI_PROVIDER_ID,
     )
-    soap_xml = nsi_util_post_soap(settings.PROVIDER_NSA_URL, reserve_xml)
+    soap_xml = nsi_util_post_soap(settings.NSI_PROVIDER_URL, reserve_xml)
     retdict = nsi_soap_parse_reserve_reply(soap_xml)  # TODO: need error handling post soap failure
     log.info("reserve successfully sent", connectionId=str(retdict["connectionId"]))
     return retdict
@@ -988,9 +988,9 @@ def nsi_send_reserve_commit(reservation: Reservation) -> dict[str, str]:
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         str(reservation.connectionId),
-        settings.PROVIDER_NSA_ID,
+        settings.NSI_PROVIDER_ID,
     )
-    soap_xml = nsi_util_post_soap(settings.PROVIDER_NSA_URL, soap_xml)
+    soap_xml = nsi_util_post_soap(settings.NSI_PROVIDER_URL, soap_xml)
     retdict = nsi_soap_parse_reserve_commit_reply(soap_xml)  # TODO: need error handling on failed post soap
     log.info("reserve commit successful sent")
     return retdict
@@ -1008,9 +1008,9 @@ def nsi_send_provision(reservation: Reservation) -> dict[str, str]:
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         str(reservation.connectionId),
-        settings.PROVIDER_NSA_ID,
+        settings.NSI_PROVIDER_ID,
     )
-    soap_xml = nsi_util_post_soap(settings.PROVIDER_NSA_URL, soap_xml)
+    soap_xml = nsi_util_post_soap(settings.NSI_PROVIDER_URL, soap_xml)
     retdict = nsi_soap_parse_provision_reply(soap_xml)  # TODO: need error handling on failed post soap
     log.info("provision successful sent")
     return retdict
@@ -1022,9 +1022,9 @@ def nsi_send_reserve_abort(reservation: Reservation) -> dict[str, Any]:
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         str(reservation.connectionId),
-        settings.PROVIDER_NSA_ID,
+        settings.NSI_PROVIDER_ID,
     )
-    soap_xml = nsi_util_post_soap(settings.PROVIDER_NSA_URL, soap_xml)
+    soap_xml = nsi_util_post_soap(settings.NSI_PROVIDER_URL, soap_xml)
     return nsi_util_xml_to_dict(soap_xml)
 
 
@@ -1034,9 +1034,9 @@ def nsi_send_release(reservation: Reservation) -> dict[str, Any]:
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         str(reservation.connectionId),
-        settings.PROVIDER_NSA_ID,
+        settings.NSI_PROVIDER_ID,
     )
-    soap_xml = nsi_util_post_soap(settings.PROVIDER_NSA_URL, soap_xml)
+    soap_xml = nsi_util_post_soap(settings.NSI_PROVIDER_URL, soap_xml)
     return nsi_util_xml_to_dict(soap_xml)
 
 
@@ -1046,18 +1046,25 @@ def nsi_send_terminate(reservation: Reservation) -> dict[str, Any]:
         reservation.correlationId,
         str(settings.NSA_BASE_URL) + "api/nsi/callback/",
         str(reservation.connectionId),
-        settings.PROVIDER_NSA_ID,
+        settings.NSI_PROVIDER_ID,
     )
-    soap_xml = nsi_util_post_soap(settings.PROVIDER_NSA_URL, soap_xml)
+    soap_xml = nsi_util_post_soap(settings.NSI_PROVIDER_URL, soap_xml)
     return nsi_util_xml_to_dict(soap_xml)
 
 
 def nsi_send_query_summary_sync(reservation: Reservation) -> dict[str, Any]:
+    """Send NSI query SOAP/XML message to NSI provider for given reservation.
+
+    Every NSI request needs a unique correlation id,
+    will set a new correlationId on message her but not store it on the reservation,
+    thus not interfering with any currently outstanding other NSI request,
+    and we do not expect a async reply on this sync request anyway.
+    """
     soap_xml = generate_query_summary_sync_xml(
         query_summary_sync_template,
-        reservation.correlationId,
+        uuid4(),
         str(reservation.connectionId),
-        settings.PROVIDER_NSA_ID,
+        settings.NSI_PROVIDER_ID,
     )
-    soap_xml = nsi_util_post_soap(settings.PROVIDER_NSA_URL, soap_xml)
+    soap_xml = nsi_util_post_soap(settings.NSI_PROVIDER_URL, soap_xml)
     return nsi_util_xml_to_dict(soap_xml)

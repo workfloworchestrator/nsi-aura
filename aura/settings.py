@@ -24,29 +24,11 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Aura application settings."""
 
-    SITE_TITLE: str = "AuRA - NSI uRA for Federating ANA"
-    # SITE_TITLE = 'AuRA - NSI ultimate Requester Agent for ANA'
+    SITE_TITLE: str = "AuRA - Demo"
 
-    #
-    # NSI Orchestrator
-    #
-    # GLOBAL_ORCHESTRATOR_URL='https://supa.moxy.ana.dlp.surfnet.nl:443'
-    # Test with bad URL
-    # GLOBAL_ORCHESTRATOR_URL='https://nosupa.moxy.ana.dlp.surfnet.nl'
-    # GLOBAL_ORCHESTRATOR_DISCOVERY_PATH='/discovery'
-
-    # DEMO_PROVIDER_NSA_ID='urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:nsa:supa'
-
-    ANAGRAM_DDS_URL: HttpUrl = HttpUrl("https://dds.ana.dlp.surfnet.nl/dds/")
-
-    UPA_URN_PREFIX: str = "urn:ogf:network:"
-
-    DEFAULT_LINK_DOMAIN: str = "ANA"
-
-    # apparently cannot dynamically figure out?
-    # NOTE: HttpUrl class will automatically add trailing / when converting to str
-    SERVER_URL_PREFIX: HttpUrl = HttpUrl("http://127.0.0.1:8000")
-    # str(str(settings.SERVER_URL_PREFIX))="http://145.100.104.178:8000"
+    # host and port to bind to
+    NSI_AURA_HOST: str = "127.0.0.1"
+    NSI_AURA_PORT: int = 8000
 
     # certificate en key to authenticate against NSI control plane
     NSI_AURA_CERTIFICATE: FilePath = FilePath("aura-certificate.pem")
@@ -64,7 +46,6 @@ class Settings(BaseSettings):
     DATABASE_DIRECTORY: DirectoryPath = DirectoryPath("db")
 
     # directory containing static files, such as images and SOAP templates
-    # TODO: make sure all code uses this, see nsi_comm_init() kludge
     STATIC_DIRECTORY: DirectoryPath = DirectoryPath("static")
 
     # nsi-aura (external) URL (scheme, host, port, prefix)
@@ -73,19 +54,20 @@ class Settings(BaseSettings):
     NSA_PORT: str = "8000"
     NSA_PATH_PREFIX: str = ""
 
-    # provider NSA
-    PROVIDER_NSA_URL: HttpUrl = HttpUrl("http://127.0.0.1:9000/nsi-v2/ConnectionServiceProvider")
-    PROVIDER_NSA_ID: str = "urn:ogf:network:domain.example:2024:nsa"
+    # NSI provider
+    NSI_PROVIDER_URL: HttpUrl = HttpUrl("http://127.0.0.1:9000/nsi-v2/ConnectionServiceProvider")
+    NSI_PROVIDER_ID: str = "urn:ogf:network:domain.example:2024:nsa"
+    NSI_DDS_URL: HttpUrl = HttpUrl("http://dds.domain.example/dds/")
+
+    # Logging
+    SQL_LOGGING: bool = False
+    LOG_LEVEL: str = "INFO"
 
     # NOTE: HttpUrl class will automatically add trailing / when converting to str
     @property
     def NSA_BASE_URL(self) -> HttpUrl:
         """External base URL of this NSA."""
         return HttpUrl(f"{self.NSA_SCHEME}://{self.NSA_HOST}:{self.NSA_PORT}{self.NSA_PATH_PREFIX}")
-
-    # Logging
-    SQL_LOGGING: bool = False
-    LOG_LEVEL: str = "INFO"
 
 
 settings = Settings(_env_file="aura.env")

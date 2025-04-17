@@ -54,7 +54,7 @@ def new_correlation_id_on_reservation(reservation_id: int) -> None:
 
 def nsi_poll_dds_job() -> None:
     """Poll the DDS for topology documents and update STP and SDP."""
-    documents = get_dds_documents(settings.ANAGRAM_DDS_URL)
+    documents = get_dds_documents(settings.NSI_DDS_URL)
     for xml in documents[TOPOLOGY_MIME_TYPE].values():
         update_stps(topology_to_stps(nsi_util_xml_to_dict(xml)))
     update_sdps()

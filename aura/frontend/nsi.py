@@ -115,6 +115,6 @@ async def nsi_callback(request: Request) -> Response:
         #     scheduler.add_job(nsi_send_reserve_commit_job(), args=[reservation_id])
 
     nsi_acknowledgement = generate_acknowledgement_xml(
-        acknowledgement_template, body["Header"]["nsiHeader"]["correlationId"], settings.PROVIDER_NSA_ID
+        acknowledgement_template, body["Header"]["nsiHeader"]["correlationId"], settings.NSI_PROVIDER_ID
     )
     return Response(content=nsi_acknowledgement, media_type="application/xml")
