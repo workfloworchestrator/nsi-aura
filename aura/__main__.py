@@ -11,16 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import importlib
+import platform
 
-import sys
-
+import structlog
 import uvicorn
 
 from aura import app
 from aura.settings import settings
 
+logger = structlog.get_logger()
+
 
 def main() -> None:
+    logger.info(
+        (
+            f"Starting NSI-AuRA {importlib.metadata.version("nsi-aura")} "
+            f"using Python {platform.python_version()} ({platform.python_implementation()}) "
+            f"on {platform.node()}"
+        )
+    )
     uvicorn.run(app, host=settings.NSI_AURA_HOST, port=settings.NSI_AURA_PORT)
 
 
