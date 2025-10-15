@@ -20,7 +20,7 @@ import uvicorn
 from aura import app
 from aura.settings import settings
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(__name__)
 
 
 def main() -> None:

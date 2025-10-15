@@ -58,7 +58,7 @@ from aura.vlan import free_vlan_ranges
 
 router = APIRouter()
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(__name__)
 
 #
 # input form type definitions

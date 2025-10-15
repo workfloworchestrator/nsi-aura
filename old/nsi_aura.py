@@ -26,7 +26,7 @@ from aura.model import Discovery, Endpoint, NetworkLink, Span
 from aura.nsi_comm import *
 from aura.settings import settings
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(__name__)
 
 #
 # NSI-AuRA = NSI ANA ultimate Requester Agent
