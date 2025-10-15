@@ -171,11 +171,9 @@ def demarcation_points() -> SelectSearchResponse:
 def input_form() -> list[AnyComponent]:
     """Render new input form."""
     submit_url = "/api/reservations/create"
-    model_form = c.ModelForm(model=ReservationInputForm, submit_url=submit_url, display_mode="page")
-    model_form.model_rebuild()
     return app_page(
         *reservation_tabs(),
-        model_form,
+        c.ModelForm(model=ReservationInputForm, submit_url=submit_url, display_mode="page"),
         title="New reservation",
     )
 
