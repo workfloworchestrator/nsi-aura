@@ -10,6 +10,7 @@ dependencies = [
     "fastapi[standard]",
     "fastui==0.7.0",
     "lxml",
+    "pydantic<2.10.0",
     "pydantic-settings",
     "python-statemachine",
     "pytz",
