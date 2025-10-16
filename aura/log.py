@@ -77,7 +77,7 @@ def init() -> None:
         # Add extra attributes of LogRecord objects to the event dictionary
         # so that values passed in the extra parameter of log methods pass
         # through to log output.
-        structlog.stdlib.ExtraAdder(),
+        # structlog.stdlib.ExtraAdder(), # disabled to remove color_message= from uvicorn logs
         timestamper,
     ]
 
@@ -165,12 +165,12 @@ def init() -> None:
                 "uvicorn.access": {
                     "handlers": ["default", "file", "database"],
                     "level": settings.LOG_LEVEL,
-                    "propagate": True,
+                    "propagate": False,
                 },
                 "uvicorn.error": {
                     "handlers": ["default", "file", "database"],
                     "level": settings.LOG_LEVEL,
-                    "propagate": True,
+                    "propagate": False,
                 },
             },
         }
@@ -182,6 +182,7 @@ def init() -> None:
     structlog.configure(
         processors=[
             structlog.stdlib.add_log_level,
+            structlog.stdlib.add_logger_name,
             structlog.stdlib.PositionalArgumentsFormatter(),
             timestamper,
             structlog.processors.StackInfoRenderer(),

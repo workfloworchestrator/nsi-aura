@@ -31,7 +31,7 @@ def main() -> None:
             f"on {platform.node()}"
         )
     )
-    uvicorn.run(app, host=settings.NSI_AURA_HOST, port=settings.NSI_AURA_PORT)
+    uvicorn.run(app, host=settings.NSI_AURA_HOST, port=settings.NSI_AURA_PORT, log_config=None)
 
 
 main()
