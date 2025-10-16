@@ -43,7 +43,7 @@ scheduler = BackgroundScheduler(
 )
 
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(__name__)
 
 
 def new_correlation_id_on_reservation(reservation_id: int) -> None:

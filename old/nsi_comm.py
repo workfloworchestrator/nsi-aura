@@ -37,7 +37,7 @@ from urllib3.util.retry import Retry
 
 from aura.settings import settings
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(__name__)
 
 #
 # Module-only variables, set by nsi_comm_init()

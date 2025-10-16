@@ -67,7 +67,7 @@ from aura.nsi_aura import (
 from aura.settings import settings
 from old.state import DUMMY_CONNECTION_ID_STR, DUMMY_CORRELATION_ID_STR
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(__name__)
 
 #
 # Constants

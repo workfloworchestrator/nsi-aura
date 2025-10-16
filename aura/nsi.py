@@ -25,7 +25,7 @@ from urllib3.util.retry import Retry
 from aura.model import STP, Reservation
 from aura.settings import settings
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(__name__)
 
 #
 # Module-only variables
@@ -608,12 +608,13 @@ def nsi_util_get_xml(url: HttpUrl) -> bytes | None:
     #    traceback.print_exc()
     #    return None
 
-    content_type = r.headers["content-type"]
-    content_type = content_type.lower()  # UTF-8 and utf-8
-    if content_type == "application/xml" or content_type.startswith("text/xml"):
-        return r.content
-    log.debug(str(url) + " did not return XML, but " + r.headers["content-type"])
-    return None
+    if r.status_code != 200:
+        log.warning(f"{url} returned {r.status_code} with message {r.reason}")
+        return None
+    elif (content_type := r.headers["content-type"].lower()) != "application/xml":
+        log.warning(f"{url} did not return application/xml but {content_type}")
+        return None
+    return r.content
 
 
 #

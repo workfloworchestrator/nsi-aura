@@ -18,7 +18,8 @@ RUN set -ex; apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 RUN pip install --upgrade pip --no-cache-dir
 COPY --from=build /app/dist/*.whl /tmp/
 RUN pip install /tmp/*.whl --no-cache-dir
-RUN useradd aura
+RUN groupadd --gid 1000 aura
+RUN useradd --uid 1000 --gid 1000 aura
 USER aura
 WORKDIR /home/aura
 COPY static static

@@ -58,7 +58,9 @@ from aura.vlan import free_vlan_ranges
 
 router = APIRouter()
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(__name__)
+
+NO_DEMARCATION_POINT_CONSTRAINT = {"value": "0", "label": "no demarcation point constraint"}
 
 #
 # input form type definitions
@@ -98,10 +100,10 @@ def generate_stp_field(title: str = "give me a title", value: str | None = None,
     return Field(title=title, json_schema_extra=json_schema_extra)  # type: ignore
 
 
-def generate_sdp_field(title: str = "give me a title", value: str | None = None, label: str | None = None) -> Any:
+def generate_sdp_field(title: str = "give me a title", initial: dict | None = None) -> Any:
     json_schema_extra = {"search_url": "/api/reservations/demarcation_points"}
-    if value and label:
-        json_schema_extra["initial"] = {"value": value, "label": label}  # type: ignore
+    if initial:
+        json_schema_extra["initial"] = initial # type: ignore
     return Field(title=title, json_schema_extra=json_schema_extra)  # type: ignore
 
 
@@ -114,7 +116,7 @@ class ReservationInputForm(ValidatedBaseModel):
     destSTP: Annotated[str, generate_stp_field("destination endpoint")]
     destVlan: destVlanType
     bandwidth: bandwidthType
-    demarcationPoint: Annotated[str, generate_sdp_field("demarcation point")]
+    demarcationPoint: Annotated[str, generate_sdp_field("demarcation point", NO_DEMARCATION_POINT_CONSTRAINT)]
     startTime: startTimeType
     endTime: endTimeType
 
@@ -161,6 +163,8 @@ def demarcation_points() -> SelectSearchResponse:
     with Session() as session:
         sdps = session.query(SDP).all()
     demarcation_points = defaultdict(list)
+    # Workaround for not being able to make demarcation point input field optional
+    demarcation_points["no demarcation point constraint"].append(NO_DEMARCATION_POINT_CONSTRAINT)
     for sdp in sdps:
         demarcation_points[sdp.description].append({"value": str(sdp.id), "label": sdp.description})
     options = [{"label": k, "options": v} for k, v in demarcation_points.items()]
@@ -188,7 +192,7 @@ def reservation_post(form: Annotated[ReservationInputForm, fastui_form(Reservati
         description=form.description,
         sourceStpId=int(form.sourceSTP),
         destStpId=int(form.destSTP),
-        sdpId=int(form.demarcationPoint),
+        sdpId=int(form.demarcationPoint),  # TODO: replace with SDP/Reservation link table
         sourceVlan=Vlan(form.sourceVlan),
         destVlan=Vlan(form.destVlan),
         bandwidth=form.bandwidth,

@@ -22,7 +22,7 @@ from aura.db import Session
 from aura.model import SDP, STP
 from aura.nsi import nsi_util_get_xml, nsi_util_xml_to_dict
 
-logger = structlog.get_logger()
+logger = structlog.get_logger(__name__)
 
 
 DISCOVERY_MIME_TYPE = "vnd.ogf.nsi.nsa.v1+xml"
