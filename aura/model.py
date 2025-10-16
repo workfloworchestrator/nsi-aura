@@ -113,7 +113,7 @@ class Reservation(SQLModel, table=True):
     endTime: datetime | None
     sourceStpId: int = mapped_column()
     destStpId: int = mapped_column()
-    sdpId: int = mapped_column()  # TODO: replace with Reservation/SDP relation table for 1:n
+    sdpId: int | None = mapped_column()  # TODO: replace with Reservation/SDP relation table for 1:n
     sourceVlan: Vlan
     destVlan: Vlan
     bandwidth: Bandwidth
