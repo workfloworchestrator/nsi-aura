@@ -311,7 +311,7 @@ def reservation_details(id: int) -> list[AnyComponent]:
                 )
             ]
             if csm.current_state != ConnectionStateMachine.ConnectionNew
-            and csm.current_state != ConnectionStateMachine.ConnectionReserveChecking
+            # and csm.current_state != ConnectionStateMachine.ConnectionReserveChecking
             and csm.current_state != ConnectionStateMachine.ConnectionReserveFailed
             else []
         ),
