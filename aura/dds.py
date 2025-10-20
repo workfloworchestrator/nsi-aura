@@ -187,6 +187,11 @@ def update_sdps() -> None:
     # TODO: implement disabling vanished SDP
 
 
+def unzip(document: dict) -> bytes:
+    """Unzip document content to bytes."""
+    return zlib.decompress(base64.b64decode(document["content"]), 16 + zlib.MAX_WBITS)
+
+
 def get_dds_documents(url: HttpUrl) -> dict[str, dict[str, bytes]]:
     """Retreive all documents from url and return them by type and id.
 
@@ -203,9 +208,12 @@ def get_dds_documents(url: HttpUrl) -> dict[str, dict[str, bytes]]:
     xml = nsi_util_get_xml(url)  # TODO: catch Exception
     if xml:
         dds = nsi_util_xml_to_dict(xml)
-        for document in dds["documents"]["document"]:
-            zipped = base64.b64decode(document["content"])
-            documents[document["type"]][document["id"]] = zlib.decompress(zipped, 16 + zlib.MAX_WBITS)
+        if isinstance(dds["documents"]["document"], list):
+            for document in dds["documents"]["document"]:
+                documents[document["type"]][document["id"]] = unzip(document)
+        else:
+            documents[document["type"]][document["id"]] = unzip(document := dds["documents"]["document"])
+
     return documents
 
 
