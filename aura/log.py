@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from datetime import datetime
-from logging import Handler, LogRecord, config
+from logging import Filter, Handler, LogRecord, config, getLogger
 from uuid import UUID
 
 import structlog
@@ -66,6 +66,20 @@ class DatabaseLogHandler(Handler):
                             message=record.msg["event"],
                         )
                     )
+
+
+class UvicornAccessLogFilter(Filter):
+    """Uvicorn's access log filter."""
+
+    def filter(self, record: LogRecord) -> bool:
+        """Filter out messages for certain endpoints.
+
+        Currently only filter out /healthcheck access messages.
+        """
+        if record.args and len(record.args) >= 3:
+            if record.args[2] in ["/healthcheck"]:
+                return False
+        return True
 
 
 def init() -> None:
@@ -175,6 +189,9 @@ def init() -> None:
             },
         }
     )
+
+    uvicorn_access_logger = getLogger("uvicorn.access")
+    uvicorn_access_logger.addFilter(UvicornAccessLogFilter())
 
     # logging.getLogger("uvicorn.error").disabled = True
     # logging.getLogger("uvicorn.access").disabled = True
