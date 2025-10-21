@@ -26,11 +26,19 @@ logger = structlog.get_logger(__name__)
 def main() -> None:
     logger.info(
         (
-            f"Starting NSI-AuRA {importlib.metadata.version("nsi-aura")} "
+            f"start NSI-AuRA {importlib.metadata.version("nsi-aura")} "
             f"using Python {platform.python_version()} ({platform.python_implementation()}) "
             f"on {platform.node()}"
         )
     )
+    match settings.verify:
+        case False:
+            message = "certificate verification disabled"
+        case "" | None:
+            message = "use default Requests CA bundle for certificate verification"
+        case _:
+            message = f"use CA bundle from {settings.CA_CERTIFICATES} for certificate verification"
+    logger.info(message)
     uvicorn.run(app, host=settings.NSI_AURA_HOST, port=settings.NSI_AURA_PORT, log_config=None)
 
 
