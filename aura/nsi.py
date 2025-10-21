@@ -589,11 +589,7 @@ def nsi_util_get_xml(url: HttpUrl) -> bytes | None:
     # 2024-11-08: SuPA moxy currently has self-signed certificate
     r = session.get(
         str(url),
-        verify=(
-            str(settings.CERTIFICATES_DIRECTORY)
-            if settings.VERIFY_REQUESTS and settings.CERTIFICATES_DIRECTORY
-            else settings.VERIFY_REQUESTS
-        ),
+        verify=settings.verify,
         cert=(str(settings.NSI_AURA_CERTIFICATE), str(settings.NSI_AURA_PRIVATE_KEY)),
     )
     # logger.debug log.debug(r.status_code)
@@ -611,7 +607,7 @@ def nsi_util_get_xml(url: HttpUrl) -> bytes | None:
     if r.status_code != 200:
         log.warning(f"{url} returned {r.status_code} with message {r.reason}")
         return None
-    elif (content_type := r.headers["content-type"].lower()) != "application/xml":
+    if (content_type := r.headers["content-type"].lower()) != "application/xml":
         log.warning(f"{url} did not return application/xml but {content_type}")
         return None
     return r.content
@@ -830,11 +826,7 @@ def nsi_util_post_soap(url: HttpUrl, soapreqmsg: bytes) -> bytes:
         str(url),
         data=body,
         headers=headers,
-        verify=(
-            str(settings.CERTIFICATES_DIRECTORY)
-            if settings.VERIFY_REQUESTS and settings.CERTIFICATES_DIRECTORY
-            else settings.VERIFY_REQUESTS
-        ),
+        verify=settings.verify,
         cert=(str(settings.NSI_AURA_CERTIFICATE), str(settings.NSI_AURA_PRIVATE_KEY)),
     )
     log.debug(response.status_code)

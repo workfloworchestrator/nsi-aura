@@ -34,10 +34,8 @@ class Settings(BaseSettings):
     NSI_AURA_CERTIFICATE: FilePath = FilePath("aura-certificate.pem")
     NSI_AURA_PRIVATE_KEY: FilePath = FilePath("aura-private-key.pem")
 
-    # directory with CA files to verify DDS and NSI provider certificates
-    # remember to rehash the certificates inside this directory with: openssl rehash .
-    # when unset the default Python requests module CA bundle is used
-    CERTIFICATES_DIRECTORY: DirectoryPath | None = None
+    # override use of default CA bundle with certificates from a file or directory
+    CA_CERTIFICATES: FilePath | DirectoryPath | None = None
 
     # requests certificate verification, only disable while debugging!
     VERIFY_REQUESTS: bool = True
@@ -68,6 +66,16 @@ class Settings(BaseSettings):
     def NSA_BASE_URL(self) -> HttpUrl:
         """External base URL of this NSA."""
         return HttpUrl(f"{self.NSA_SCHEME}://{self.NSA_HOST}:{self.NSA_PORT}{self.NSA_PATH_PREFIX}")
+
+    # Verify property for Requests:
+    # False -> no verification
+    # File path -> read CA certificates from file
+    # Directory path -> read CA files from directory with symbolic links to files named by the hash values (c_rehash)
+    # None -> verification with default Requests configured CA bundle
+    @property
+    def verify(self) -> str | bool | None:
+        """Verify option for Requests calls."""
+        return (str(self.CA_CERTIFICATES) if self.CA_CERTIFICATES else None) if self.VERIFY_REQUESTS else False
 
 
 settings = Settings(_env_file="aura.env")
