@@ -108,7 +108,7 @@ def nsi_send_terminate_job(reservation_id: int) -> None:
     reply_dict = nsi_send_terminate(reservation)
     if "Fault" in reply_dict["Body"]:
         se = reply_dict["Body"]["Fault"]["detail"]["serviceException"]
-        log.warning(f"send terminate failed: {se["text"]}", nsaId=se["nsaId"], errorId=se["errorId"], text=se["text"])
+        log.warning(f"send terminate failed: {se['text']}", nsaId=se["nsaId"], errorId=se["errorId"], text=se["text"])
         # TODO: transition to error state (that needs to be defined)
     else:
         log.info("terminate successfully sent")
@@ -146,7 +146,7 @@ def nsi_send_release_job(reservation_id: int) -> None:
     reply_dict = nsi_send_release(reservation)
     if "Fault" in reply_dict["Body"]:
         se = reply_dict["Body"]["Fault"]["detail"]["serviceException"]
-        log.warning(f"send release failed: {se["text"]}", nsaId=se["nsaId"], errorId=se["errorId"], text=se["text"])
+        log.warning(f"send release failed: {se['text']}", nsaId=se["nsaId"], errorId=se["errorId"], text=se["text"])
         # TODO: transition to error state (that needs to be defined)
     else:
         log.info("send release successful")

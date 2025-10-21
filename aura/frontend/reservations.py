@@ -103,7 +103,7 @@ def generate_stp_field(title: str = "give me a title", value: str | None = None,
 def generate_sdp_field(title: str = "give me a title", initial: dict | None = None) -> Any:
     json_schema_extra = {"search_url": "/api/reservations/demarcation_points"}
     if initial:
-        json_schema_extra["initial"] = initial # type: ignore
+        json_schema_extra["initial"] = initial  # type: ignore
     return Field(title=title, json_schema_extra=json_schema_extra)  # type: ignore
 
 
@@ -124,7 +124,7 @@ class ReservationInputForm(ValidatedBaseModel):
 def generate_modify_form(reservation_id: int) -> ValidatedBaseModel:
     with Session() as session:
         reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()  # type: ignore[arg-type]
-        sdp = session.query(SDP).filter(SDP.id == reservation.sdpId).one()  # type: ignore[arg-type]
+        sdp = session.query(SDP).filter(SDP.id == reservation.sdpId).one_or_none()  # type: ignore[arg-type]
 
     class ReservationModifyForm(ValidatedBaseModel):
         """Input form with all connection input fields with validation, where possible."""
@@ -138,7 +138,10 @@ def generate_modify_form(reservation_id: int) -> ValidatedBaseModel:
         # destSTP: Annotated[str, generate_dest_stp_field()]
         destVlan: destVlanType = reservation.destVlan
         bandwidth: bandwidthType = reservation.bandwidth
-        demarcationPoint: str = generate_sdp_field("demarcation point", str(reservation.sdpId), sdp.description)
+        demarcationPoint: str = generate_sdp_field(
+            "demarcation point",
+            {"value": str(reservation.sdpId), "label": sdp.description} if sdp else NO_DEMARCATION_POINT_CONSTRAINT,
+        )
         startTime: startTimeType = reservation.startTime
         endTime: endTimeType = reservation.endTime
 
@@ -311,7 +314,7 @@ def reservation_details(id: int) -> list[AnyComponent]:
                 )
             ]
             if csm.current_state != ConnectionStateMachine.ConnectionNew
-            and csm.current_state != ConnectionStateMachine.ConnectionReserveChecking
+            # and csm.current_state != ConnectionStateMachine.ConnectionReserveChecking
             and csm.current_state != ConnectionStateMachine.ConnectionReserveFailed
             else []
         ),

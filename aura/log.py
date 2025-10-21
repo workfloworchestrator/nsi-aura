@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from datetime import datetime
-from logging import Handler, LogRecord, config
+from logging import Filter, Handler, LogRecord, config, getLogger
 from uuid import UUID
 
 import structlog
@@ -68,6 +68,20 @@ class DatabaseLogHandler(Handler):
                     )
 
 
+class UvicornAccessLogFilter(Filter):
+    """Uvicorn's access log filter."""
+
+    def filter(self, record: LogRecord) -> bool:
+        """Filter out messages for certain endpoints.
+
+        Currently only filter out /healthcheck access messages.
+        """
+        if record.args and len(record.args) >= 3:
+            if record.args[2] in ["/healthcheck"]:
+                return False
+        return True
+
+
 def init() -> None:
     timestamper = structlog.processors.TimeStamper(fmt="iso")
     pre_chain = [
@@ -77,7 +91,7 @@ def init() -> None:
         # Add extra attributes of LogRecord objects to the event dictionary
         # so that values passed in the extra parameter of log methods pass
         # through to log output.
-        structlog.stdlib.ExtraAdder(),
+        # structlog.stdlib.ExtraAdder(), # disabled to remove color_message= from uvicorn logs
         timestamper,
     ]
 
@@ -165,16 +179,19 @@ def init() -> None:
                 "uvicorn.access": {
                     "handlers": ["default", "file", "database"],
                     "level": settings.LOG_LEVEL,
-                    "propagate": True,
+                    "propagate": False,
                 },
                 "uvicorn.error": {
                     "handlers": ["default", "file", "database"],
                     "level": settings.LOG_LEVEL,
-                    "propagate": True,
+                    "propagate": False,
                 },
             },
         }
     )
+
+    uvicorn_access_logger = getLogger("uvicorn.access")
+    uvicorn_access_logger.addFilter(UvicornAccessLogFilter())
 
     # logging.getLogger("uvicorn.error").disabled = True
     # logging.getLogger("uvicorn.access").disabled = True
@@ -182,6 +199,7 @@ def init() -> None:
     structlog.configure(
         processors=[
             structlog.stdlib.add_log_level,
+            structlog.stdlib.add_logger_name,
             structlog.stdlib.PositionalArgumentsFormatter(),
             timestamper,
             structlog.processors.StackInfoRenderer(),
