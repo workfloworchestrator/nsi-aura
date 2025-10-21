@@ -26,7 +26,7 @@ logger = structlog.get_logger(__name__)
 def main() -> None:
     logger.info(
         (
-            f"start NSI-AuRA {importlib.metadata.version("nsi-aura")} "
+            f"start NSI-AuRA {importlib.metadata.version('nsi-aura')} "
             f"using Python {platform.python_version()} ({platform.python_implementation()}) "
             f"on {platform.node()}"
         )

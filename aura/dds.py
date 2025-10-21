@@ -260,7 +260,7 @@ if __name__ == "__main__":
         ],
         "serviceDefinition": {
             "id": "urn:ogf:network:moxy.ana.dlp.surfnet.nl:2024:ana-moxy:sd:EVTS.A-GOLE",
-            "name": "GLIF Automated GOLE Ethernet VLAN Transfer " "Service",
+            "name": "GLIF Automated GOLE Ethernet VLAN Transfer Service",
             "serviceType": "http://services.ogf.org/nsi/2013/12/descriptions/EVTS.A-GOLE",
         },
         "Relation": [
