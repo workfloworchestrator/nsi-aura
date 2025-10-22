@@ -49,10 +49,14 @@ def topology_to_stps(topology: dict) -> list[STP]:
     """Parse dict representation of NSI topology document and return the lists of STP."""
     log = logger.bind(topology=topology["id"])
 
-    bidirectionalPorts = to_dict("id", topology["BidirectionalPort"])
-    relations = to_dict("type", topology["Relation"])
-    inboundPorts = to_dict("id", relations[HAS_INBOUND_PORT]["PortGroup"])
-    outboundPorts = to_dict("id", relations[HAS_OUTBOUND_PORT]["PortGroup"])
+    try:
+        bidirectionalPorts = to_dict("id", topology["BidirectionalPort"])
+        relations = to_dict("type", topology["Relation"])
+        inboundPorts = to_dict("id", relations[HAS_INBOUND_PORT]["PortGroup"])
+        outboundPorts = to_dict("id", relations[HAS_OUTBOUND_PORT]["PortGroup"])
+    except KeyError as e:
+        log.warning("cannot parse topology", error=f"cannot find {str(e)} in topology")
+        return []
 
     stps = []
     for bidirectionalPortId in bidirectionalPorts:
