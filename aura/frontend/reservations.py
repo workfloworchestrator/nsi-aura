@@ -302,6 +302,7 @@ def reservation_details(id: int) -> list[AnyComponent]:
             if csm.current_state == ConnectionStateMachine.ConnectionReserveTimeout
             or csm.current_state == ConnectionStateMachine.ConnectionFailed
             or csm.current_state == ConnectionStateMachine.ConnectionReserveCommitted
+            or csm.current_state == ConnectionStateMachine.ConnectionProvisioned
             or csm.current_state == ConnectionStateMachine.ConnectionReserveFailed
             else []
         ),
