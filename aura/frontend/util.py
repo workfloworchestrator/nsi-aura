@@ -19,7 +19,7 @@ from fastui.components.display import DisplayLookup
 from fastui.events import GoToEvent, PageEvent
 
 from aura.fsm import ConnectionStateMachine
-from aura.model import Reservation
+from aura.model import STP, Reservation
 from aura.settings import settings
 
 # do not know why, but otherwise FastUI will complain
@@ -42,6 +42,11 @@ def app_page(*components: AnyComponent, title: str | None = None) -> list[AnyCom
                     components=[c.Text(text="Database")],
                     on_click=GoToEvent(url="/database/reservation"),
                     active="startswith:/database",
+                ),
+                c.Link(
+                    components=[c.Text(text="STP")],
+                    on_click=GoToEvent(url="/stp/active"),
+                    active="startswith:/stp",
                 ),
                 # c.Link(
                 #     components=[c.Text(text="Auth")],
@@ -190,6 +195,21 @@ def reservation_table(reservations: list[Reservation]) -> c.Table:
             DisplayLookup(field="destVlan"),
             DisplayLookup(field="bandwidth"),
             DisplayLookup(field="state"),
+        ],
+        class_name="+ small",
+    )
+
+
+def stp_table(stps: list[STP]) -> c.Table:
+    return c.Table(
+        data_model=STP,
+        data=stps,
+        columns=[
+            DisplayLookup(field="id", on_click=GoToEvent(url="/stp/{id}/")),
+            DisplayLookup(field="stpId"),
+            DisplayLookup(field="vlanRange"),
+            DisplayLookup(field="description"),
+            DisplayLookup(field="active"),
         ],
         class_name="+ small",
     )

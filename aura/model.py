@@ -43,6 +43,7 @@ class STP(SQLModel, table=True):
     outboundAlias: str | None
     vlanRange: str  # our labels are VLAN's
     description: str | None
+    active: bool | None
 
     @property
     def organisationId(self) -> str:
@@ -118,10 +119,10 @@ class Reservation(SQLModel, table=True):
 
 # workaround to use column_property with SQLModel by injecting the scalar subquery after the class definition
 Reservation._sourceStp = column_property(
-    select(STP.description).where(STP.id == Reservation.sourceStpId).correlate_except(STP).scalar_subquery()
+    select(STP.stpId).where(STP.id == Reservation.sourceStpId).correlate_except(STP).scalar_subquery()
 )
 Reservation._destStp = column_property(
-    select(STP.description).where(STP.id == Reservation.destStpId).correlate_except(STP).scalar_subquery()
+    select(STP.stpId).where(STP.id == Reservation.destStpId).correlate_except(STP).scalar_subquery()
 )
 
 

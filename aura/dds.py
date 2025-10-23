@@ -92,6 +92,7 @@ def topology_to_stps(topology: dict) -> list[STP]:
                 outboundAlias=outboundAliasId,
                 vlanRange=inboundPort["LabelGroup"] if inboundPort else "",
                 description=bidirectionalPorts[bidirectionalPortId]["name"],
+                active=True,
             )
         )
         log.debug(f"found STP {bidirectionalPortId}: {stps[-1]}")
