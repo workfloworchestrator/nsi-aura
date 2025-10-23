@@ -97,11 +97,13 @@ class ConnectionStateMachine(AuraStateMachine):
     nsi_receive_data_plane_down = ConnectionReleased.to(ConnectionReserveCommitted)
     nsi_receive_error_event = (
         ConnectionActive.to(ConnectionFailed)
+        | ConnectionProvisioning.to(ConnectionFailed)
         | ConnectionProvisioned.to(ConnectionFailed)
     )
     nsi_send_terminate = (
         ConnectionReserveTimeout.to(ConnectionTerminating)
         | ConnectionReserveCommitted.to(ConnectionTerminating)
+        | ConnectionProvisioned.to(ConnectionTerminating)
         | ConnectionFailed.to(ConnectionTerminating)
         | ConnectionReserveFailed.to(ConnectionTerminating)
     )
