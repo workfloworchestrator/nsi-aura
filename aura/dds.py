@@ -55,7 +55,7 @@ def topology_to_stps(topology: dict) -> list[STP]:
         inboundPorts = to_dict("id", relations[HAS_INBOUND_PORT]["PortGroup"])
         outboundPorts = to_dict("id", relations[HAS_OUTBOUND_PORT]["PortGroup"])
     except KeyError as e:
-        log.warning("cannot parse topology", error=f"cannot find {str(e)} in topology")
+        log.warning("cannot parse topology", error=f"cannot find {e!s} in topology")
         return []
 
     stps = []
