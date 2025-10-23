@@ -21,6 +21,7 @@ import structlog
 from lxml import etree
 from pydantic import HttpUrl
 from urllib3.util.retry import Retry
+import requests.exceptions
 
 from aura.model import STP, Reservation
 from aura.settings import settings
@@ -587,11 +588,15 @@ def nsi_util_get_xml(url: HttpUrl) -> bytes | None:
     # throws Exception to higher layer for display to user
     log.debug("SENDING HTTP REQUEST FOR XML", url=str(url))
     # 2024-11-08: SuPA moxy currently has self-signed certificate
-    r = session.get(
-        str(url),
-        verify=settings.verify,
-        cert=(str(settings.NSI_AURA_CERTIFICATE), str(settings.NSI_AURA_PRIVATE_KEY)),
-    )
+    try:
+        r = session.get(
+            str(url),
+            verify=settings.verify,
+            cert=(str(settings.NSI_AURA_CERTIFICATE), str(settings.NSI_AURA_PRIVATE_KEY)),
+        )
+    except requests.exceptions.ConnectionError as e:
+        log.warning("cannot get XML document", url=str(url), error=str(e))
+        return None
     # logger.debug log.debug(r.status_code)
     # logger.debug log.debug(r.headers['content-type'])
     # logger.debug log.debug(r.encoding)
@@ -822,13 +827,17 @@ def nsi_util_post_soap(url: HttpUrl, soapreqmsg: bytes) -> bytes:
     body = soapreqmsg
 
     # 2024-11-08: SuPA moxy currently has self-signed certificate
-    response = session.post(
+    try:
+        response = session.post(
         str(url),
         data=body,
         headers=headers,
         verify=settings.verify,
         cert=(str(settings.NSI_AURA_CERTIFICATE), str(settings.NSI_AURA_PRIVATE_KEY)),
     )
+    except requests.exceptions.ConnectionError as e:
+        log.warning("cannot get XML document", url=str(url), error=str(e))
+        raise e
     log.debug(response.status_code)
     if response.status_code != 200:
         response.raise_for_status()

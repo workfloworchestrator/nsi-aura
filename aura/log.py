@@ -203,7 +203,7 @@ def init() -> None:
             structlog.stdlib.PositionalArgumentsFormatter(),
             timestamper,
             structlog.processors.StackInfoRenderer(),
-            structlog.processors.format_exc_info,
+            # structlog.processors.format_exc_info,  # structlog.dev.ConsoleRenderer now formats exceptions itself
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
         logger_factory=structlog.stdlib.LoggerFactory(),
