@@ -17,10 +17,10 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from annotated_types import Ge, Gt, Le, doc
-from pydantic import BaseModel, computed_field
+from pydantic import computed_field
 from sqlalchemy.orm import column_property
 from sqlalchemy.testing.schema import mapped_column
-from sqlmodel import Field, SQLModel, select
+from sqlmodel import Field, Relationship, SQLModel, select
 
 #
 # Types
@@ -28,25 +28,10 @@ from sqlmodel import Field, SQLModel, select
 Vlan = Annotated[int, Ge(2), Le(4094), doc("VLAN ID.")]
 Bandwidth = Annotated[int, Gt(0)]
 
+
 #
 # Models
 #
-
-
-#
-# Endpoint
-# --------
-# TODO: CONCURRENCY: add absolute identifier such that those can be used in URLs instead of Model id's
-# which may change during a reload of topos
-#
-class Endpoint(BaseModel):
-    id: int
-    name: str
-    svlanid: int  # start VLAN ID, hack for tuple
-    evlanid: int  # end VLAN ID, hack for tuple. If same, then qualified STP
-    domain: str  # domain for this endpoint
-
-
 class STP(SQLModel, table=True):
     """NSI Service Termination Point."""
 
@@ -83,6 +68,11 @@ class STP(SQLModel, table=True):
         return f"{self.urn_base}?vlan={self.vlanRange}"
 
 
+class ReservationSDPLink(SQLModel, table=True):
+    reservation_id: int | None = Field(default=None, foreign_key="reservation.id", primary_key=True)
+    sdp_id: int | None = Field(default=None, foreign_key="sdp.id", primary_key=True)
+
+
 class SDP(SQLModel, table=True):
     """NSI Service Demarcation Point."""
 
@@ -92,15 +82,7 @@ class SDP(SQLModel, table=True):
     vlanRange: str  # our labels are VLAN's
     description: str | None
 
-
-# On some installs we get confusion between Link(DataModel) and the Link HTML component
-class NetworkLink(BaseModel):
-    id: int
-    name: str
-    linkid: int
-    svlanid: int  # start VLAN ID, hack for tuple
-    evlanid: int  # end VLAN ID, hack for tuple. If same, then qualified STP
-    domain: str  # domain for this endpoint
+    reservations: list["Reservation"] = Relationship(back_populates="sdps", link_model=ReservationSDPLink)
 
 
 class Reservation(SQLModel, table=True):
@@ -113,12 +95,13 @@ class Reservation(SQLModel, table=True):
     endTime: datetime | None
     sourceStpId: int = mapped_column()
     destStpId: int = mapped_column()
-    sdpId: int | None = mapped_column()  # TODO: replace with Reservation/SDP relation table for 1:n
     sourceVlan: Vlan
     destVlan: Vlan
     bandwidth: Bandwidth
     state: str  # Statemachine default state field name
     # state: str = Field(default=ConnectionStateMachine.ConnectionNew.value) # need to fix circular imports to use this
+
+    sdps: list[SDP] = Relationship(back_populates="reservations", link_model=ReservationSDPLink)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -152,24 +135,3 @@ class Log(SQLModel, table=True):
     filename: str
     timestamp: datetime
     message: str
-
-
-#
-# Span i.e. a Connection i,e., two STPs that are connected, e.g. for showing a path
-#
-class Span(BaseModel):
-    id: int
-    connectionId: str  # connectionId UUID
-    sourceSTP: str  # source STP URN
-    destSTP: str  # dest STP URN
-
-
-#
-# Discovery, i.e. NSI metadata information on a uPA such as version and expires
-#
-class Discovery(BaseModel):
-    id: int
-    agentid: str  # 'urn:ogf:network:ana.dlp.surfnet.nl:2024:nsa:safnari',
-    version: str  # '2024-11-27T15:07:21.050548388Z',
-    expires: str  # '2025-11-27T15:07:24.229Z'},
-    # 'services': {'application/vnd.ogf.nsi.dds.v1+xml': 'https://dds.ana.dlp.surfnet.nl/dds', 'application/vnd.ogf.nsi.cs.v2.requester+soap': 'https://safnari.ana.dlp.surfnet.nl/nsi-v2/ConnectionServiceRequester', 'application/vnd.ogf.nsi.cs.v2.provider+soap': 'https://safnari.ana.dlp.surfnet.nl/nsi-v2/ConnectionServiceProvider'}}

@@ -100,10 +100,11 @@ def generate_stp_field(title: str = "give me a title", value: str | None = None,
     return Field(title=title, json_schema_extra=json_schema_extra)  # type: ignore
 
 
-def generate_sdp_field(title: str = "give me a title", initial: dict | None = None) -> Any:
+def generate_sdp_field(title: str = "give me a title", sdp: SDP | None = None) -> Any:
     json_schema_extra = {"search_url": "/api/reservations/demarcation_points"}
-    if initial:
-        json_schema_extra["initial"] = initial  # type: ignore
+    json_schema_extra["initial"] = (
+        {"value": str(sdp.id), "label": sdp.description} if sdp else NO_DEMARCATION_POINT_CONSTRAINT
+    )
     return Field(title=title, json_schema_extra=json_schema_extra)  # type: ignore
 
 
@@ -116,7 +117,8 @@ class ReservationInputForm(ValidatedBaseModel):
     destSTP: Annotated[str, generate_stp_field("destination endpoint")]
     destVlan: destVlanType
     bandwidth: bandwidthType
-    demarcationPoint: Annotated[str, generate_sdp_field("demarcation point", NO_DEMARCATION_POINT_CONSTRAINT)]
+    constraint1: Annotated[str, generate_sdp_field("constraint 1")]
+    constraint2: Annotated[str, generate_sdp_field("constraint 2")]
     startTime: startTimeType
     endTime: endTimeType
 
@@ -124,24 +126,20 @@ class ReservationInputForm(ValidatedBaseModel):
 def generate_modify_form(reservation_id: int) -> ValidatedBaseModel:
     with Session() as session:
         reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()  # type: ignore[arg-type]
-        sdp = session.query(SDP).filter(SDP.id == reservation.sdpId).one_or_none()  # type: ignore[arg-type]
+        sdp1 = reservation.sdps[0] if len(reservation.sdps) > 0 else None
+        sdp2 = reservation.sdps[1] if len(reservation.sdps) > 1 else None
 
     class ReservationModifyForm(ValidatedBaseModel):
         """Input form with all connection input fields with validation, where possible."""
 
         description: descriptionType = reservation.description
-        # sourceSTP: sourceSTPType = str(reservation.sourceStp)
         sourceSTP: str = generate_stp_field("source endpoint", str(reservation.sourceStpId), reservation.sourceStp)
         sourceVlan: destVlanType = reservation.sourceVlan
-        # destSTP: destSTPType = str(reservation.destStp)
         destSTP: str = generate_stp_field("destination endpoint", str(reservation.destStpId), reservation.destStp)
-        # destSTP: Annotated[str, generate_dest_stp_field()]
         destVlan: destVlanType = reservation.destVlan
         bandwidth: bandwidthType = reservation.bandwidth
-        demarcationPoint: str = generate_sdp_field(
-            "demarcation point",
-            {"value": str(reservation.sdpId), "label": sdp.description} if sdp else NO_DEMARCATION_POINT_CONSTRAINT,
-        )
+        constraint1: Annotated[str, generate_sdp_field("constraint 1", sdp1)]
+        constraint2: Annotated[str, generate_sdp_field("constraint 2", sdp2)]
         startTime: startTimeType = reservation.startTime
         endTime: endTimeType = reservation.endTime
 
@@ -188,6 +186,13 @@ def input_form() -> list[AnyComponent]:
 @router.post("/create", response_model=FastUI, response_model_exclude_none=True)
 def reservation_post(form: Annotated[ReservationInputForm, fastui_form(ReservationInputForm)]) -> list[FireEvent]:
     """Store values from input form in reservation database and start NSI reserve job."""
+    sdps = []
+    if form.constraint1 != NO_DEMARCATION_POINT_CONSTRAINT["value"]:
+        with Session() as session:
+            sdps.append(session.query(SDP).filter(SDP.id == int(form.constraint1)).one())
+    if form.constraint2 != NO_DEMARCATION_POINT_CONSTRAINT["value"]:
+        with Session() as session:
+            sdps.append(session.query(SDP).filter(SDP.id == int(form.constraint2)).one())
     reservation = Reservation(
         connectionId=None,
         globalReservationId=uuid4(),
@@ -195,7 +200,7 @@ def reservation_post(form: Annotated[ReservationInputForm, fastui_form(Reservati
         description=form.description,
         sourceStpId=int(form.sourceSTP),
         destStpId=int(form.destSTP),
-        sdpId=int(form.demarcationPoint),  # TODO: replace with SDP/Reservation link table
+        sdps=sdps,
         sourceVlan=Vlan(form.sourceVlan),
         destVlan=Vlan(form.destVlan),
         bandwidth=form.bandwidth,
