@@ -17,11 +17,11 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import requests
+import requests.exceptions
 import structlog
 from lxml import etree
 from pydantic import HttpUrl
 from urllib3.util.retry import Retry
-import requests.exceptions
 
 from aura.model import STP, Reservation
 from aura.settings import settings
@@ -829,12 +829,12 @@ def nsi_util_post_soap(url: HttpUrl, soapreqmsg: bytes) -> bytes:
     # 2024-11-08: SuPA moxy currently has self-signed certificate
     try:
         response = session.post(
-        str(url),
-        data=body,
-        headers=headers,
-        verify=settings.verify,
-        cert=(str(settings.NSI_AURA_CERTIFICATE), str(settings.NSI_AURA_PRIVATE_KEY)),
-    )
+            str(url),
+            data=body,
+            headers=headers,
+            verify=settings.verify,
+            cert=(str(settings.NSI_AURA_CERTIFICATE), str(settings.NSI_AURA_PRIVATE_KEY)),
+        )
     except requests.exceptions.ConnectionError as e:
         log.warning("cannot get XML document", url=str(url), error=str(e))
         raise e
