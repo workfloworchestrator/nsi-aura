@@ -122,7 +122,6 @@ def update_stps(stps: list[STP]) -> None:
                 or existing_stp.inboundAlias != new_stp.inboundAlias
                 or existing_stp.outboundAlias != new_stp.outboundAlias
                 or existing_stp.vlanRange != new_stp.vlanRange
-                or existing_stp.description != new_stp.description
             ):
                 log.info("update existing STP")
                 existing_stp.inboundPort = new_stp.inboundPort
@@ -130,7 +129,6 @@ def update_stps(stps: list[STP]) -> None:
                 existing_stp.inboundAlias = new_stp.inboundAlias
                 existing_stp.outboundAlias = new_stp.outboundAlias
                 existing_stp.vlanRange = new_stp.vlanRange
-                existing_stp.description = new_stp.description
             else:
                 log.debug("STP did not change")
     # TODO: implement disabling vanished STP
