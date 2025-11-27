@@ -322,14 +322,14 @@ wheels = [
 
 [[package]]
 name = "fastui"
-version = "0.7.0"
+version = "0.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic", extra = ["email"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/87/97/3f001410200256026ff98a4588ec8cb4f3b48bc74a28325e32bfb3b08ffd/fastui-0.7.0.tar.gz", hash = "sha256:08ec1b8437653fc37caaf3dae46566a43dbda3f190c62c43f8f3d063261dd1e8", size = 28950, upload-time = "2024-08-22T15:20:40.655Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c4/27/e52de3e3a3dd16cda6fac11d2b5b0ed8a54e14386a303bc8f757275df121/fastui-0.9.0.tar.gz", hash = "sha256:490ae906adea604f6fbb6270a8d1836611371dd304a1c556cad2785474a287f9", size = 29625, upload-time = "2025-10-28T08:55:17.305Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/10/44/0122aa71d3074e7674e864a6c67381d8dc244054ebe0380b60fc6c15f6cc/fastui-0.7.0-py3-none-any.whl", hash = "sha256:3e903828b26ecaef2da46e30bbe1123db20cf4a1c32d6c082665f52de9f639d2", size = 28622, upload-time = "2024-08-22T15:20:39.253Z" },
+    { url = "https://files.pythonhosted.org/packages/9f/ab/1a181f6650a5d80cb5475096751be3cdf7e85a724c2503f082fa691aa7ba/fastui-0.9.0-py3-none-any.whl", hash = "sha256:82f226e32a377ca93c8cc2de861d3c7766f6d0f746d05822999a7dd768c55b13", size = 29354, upload-time = "2025-10-28T08:55:16.037Z" },
 ]
 
 [[package]]
@@ -716,7 +716,7 @@ requires-dist = [
     { name = "apscheduler" },
     { name = "black", marker = "extra == 'dev'" },
     { name = "fastapi", extras = ["standard"] },
-    { name = "fastui", specifier = "==0.7.0" },
+    { name = "fastui", specifier = "==0.9.0" },
     { name = "isort", marker = "extra == 'dev'" },
     { name = "lxml" },
     { name = "lxml-stubs", marker = "extra == 'dev'" },
