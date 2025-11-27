@@ -1,28 +1,20 @@
 # syntax=docker/dockerfile:1
 #
 # Build stage
-FROM python:3.13-slim-trixie AS build
-ENV PIP_ROOT_USER_ACTION=ignore
+FROM ghcr.io/astral-sh/uv:python3.13-alpine AS build
 WORKDIR /app
-RUN set -ex; apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
-RUN pip install --upgrade pip --no-cache-dir
-RUN pip install build --no-cache-dir
-COPY pyproject.toml LICENSE.txt README.md .
+COPY pyproject.toml LICENSE.txt README.md ./
 COPY aura aura
-RUN python -m build --wheel --outdir dist
+COPY static static
+RUN uv build --no-cache --wheel --out-dir dist
 
 # Final stage
-FROM python:3.13-slim-trixie
-ENV PIP_ROOT_USER_ACTION=ignore
-RUN set -ex; apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
-RUN pip install --upgrade pip --no-cache-dir
+FROM ghcr.io/astral-sh/uv:python3.13-alpine
 COPY --from=build /app/dist/*.whl /tmp/
-RUN pip install /tmp/*.whl --no-cache-dir
-RUN groupadd --gid 1000 aura
-RUN useradd --uid 1000 --gid 1000 aura
+RUN uv pip install --system --no-cache /tmp/*.whl && rm /tmp/*.whl
+RUN addgroup -g 1000 aura && adduser -D -u 1000 -G aura aura
 USER aura
 WORKDIR /home/aura
-COPY static static
-COPY images images
 EXPOSE 8080/tcp
+ENV STATIC_DIRECTORY=/usr/local/share/aura/static
 CMD ["nsi-aura"]

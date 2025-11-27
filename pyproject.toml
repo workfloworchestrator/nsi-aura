@@ -43,6 +43,9 @@ license-files = ["LICENSE.txt"]
 [tool.setuptools]
 packages = ["aura", "aura.frontend"]
 
+[tool.setuptools.data-files]
+"share/aura/static" = ["static/*"]
+
 [project.optional-dependencies]
 dev = [
     "black",

@@ -28,6 +28,7 @@ from aura.frontend.reservations import router as reservations_router
 from aura.frontend.stp import router as stp_router
 from aura.job import nsi_poll_dds_job, scheduler
 from aura.log import init as log_init
+from aura.settings import settings
 
 #
 # logging
@@ -54,7 +55,7 @@ app = FastAPI()
 
 # make sure the folder named 'static' exists in the project,
 # and put the css and js files inside a subfolder called 'assets'
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=settings.STATIC_DIRECTORY), name="static")
 
 # include routes
 app.include_router(healthcheck_router)
