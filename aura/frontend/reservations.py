@@ -178,7 +178,7 @@ def input_form() -> list[AnyComponent]:
     submit_url = "/api/reservations/create"
     return app_page(
         *reservation_tabs(),
-        c.ModelForm(model=ReservationInputForm, submit_url=submit_url, display_mode="page"),
+        c.ModelForm(model=ReservationInputForm, submit_url=submit_url, display_mode="default"),
         title="New reservation",
     )
 
