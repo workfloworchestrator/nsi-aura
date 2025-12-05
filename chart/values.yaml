@@ -28,7 +28,7 @@ fullnameOverride: ""
 #  NSI_AURA_PRIVATE_KEY: "aura-private-key.pem"
 #  CERTIFICATES_DIRECTORY: 
 #  VERIFY_REQUESTS: "True"
-#  DATABASE_DIRECTORY: "db"
+#  DATABASE_DIRECTORY: "sqlite:///db/aura.db"
 #  STATIC_DIRECTORY: "static"
 #  NSA_SCHEME: "http"
 #  NSA_HOST: "localhost"

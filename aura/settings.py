@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     VERIFY_REQUESTS: bool = True
 
     # database directory, may be relative or absolute
-    DATABASE_DIRECTORY: DirectoryPath = DirectoryPath("db")
+    DATABASE_URI: str = "sqlite:///db/aura.db"
 
     # directory containing static files, such as images and SOAP templates
     STATIC_DIRECTORY: DirectoryPath = DirectoryPath("static")
