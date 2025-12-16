@@ -37,8 +37,14 @@ def strip_urn(urn: str) -> str:
     return urn.replace("urn:ogf:network:", "")
 
 
-def to_dict(index: str, collection: dict) -> dict:
-    return {element[index]: element for element in collection}
+def to_dict(index: str, collection: list | dict) -> dict:
+    if isinstance(collection, dict):
+        return {collection[index]: collection}
+    elif isinstance(collection, list):
+        return {element[index]: element for element in collection}
+    else:
+        return {}
+
 
 
 def to_list(index: str, collection: dict) -> list:
