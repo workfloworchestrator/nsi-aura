@@ -41,7 +41,18 @@ spec:
           {{- end }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+          {{- if .Values.secretProviderClass.enabled }}
+            {{- range .Values.secretProviderClass.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          {{- end }}
           envFrom:
+          {{- if .Values.secretProviderClass.enabled }}
+            - secretRef:
+                name: {{ .Release.Name }}-secret
+          {{- end }}
           {{- if .Values.env }}
             - configMapRef:
                 name: {{ .Release.Name }}-environment
@@ -62,13 +73,28 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.volumeMounts }}
           volumeMounts:
+          {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
-      {{- with .Values.volumes }}
+          {{- if .Values.secretProviderClass.enabled }}
+            - name: secret-store
+              mountPath: "/mnt/secret-store"
+              readOnly: true
+          {{- end }}
       volumes:
+      {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.secretProviderClass.enabled }}
+        - name: secret-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ .Release.Name }}-secretproviderclass
+            nodePublishSecretRef:
+              name: {{ .Values.secretProviderClass.nodePublishSecretRefNname }}
       {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

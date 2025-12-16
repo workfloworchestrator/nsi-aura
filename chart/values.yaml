@@ -28,7 +28,7 @@ fullnameOverride: ""
 #  NSI_AURA_PRIVATE_KEY: "aura-private-key.pem"
 #  CERTIFICATES_DIRECTORY: 
 #  VERIFY_REQUESTS: "True"
-#  DATABASE_DIRECTORY: "db"
+#  DATABASE_URI: "sqlite:///db/aura.db"
 #  STATIC_DIRECTORY: "static"
 #  NSA_SCHEME: "http"
 #  NSA_HOST: "localhost"
@@ -172,6 +172,22 @@ persistence:
   accessModes:
     - ReadWriteOnce
   size: 1Gi
+
+secretProviderClass:
+  enabled: false
+  provider: YourKvProvider
+  name: "example-kv"
+  keyVaultName: "example-kv"
+  tenantId: "a2239160-4e4d-4e33-877a-d409dffa7f1f"
+  nodePublishSecretRefNname: "kv-sp-secret"
+  env:
+    #- name: "HOST"
+    #  value: "db.example.domain"
+    #- name: "PORT"
+    #  value: 5432
+  objects:
+    - key: "PASSWORD"
+      objectName: "db-password"
 
 # Additional volumes on the output Deployment definition.
 volumes: []
