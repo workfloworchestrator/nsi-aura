@@ -291,3 +291,85 @@ def reservation_header(reservation: Reservation) -> c.Div:
             c.Div(class_name="+ row mb-3", components=[]),
         ],
     )
+
+
+def reservation_buttons(reservation: Reservation) -> c.Div:
+    csm = ConnectionStateMachine(reservation)
+    return c.Div(
+        components=[
+            c.Button(
+                text="Back",
+                on_click=GoToEvent(url="/reservations"),
+                class_name="+ ms-2",
+            ),
+            c.Button(
+                text="Log",
+                on_click=GoToEvent(url=f"/reservations/{reservation.id}/log"),
+                class_name="+ ms-2",
+            ),
+            *(
+                button_with_modal(
+                    name="modal-release-reservation",
+                    button="Release",
+                    title=f"Release reservation {reservation.description}?",
+                    modal="Are you sure you want to release this reservation?",
+                    url=f"/api/reservations/{reservation.id}/release",
+                )
+                if csm.current_state == ConnectionStateMachine.ConnectionActive
+                else []
+            ),
+            *(
+                button_with_modal(
+                    name="modal-provision-reservation",
+                    button="Provision",
+                    title=f"Provision reservation {reservation.description}?",
+                    modal="Are you sure you want to Provision this reservation?",
+                    url=f"/api/reservations/{reservation.id}/provision",
+                )
+                if csm.current_state == ConnectionStateMachine.ConnectionReserveCommitted
+                else []
+            ),
+            *(
+                button_with_modal(
+                    name="modal-reserve-again-reservation",
+                    button="Reserve Again",
+                    title=f"Reserve reservation {reservation.description} again?",
+                    modal="Are you sure you want to reserve this reservation again?",
+                    url=f"/api/reservations/{reservation.id}/reserve-again",
+                )
+                if csm.current_state == ConnectionStateMachine.ConnectionReserveFailed
+                or csm.current_state == ConnectionStateMachine.ConnectionTerminated
+                else []
+            ),
+            *(
+                button_with_modal(
+                    name="modal-terminate-reservation",
+                    button="Terminate",
+                    title=f"Terminate reservation {reservation.description}?",
+                    modal="Are you sure you want to terminate this reservation?",
+                    url=f"/api/reservations/{reservation.id}/terminate",
+                )
+                if csm.current_state == ConnectionStateMachine.ConnectionReserveTimeout
+                or csm.current_state == ConnectionStateMachine.ConnectionFailed
+                or csm.current_state == ConnectionStateMachine.ConnectionReserveCommitted
+                or csm.current_state == ConnectionStateMachine.ConnectionProvisioned
+                or csm.current_state == ConnectionStateMachine.ConnectionReserveFailed
+                else []
+            ),
+            *(
+                [
+                    c.Button(
+                        text="Verify",
+                        on_click=GoToEvent(url=f"/reservations/{reservation.id}/verify"),
+                        class_name="+ ms-2",
+                    )
+                ]
+                if csm.current_state != ConnectionStateMachine.ConnectionNew
+                # and csm.current_state != ConnectionStateMachine.ConnectionReserveChecking
+                and csm.current_state != ConnectionStateMachine.ConnectionProvisioned
+                and csm.current_state != ConnectionStateMachine.ConnectionReserveFailed
+                else []
+            ),
+        ],
+        class_name="d-flex flex-row gap-1 py-3",  # gap: between elements, py: padding y-axis
+    )

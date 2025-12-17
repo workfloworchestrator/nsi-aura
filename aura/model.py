@@ -106,27 +106,12 @@ class Reservation(SQLModel, table=True):
     # state: str = Field(default=ConnectionStateMachine.ConnectionNew.value) # need to fix circular imports to use this
 
     sdps: list[SDP] = Relationship(back_populates="reservations", link_model=ReservationSDPLink)
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def sourceStp(self) -> Any:
-        return self._sourceStp  # type: ignore[attr-defined]
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def destStp(self) -> Any:
-        return self._destStp  # type: ignore[attr-defined]
-
-    # TODO: add sdp computed field
-
-
-# workaround to use column_property with SQLModel by injecting the scalar subquery after the class definition
-Reservation._sourceStp = column_property(
-    select(STP.stpId).where(STP.id == Reservation.sourceStpId).correlate_except(STP).scalar_subquery()
-)
-Reservation._destStp = column_property(
-    select(STP.stpId).where(STP.id == Reservation.destStpId).correlate_except(STP).scalar_subquery()
-)
+    sourceStp: STP = Relationship(
+        sa_relationship_kwargs={"primaryjoin": "Reservation.sourceStpId == STP.id", "lazy": "joined"}
+    )
+    destStp: STP = Relationship(
+        sa_relationship_kwargs={"primaryjoin": "Reservation.destStpId == STP.id", "lazy": "joined"}
+    )
 
 
 class Log(SQLModel, table=True):
