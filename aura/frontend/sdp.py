@@ -94,47 +94,11 @@ def sdp_detail(id: int) -> list[AnyComponent]:
             ]
         ),
         c.Heading(text=f"Details for SDP {id}", level=4),
-        c.Details(
-            data=sdp,
-            fields=[
-                DisplayLookup(field="id"),
-                DisplayLookup(field="stpAId"),
-                DisplayLookup(field="stpZId"),
-                DisplayLookup(field="vlanRange"),
-                DisplayLookup(field="description"),
-                DisplayLookup(field="active"),
-            ],
-        ),
+        c.Details(data=sdp),
         c.Heading(text=f"Details for STP {sdp.stpAId}", level=4),
-        c.Details(
-            data=sdp.stpA,
-            fields=[
-                DisplayLookup(field="id"),
-                DisplayLookup(field="stpId"),
-                DisplayLookup(field="vlanRange"),
-                DisplayLookup(field="description"),
-                DisplayLookup(field="inboundPort"),
-                DisplayLookup(field="outboundPort"),
-                DisplayLookup(field="inboundAlias"),
-                DisplayLookup(field="outboundAlias"),
-                DisplayLookup(field="active"),
-            ],
-        ),
+        c.Details(data=sdp.stpA),
         c.Heading(text=f"Details for STP {sdp.stpZId}", level=4),
-        c.Details(
-            data=sdp.stpZ,
-            fields=[
-                DisplayLookup(field="id"),
-                DisplayLookup(field="stpId"),
-                DisplayLookup(field="vlanRange"),
-                DisplayLookup(field="description"),
-                DisplayLookup(field="inboundPort"),
-                DisplayLookup(field="outboundPort"),
-                DisplayLookup(field="inboundAlias"),
-                DisplayLookup(field="outboundAlias"),
-                DisplayLookup(field="active"),
-            ],
-        ),
+        c.Details(data=sdp.stpZ),
         title=f"SDP {sdp.description}",
     )
 
