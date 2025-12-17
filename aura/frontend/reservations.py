@@ -234,11 +234,11 @@ def reservation_details(id: int) -> list[AnyComponent]:
         return app_page(title=f"No reservation with id {id}.")
     return app_page(
         reservation_buttons(reservation),
-        c.Heading(text=f"Details for reservation {id}", level=5),
+        c.Heading(text="Reservation details", level=5),
         c.Details(data=reservation),
-        c.Heading(text=f"Details for STP {reservation.sourceStpId}", level=5),
+        c.Heading(text="SourceStp details", level=5),
         c.Details(data=reservation.sourceStp),
-        c.Heading(text=f"Details for STP {reservation.destStpId}", level=5),
+        c.Heading(text="DestStp details", level=5),
         c.Details(data=reservation.destStp),
         title=f"Reservation {reservation.description}",
     )

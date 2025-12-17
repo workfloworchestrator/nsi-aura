@@ -92,11 +92,11 @@ def sdp_detail(id: int) -> list[AnyComponent]:
                 ),
             ]
         ),
-        c.Heading(text=f"Details for SDP {id}", level=4),
+        c.Heading(text="SDP details", level=4),
         c.Details(data=sdp),
-        c.Heading(text=f"Details for STP {sdp.stpAId}", level=4),
+        c.Heading(text="StpA details", level=4),
         c.Details(data=sdp.stpA),
-        c.Heading(text=f"Details for STP {sdp.stpZId}", level=4),
+        c.Heading(text="StpZ details", level=4),
         c.Details(data=sdp.stpZ),
         title=f"SDP {sdp.description}",
     )
