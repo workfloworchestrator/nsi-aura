@@ -40,10 +40,9 @@ def strip_urn(urn: str) -> str:
 def to_dict(index: str, collection: list | dict) -> dict:
     if isinstance(collection, dict):
         return {collection[index]: collection}
-    elif isinstance(collection, list):
+    if isinstance(collection, list):
         return {element[index]: element for element in collection}
-    else:
-        return {}
+    return {}
 
 
 def to_list(index: str, collection: dict) -> list:

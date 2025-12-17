@@ -13,13 +13,11 @@
 # limitations under the License.
 
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated
 from uuid import UUID
 
 from annotated_types import Ge, Gt, Le, doc
-from pydantic import computed_field
-from sqlalchemy.orm import column_property
-from sqlmodel import Field, Relationship, SQLModel, select
+from sqlmodel import Field, Relationship, SQLModel
 
 #
 # Types
