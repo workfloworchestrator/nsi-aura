@@ -19,7 +19,6 @@ from uuid import UUID
 from annotated_types import Ge, Gt, Le, doc
 from pydantic import computed_field
 from sqlalchemy.orm import column_property
-from sqlalchemy.testing.schema import mapped_column
 from sqlmodel import Field, Relationship, SQLModel, select
 
 #
@@ -43,7 +42,7 @@ class STP(SQLModel, table=True):
     outboundAlias: str | None
     vlanRange: str  # our labels are VLAN's
     description: str | None
-    active: bool | None
+    active: bool = Field(default=True)
 
     @property
     def organisationId(self) -> str:
@@ -78,10 +77,14 @@ class SDP(SQLModel, table=True):
     """NSI Service Demarcation Point."""
 
     id: int | None = Field(default=None, primary_key=True)
-    stpAId: int
-    stpZId: int
+    stpAId: int = Field(foreign_key="stp.id")
+    stpZId: int = Field(foreign_key="stp.id")
     vlanRange: str  # our labels are VLAN's
     description: str | None
+    active: bool = Field(default=True)
+
+    stpA: STP = Relationship(sa_relationship_kwargs={"primaryjoin": "SDP.stpAId == STP.id", "lazy": "joined"})
+    stpZ: STP = Relationship(sa_relationship_kwargs={"primaryjoin": "SDP.stpZId == STP.id", "lazy": "joined"})
 
     reservations: list["Reservation"] = Relationship(back_populates="sdps", link_model=ReservationSDPLink)
 
@@ -94,8 +97,8 @@ class Reservation(SQLModel, table=True):
     description: str
     startTime: datetime | None
     endTime: datetime | None
-    sourceStpId: int = mapped_column()
-    destStpId: int = mapped_column()
+    sourceStpId: int = Field(foreign_key="stp.id")
+    destStpId: int = Field(foreign_key="stp.id")
     sourceVlan: Vlan
     destVlan: Vlan
     bandwidth: Bandwidth
@@ -128,7 +131,7 @@ Reservation._destStp = column_property(
 
 class Log(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    reservation_id: int
+    reservation_id: int = Field(foreign_key="reservation.id")
     name: str
     module: str
     line: int

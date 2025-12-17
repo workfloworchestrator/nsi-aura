@@ -46,7 +46,6 @@ def to_dict(index: str, collection: list | dict) -> dict:
         return {}
 
 
-
 def to_list(index: str, collection: dict) -> list:
     return [element[index] for element in collection]
 
