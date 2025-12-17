@@ -37,6 +37,7 @@ from aura.dds import has_alias
 from aura.exception import AuraNsiError
 from aura.frontend.util import (
     app_page,
+    button_row,
     reservation_buttons,
     reservation_header,
     reservation_table,
@@ -235,10 +236,10 @@ def reservation_details(id: int) -> list[AnyComponent]:
         reservation_buttons(reservation),
         c.Heading(text=f"Details for reservation {id}", level=5),
         c.Details(data=reservation),
-                c.Heading(text=f"Details for STP {reservation.sourceStpId}", level=5),
-                c.Details(data=reservation.sourceStp),
-                c.Heading(text=f"Details for STP {reservation.destStpId}", level=5),
-                c.Details(data=reservation.destStp),
+        c.Heading(text=f"Details for STP {reservation.sourceStpId}", level=5),
+        c.Details(data=reservation.sourceStp),
+        c.Heading(text=f"Details for STP {reservation.destStpId}", level=5),
+        c.Details(data=reservation.destStp),
         title=f"Reservation {reservation.description}",
     )
 
@@ -275,6 +276,15 @@ async def reservation_log(id: int) -> list[AnyComponent]:
     if reservation is None:
         return app_page(title=f"No reservation with id {id}.")
     return app_page(
+        button_row(
+            [
+                c.Button(
+                    text="Back",
+                    on_click=GoToEvent(url=f"/reservations/{id}/"),
+                    class_name="+ ms-2",
+                )
+            ]
+        ),
         reservation_header(reservation),
         c.Div(
             components=[
@@ -286,12 +296,7 @@ async def reservation_log(id: int) -> list[AnyComponent]:
             ],
             class_name="my-2 p-2 border rounded",
         ),
-        c.Button(
-            text="Back",
-            on_click=GoToEvent(url=f"/reservations/{id}/"),
-            class_name="+ ms-2",
-        ),
-        title="Streaming logs",
+        title=f"Streaming logs {reservation.description}",
     )
 
 
@@ -318,10 +323,10 @@ async def reservation_retry_reserve(id: int) -> list[AnyComponent]:
 @router.get("/{id}/verify", response_model=FastUI, response_model_exclude_none=True)
 async def reservation_verify(id: int) -> list[AnyComponent]:
     """Verify reservation with given id."""
-    components: list[AnyComponent]
+    buttons: list[c.Button] = []
     with Session() as session:
         reservation = session.query(Reservation).filter(Reservation.id == id).one()  # type: ignore[arg-type]
-    components = [reservation_header(reservation)]
+    components: list[AnyComponent] = [reservation_header(reservation)]
     try:
         reply_dict = nsi_send_query_summary_sync(reservation)
         # TODO: verify that the body contains a querySummarySyncConfirmed reply
@@ -341,13 +346,17 @@ async def reservation_verify(id: int) -> list[AnyComponent]:
             components.append(c.Paragraph(text=f"{reservation.state} matches NSI connection states"))
         else:
             components.append(c.Paragraph(text=f"{reservation.state} should be {connection_state}"))
-            components.append(
-                c.Button(text="Fix State", on_click=GoToEvent(url=f"/reservations/{id}/set_state/{connection_state}"))
+            buttons.append(
+                c.Button(
+                    text="Fix State",
+                    on_click=GoToEvent(url=f"/reservations/{id}/set_state/{connection_state}", class_name="+ ms-2"),
+                )
             )
-    components.append(c.Button(text="Back", on_click=GoToEvent(url=f"/reservations/{id}/"), class_name="+ ms-2"))
+    buttons.insert(0, c.Button(text="Back", on_click=GoToEvent(url=f"/reservations/{id}/"), class_name="+ ms-2"))
     return app_page(
+        button_row(buttons),
         *components,
-        title="Verify connection state",
+        title=f"Verify {reservation.description}",
     )
 
 

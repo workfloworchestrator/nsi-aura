@@ -293,10 +293,15 @@ def reservation_header(reservation: Reservation) -> c.Div:
     )
 
 
+def button_row(buttons: list[c.Button]) -> c.Div:
+    # gap: between elements, py: padding y-axis
+    return c.Div(components=buttons, class_name="d-flex flex-row gap-1 py-3")
+
+
 def reservation_buttons(reservation: Reservation) -> c.Div:
     csm = ConnectionStateMachine(reservation)
-    return c.Div(
-        components=[
+    return button_row(
+        [
             c.Button(
                 text="Back",
                 on_click=GoToEvent(url="/reservations"),
@@ -370,6 +375,5 @@ def reservation_buttons(reservation: Reservation) -> c.Div:
                 and csm.current_state != ConnectionStateMachine.ConnectionReserveFailed
                 else []
             ),
-        ],
-        class_name="d-flex flex-row gap-1 py-3",  # gap: between elements, py: padding y-axis
+        ]
     )

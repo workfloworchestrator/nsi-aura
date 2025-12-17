@@ -23,7 +23,7 @@ from fastui.forms import fastui_form
 from pydantic import BaseModel, Field
 
 from aura.db import Session
-from aura.frontend.util import app_page, sdp_table
+from aura.frontend.util import app_page, button_row, sdp_table
 from aura.model import SDP
 
 router = APIRouter()
@@ -79,6 +79,20 @@ def sdp_detail(id: int) -> list[AnyComponent]:
     if sdp is None:
         return app_page(title=f"No SDP with id {id}.")
     return app_page(
+        button_row(
+            [
+                c.Button(
+                    text="Back",
+                    on_click=GoToEvent(url="/sdp"),
+                    class_name="+ ms-2",
+                ),
+                c.Button(
+                    text="Modify",
+                    on_click=GoToEvent(url=f"/sdp/{id}/modify"),
+                    class_name="+ ms-2",
+                ),
+            ]
+        ),
         c.Heading(text=f"Details for SDP {id}", level=4),
         c.Details(
             data=sdp,
@@ -120,16 +134,6 @@ def sdp_detail(id: int) -> list[AnyComponent]:
                 DisplayLookup(field="outboundAlias"),
                 DisplayLookup(field="active"),
             ],
-        ),
-        c.Button(
-            text="Back",
-            on_click=GoToEvent(url="/sdp"),
-            class_name="+ ms-2",
-        ),
-        c.Button(
-            text="Modify",
-            on_click=GoToEvent(url=f"/sdp/{id}/modify"),
-            class_name="+ ms-2",
         ),
         title=f"SDP {sdp.description}",
     )
