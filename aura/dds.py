@@ -106,6 +106,7 @@ def topology_to_stps(topology: dict) -> list[STP]:
 
 def update_stps(stps: list[STP]) -> None:
     """Update STP table with topology information from DDS."""
+    new_stp_ids = [stp.stpId for stp in stps]
     for new_stp in stps:
         log = logger.bind(
             stpId=new_stp.stpId,
@@ -141,7 +142,6 @@ def update_stps(stps: list[STP]) -> None:
                 log.debug("STP did not change")
     with Session.begin() as session:
         existing_stp_ids = [row[0] for row in session.query(STP.stpId).filter(STP.active).all()]
-        new_stp_ids = [stp.stpId for stp in stps]
         for vanished_stp_id in [stpId for stpId in existing_stp_ids if stpId not in new_stp_ids]:
             logger.info("mark STP as inactive", stpId=vanished_stp_id)
             session.execute(update(STP).where(STP.stpId == vanished_stp_id).values(active=False))
