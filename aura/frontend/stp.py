@@ -17,13 +17,12 @@ from fastapi import APIRouter
 from fastui import AnyComponent, FastUI
 from fastui import components as c
 from fastui.components import FireEvent
-from fastui.components.display import DisplayLookup
 from fastui.events import GoToEvent
 from fastui.forms import fastui_form
 from pydantic import BaseModel, Field
 
 from aura.db import Session
-from aura.frontend.util import app_page, stp_table
+from aura.frontend.util import app_page, button_row, stp_table
 from aura.model import STP
 
 router = APIRouter()
@@ -79,31 +78,22 @@ def stp_detail(id: int) -> list[AnyComponent]:
     if stp is None:
         return app_page(title=f"No STP with id {id}.")
     return app_page(
-        c.Details(
-            data=stp,
-            fields=[
-                DisplayLookup(field="id"),
-                DisplayLookup(field="stpId"),
-                DisplayLookup(field="vlanRange"),
-                DisplayLookup(field="description"),
-                DisplayLookup(field="inboundPort"),
-                DisplayLookup(field="outboundPort"),
-                DisplayLookup(field="inboundAlias"),
-                DisplayLookup(field="outboundAlias"),
-                DisplayLookup(field="active"),
-            ],
+        button_row(
+            [
+                c.Button(
+                    text="Back",
+                    on_click=GoToEvent(url="/stp"),
+                    class_name="+ ms-2",
+                ),
+                c.Button(
+                    text="Modify",
+                    on_click=GoToEvent(url=f"/stp/{id}/modify"),
+                    class_name="+ ms-2",
+                ),
+            ]
         ),
-        c.Button(
-            text="Back",
-            on_click=GoToEvent(url="/stp"),
-            class_name="+ ms-2",
-        ),
-        c.Button(
-            text="Modify",
-            on_click=GoToEvent(url=f"/stp/{id}/modify"),
-            class_name="+ ms-2",
-        ),
-        title=f"STP with id {id}",
+        c.Details(data=stp),
+        title=f"STP {stp.description}",
     )
 
 

@@ -19,7 +19,7 @@ from fastui.components.display import DisplayLookup
 from fastui.events import GoToEvent, PageEvent
 
 from aura.fsm import ConnectionStateMachine
-from aura.model import STP, Reservation
+from aura.model import SDP, STP, Reservation
 from aura.settings import settings
 
 # do not know why, but otherwise FastUI will complain
@@ -39,14 +39,14 @@ def app_page(*components: AnyComponent, title: str | None = None) -> list[AnyCom
                     active="startswith:/reservations",
                 ),
                 c.Link(
-                    components=[c.Text(text="Database")],
-                    on_click=GoToEvent(url="/database/reservation"),
-                    active="startswith:/database",
-                ),
-                c.Link(
                     components=[c.Text(text="STP")],
                     on_click=GoToEvent(url="/stp/active"),
                     active="startswith:/stp",
+                ),
+                c.Link(
+                    components=[c.Text(text="SDP")],
+                    on_click=GoToEvent(url="/sdp/active"),
+                    active="startswith:/sdp",
                 ),
                 # c.Link(
                 #     components=[c.Text(text="Auth")],
@@ -215,6 +215,22 @@ def stp_table(stps: list[STP]) -> c.Table:
     )
 
 
+def sdp_table(sdps: list[SDP]) -> c.Table:
+    return c.Table(
+        data_model=SDP,
+        data=sdps,
+        columns=[
+            DisplayLookup(field="id", on_click=GoToEvent(url="/sdp/{id}/")),
+            DisplayLookup(field="stpAId"),
+            DisplayLookup(field="stpZId"),
+            DisplayLookup(field="vlanRange"),
+            DisplayLookup(field="description"),
+            DisplayLookup(field="active"),
+        ],
+        class_name="+ small",
+    )
+
+
 def reservation_tabs() -> list[AnyComponent]:
     return [
         c.LinkList(
@@ -274,4 +290,90 @@ def reservation_header(reservation: Reservation) -> c.Div:
             # add some margin at bottom size 3
             c.Div(class_name="+ row mb-3", components=[]),
         ],
+    )
+
+
+def button_row(buttons: list[c.Button]) -> c.Div:
+    # gap: between elements, py: padding y-axis
+    return c.Div(components=buttons, class_name="d-flex flex-row gap-1 py-3")
+
+
+def reservation_buttons(reservation: Reservation) -> c.Div:
+    csm = ConnectionStateMachine(reservation)
+    return button_row(
+        [
+            c.Button(
+                text="Back",
+                on_click=GoToEvent(url="/reservations"),
+                class_name="+ ms-2",
+            ),
+            c.Button(
+                text="Log",
+                on_click=GoToEvent(url=f"/reservations/{reservation.id}/log"),
+                class_name="+ ms-2",
+            ),
+            *(
+                button_with_modal(
+                    name="modal-release-reservation",
+                    button="Release",
+                    title=f"Release reservation {reservation.description}?",
+                    modal="Are you sure you want to release this reservation?",
+                    url=f"/api/reservations/{reservation.id}/release",
+                )
+                if csm.current_state == ConnectionStateMachine.ConnectionActive
+                else []
+            ),
+            *(
+                button_with_modal(
+                    name="modal-provision-reservation",
+                    button="Provision",
+                    title=f"Provision reservation {reservation.description}?",
+                    modal="Are you sure you want to Provision this reservation?",
+                    url=f"/api/reservations/{reservation.id}/provision",
+                )
+                if csm.current_state == ConnectionStateMachine.ConnectionReserveCommitted
+                else []
+            ),
+            *(
+                button_with_modal(
+                    name="modal-reserve-again-reservation",
+                    button="Reserve Again",
+                    title=f"Reserve reservation {reservation.description} again?",
+                    modal="Are you sure you want to reserve this reservation again?",
+                    url=f"/api/reservations/{reservation.id}/reserve-again",
+                )
+                if csm.current_state == ConnectionStateMachine.ConnectionReserveFailed
+                or csm.current_state == ConnectionStateMachine.ConnectionTerminated
+                else []
+            ),
+            *(
+                button_with_modal(
+                    name="modal-terminate-reservation",
+                    button="Terminate",
+                    title=f"Terminate reservation {reservation.description}?",
+                    modal="Are you sure you want to terminate this reservation?",
+                    url=f"/api/reservations/{reservation.id}/terminate",
+                )
+                if csm.current_state == ConnectionStateMachine.ConnectionReserveTimeout
+                or csm.current_state == ConnectionStateMachine.ConnectionFailed
+                or csm.current_state == ConnectionStateMachine.ConnectionReserveCommitted
+                or csm.current_state == ConnectionStateMachine.ConnectionProvisioned
+                or csm.current_state == ConnectionStateMachine.ConnectionReserveFailed
+                else []
+            ),
+            *(
+                [
+                    c.Button(
+                        text="Verify",
+                        on_click=GoToEvent(url=f"/reservations/{reservation.id}/verify"),
+                        class_name="+ ms-2",
+                    )
+                ]
+                if csm.current_state != ConnectionStateMachine.ConnectionNew
+                # and csm.current_state != ConnectionStateMachine.ConnectionReserveChecking
+                and csm.current_state != ConnectionStateMachine.ConnectionProvisioned
+                and csm.current_state != ConnectionStateMachine.ConnectionReserveFailed
+                else []
+            ),
+        ]
     )

@@ -20,11 +20,11 @@ from fastapi.staticfiles import StaticFiles
 from fastui import prebuilt_html
 from starlette.responses import HTMLResponse, PlainTextResponse
 
-from aura.frontend.database import router as database_router
 from aura.frontend.healthcheck import router as healthcheck_router
 from aura.frontend.home import router as home_router
 from aura.frontend.nsi import router as nsi_router
 from aura.frontend.reservations import router as reservations_router
+from aura.frontend.sdp import router as sdp_router
 from aura.frontend.stp import router as stp_router
 from aura.job import nsi_poll_dds_job, scheduler
 from aura.log import init as log_init
@@ -59,9 +59,9 @@ app.mount("/static", StaticFiles(directory=settings.STATIC_DIRECTORY), name="sta
 
 # include routes
 app.include_router(healthcheck_router)
-app.include_router(stp_router, prefix="/api/stp")
 app.include_router(reservations_router, prefix="/api/reservations")
-app.include_router(database_router, prefix="/api/database")
+app.include_router(stp_router, prefix="/api/stp")
+app.include_router(sdp_router, prefix="/api/sdp")
 app.include_router(nsi_router, prefix="/api/nsi")
 app.include_router(home_router, prefix="/api")
 
