@@ -17,10 +17,11 @@ import zlib
 
 import structlog
 from pydantic import HttpUrl
+from sqlalchemy import update
 
 from aura.db import Session
 from aura.model import SDP, STP
-from aura.nsi import nsi_util_get_xml, nsi_util_xml_to_dict
+from aura.nsi import nsi_util_get_xml, nsi_xml_to_dict
 
 logger = structlog.get_logger(__name__)
 
@@ -114,6 +115,7 @@ def update_stps(stps: list[STP]) -> None:
             outboundAlias=new_stp.outboundAlias,
             vlanRange=new_stp.vlanRange,
             description=new_stp.description,
+            active=new_stp.active,
         )
         with Session.begin() as session:
             existing_stp = session.query(STP).filter(STP.stpId == new_stp.stpId).one_or_none()  # type: ignore[arg-type]
@@ -126,6 +128,7 @@ def update_stps(stps: list[STP]) -> None:
                 or existing_stp.inboundAlias != new_stp.inboundAlias
                 or existing_stp.outboundAlias != new_stp.outboundAlias
                 or existing_stp.vlanRange != new_stp.vlanRange
+                or existing_stp.active != new_stp.active
             ):
                 log.info("update existing STP")
                 existing_stp.inboundPort = new_stp.inboundPort
@@ -133,9 +136,16 @@ def update_stps(stps: list[STP]) -> None:
                 existing_stp.inboundAlias = new_stp.inboundAlias
                 existing_stp.outboundAlias = new_stp.outboundAlias
                 existing_stp.vlanRange = new_stp.vlanRange
+                existing_stp.active = new_stp.active
             else:
                 log.debug("STP did not change")
-    # TODO: implement disabling vanished STP
+    with Session.begin() as session:
+        existing_stp_ids = [row[0] for row in session.query(STP.stpId).filter(STP.active).all()]
+        new_stp_ids = [stp.stpId for stp in stps]
+        for vanished_stp_id in [stpId for stpId in existing_stp_ids if stpId not in new_stp_ids]:
+            logger.info("mark STP as inactive", stpId=vanished_stp_id)
+            session.execute(update(STP).where(STP.stpId == vanished_stp_id).values(active=False))
+        session.commit()
 
 
 def has_alias(stp: STP) -> bool:
@@ -156,7 +166,7 @@ def update_sdps() -> None:
         )
 
     with Session() as session:
-        stps = session.query(STP).all()
+        stps = session.query(STP).filter(STP.active == True).all()
     # find connected STPs
     sdps = []
     for a in stps:
@@ -172,6 +182,7 @@ def update_sdps() -> None:
             stpZId=stp_z.stpId,
             vlanRange=stp_a.vlanRange,  # TODO: should store a and z overlapping range only
             description=description,
+            active=True,
         )
         with Session.begin() as session:
             existing_sdp = session.query(SDP).filter((SDP.stpAId == stp_a.id) & (SDP.stpZId == stp_z.id)).one_or_none()  # type: ignore[arg-type]
@@ -185,13 +196,21 @@ def update_sdps() -> None:
                         description=description,
                     )
                 )
-            elif existing_sdp.vlanRange != stp_a.vlanRange or existing_sdp.description != description:
+            elif existing_sdp.vlanRange != stp_a.vlanRange or not existing_sdp.active:
                 log.info("update existing SDP")
                 existing_sdp.vlanRange = stp_a.vlanRange  # TODO: should store a and z overlapping range only
-                existing_sdp.description = description
+                existing_sdp.active = True
             else:
                 log.debug("SDP did not change")
-    # TODO: implement disabling vanished SDP
+    with Session.begin() as session:
+        existing_sdps = [sorted([sdp.stpAId, sdp.stpZId]) for sdp in session.query(SDP).filter(SDP.active).all()]
+        new_sdps = [sorted([sdp[0].id, sdp[1].id]) for sdp in sdps]
+        for vanished_sdp in [sdp for sdp in existing_sdps if sorted(sdp) not in new_sdps]:
+            stpA = session.query(STP).filter(STP.id == vanished_sdp[0]).one()
+            stpZ = session.query(STP).filter(STP.id == vanished_sdp[1]).one()
+            logger.info("mark SDP as inactive", stpA=stpA.stpId, stpZ=stpZ.stpId, vlanRange=stpA.vlanRange)
+            session.execute(update(SDP).where(SDP.stpAId == stpA.id and SDP.stpZId == stpA.id).values(active=False))
+        session.commit()
 
 
 def unzip(document: dict) -> bytes:
@@ -214,7 +233,7 @@ def get_dds_documents(url: HttpUrl) -> dict[str, dict[str, bytes]]:
 
     xml = nsi_util_get_xml(url)  # TODO: catch Exception
     if xml:
-        dds = nsi_util_xml_to_dict(xml)
+        dds = nsi_xml_to_dict(xml)
         if isinstance(dds["documents"]["document"], list):
             for document in dds["documents"]["document"]:
                 documents[document["type"]][document["id"]] = unzip(document)

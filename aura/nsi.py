@@ -801,7 +801,7 @@ def nsi_util_element_to_dict(node: Any, attributes: bool = True) -> dict[str, An
     return result
 
 
-def nsi_util_xml_to_dict(xml: bytes) -> dict[Any, Any]:
+def nsi_xml_to_dict(xml: bytes) -> dict[Any, Any]:
     """Convert XML string to dict."""
     return nsi_util_element_to_dict(etree.fromstring(xml))
 
@@ -1027,7 +1027,7 @@ def nsi_send_reserve_abort(reservation: Reservation) -> dict[str, Any]:
         settings.NSI_PROVIDER_ID,
     )
     soap_xml = nsi_util_post_soap(settings.NSI_PROVIDER_URL, soap_xml)
-    return nsi_util_xml_to_dict(soap_xml)
+    return nsi_xml_to_dict(soap_xml)
 
 
 def nsi_send_release(reservation: Reservation) -> dict[str, Any]:
@@ -1039,7 +1039,7 @@ def nsi_send_release(reservation: Reservation) -> dict[str, Any]:
         settings.NSI_PROVIDER_ID,
     )
     soap_xml = nsi_util_post_soap(settings.NSI_PROVIDER_URL, soap_xml)
-    return nsi_util_xml_to_dict(soap_xml)
+    return nsi_xml_to_dict(soap_xml)
 
 
 def nsi_send_terminate(reservation: Reservation) -> dict[str, Any]:
@@ -1051,7 +1051,7 @@ def nsi_send_terminate(reservation: Reservation) -> dict[str, Any]:
         settings.NSI_PROVIDER_ID,
     )
     soap_xml = nsi_util_post_soap(settings.NSI_PROVIDER_URL, soap_xml)
-    return nsi_util_xml_to_dict(soap_xml)
+    return nsi_xml_to_dict(soap_xml)
 
 
 def nsi_send_query_summary_sync(reservation: Reservation) -> dict[str, Any]:
@@ -1069,4 +1069,4 @@ def nsi_send_query_summary_sync(reservation: Reservation) -> dict[str, Any]:
         settings.NSI_PROVIDER_ID,
     )
     soap_xml = nsi_util_post_soap(settings.NSI_PROVIDER_URL, soap_xml)
-    return nsi_util_xml_to_dict(soap_xml)
+    return nsi_xml_to_dict(soap_xml)
