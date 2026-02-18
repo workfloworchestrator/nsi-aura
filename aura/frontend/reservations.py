@@ -119,8 +119,8 @@ class ReservationInputForm(ValidatedBaseModel):
     bandwidth: bandwidthType
     constraint1: Annotated[str, generate_sdp_field("constraint 1")]
     constraint2: Annotated[str, generate_sdp_field("constraint 2")]
-    startTime: startTimeType
-    endTime: endTimeType
+    # startTime: startTimeType
+    # endTime: endTimeType
 
 
 def generate_modify_form(reservation_id: int) -> ValidatedBaseModel:
@@ -133,19 +133,17 @@ def generate_modify_form(reservation_id: int) -> ValidatedBaseModel:
         """Input form with all connection input fields with validation, where possible."""
 
         description: descriptionType = reservation.description
-        sourceSTP: str = (
-            generate_stp_field("source endpoint", str(reservation.sourceStpId), reservation.sourceStp.stpId),
+        sourceSTP: str = generate_stp_field(
+            "source endpoint", str(reservation.sourceStpId), reservation.sourceStp.stpId
         )
         sourceVlan: destVlanType = reservation.sourceVlan
-        destSTP: str = (
-            generate_stp_field("destination endpoint", str(reservation.destStpId), reservation.destStp.stpId),
-        )
+        destSTP: str = generate_stp_field("destination endpoint", str(reservation.destStpId), reservation.destStp.stpId)
         destVlan: destVlanType = reservation.destVlan
         bandwidth: bandwidthType = reservation.bandwidth
         constraint1: Annotated[str, generate_sdp_field("constraint 1", sdp1)]
         constraint2: Annotated[str, generate_sdp_field("constraint 2", sdp2)]
-        startTime: startTimeType = reservation.startTime
-        endTime: endTimeType = reservation.endTime
+        # startTime: startTimeType = reservation.startTime
+        # endTime: endTimeType = reservation.endTime
 
     return ReservationModifyForm  # type: ignore[return-value]
 
@@ -208,8 +206,8 @@ def reservation_post(form: Annotated[ReservationInputForm, fastui_form(Reservati
         sourceVlan=Vlan(form.sourceVlan),
         destVlan=Vlan(form.destVlan),
         bandwidth=form.bandwidth,
-        startTime=form.startTime,
-        endTime=form.endTime,
+        # startTime=form.startTime,
+        # endTime=form.endTime,
         state=ConnectionStateMachine.ConnectionNew.value,
     )
     with Session.begin() as session:
@@ -310,7 +308,7 @@ def modify_form(id: int) -> list[AnyComponent]:
     submit_url = "/api/reservations/create"
     return app_page(
         *reservation_tabs(),
-        c.ModelForm(model=generate_modify_form(id), submit_url=submit_url, display_mode="page"),
+        c.ModelForm(model=generate_modify_form(id), submit_url=submit_url, display_mode="default"),
         title="Modify reservation",
     )
 

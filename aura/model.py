@@ -93,8 +93,8 @@ class Reservation(SQLModel, table=True):
     globalReservationId: UUID
     correlationId: UUID
     description: str
-    startTime: datetime | None
-    endTime: datetime | None
+    startTime: datetime | None = None
+    endTime: datetime | None = None
     sourceStpId: int = Field(foreign_key="stp.id")
     destStpId: int = Field(foreign_key="stp.id")
     sourceVlan: Vlan
