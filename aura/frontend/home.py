@@ -21,25 +21,40 @@ from aura.frontend.util import app_page
 
 router = APIRouter()
 
-text = """
-NSI-AuRA, the Network Service Interface (NSI) ultimate Requester Agent (uRA)
-for the Advanced North Atlantic (ANA) consortium (https://www.anaeng.global/).
+introduction = """
+[NSI-AuRA](https://github.com/workfloworchestrator/nsi-aura/),
+the Network Service Interface (NSI) ultimate Requester Agent (uRA)
+for the [Advanced North Atlantic (ANA) consortium](https://www.anaeng.global/).
 This is part of a project called ANA-GRAM, the ANA Global Resource Aggregation Method,
 to federate the ANA trans-Atlantic links via network automation.
 """
 
+how_to = """
+1. Mail NOC of domain A and Z to determine Customer VLAN IDs and add matching endpoints to their NSI domain topologies.
+2. Allow the topology change(s) to propagate.
+3. [Select endpoints and transatlantic link](/reservations/new).
+"""
 
 @router.get("/", response_model=FastUI, response_model_exclude_none=True)
 def home() -> list[AnyComponent]:
     # Arno: Topologies are now pulled via __init__.py on a 1 minute interval.
     return app_page(
         c.Heading(text="Introduction", level=3),
-        c.Paragraph(text=text),
-
+        c.Markdown(text=introduction),
+        c.Heading(text="Connection states and operations", level=3),
+        c.Div(
+            components=[
+                c.Image(
+                    src="/static/AuRA Reservation States.svg",
+                    alt="AURA Connection State and Actions diagram",
+                    loading="lazy",
+                    referrer_policy="no-referrer",
+                )
+            ],
+            class_name="+ d-flex justify-content-center",
+        ),
         c.Heading(text="How to Create a New Connection", level=3),
-        c.Paragraph(text='1. Mail NOC of domain A and Z to determine Customer VLAN IDs and add matching endpoints to their NSI domain topologies.'),
-        c.Paragraph(text='2. Wait 1 minute till we reloaded their topologies from NSI-DDS.'),
-        c.Link(components=[c.Paragraph(text='3. Select endpoints and link')], on_click=GoToEvent(url="/reservations/new")),
+        c.Markdown(text=how_to),
         c.Heading(text="Other Operations?", level=3),
-        c.Paragraph(text='See buttons at top of page.')
+        c.Paragraph(text="See buttons at top of page."),
     )
