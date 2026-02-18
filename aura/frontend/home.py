@@ -35,11 +35,14 @@ def home() -> list[AnyComponent]:
     return app_page(
         c.Heading(text="Introduction", level=3),
         c.Paragraph(text=text),
-
         c.Heading(text="How to Create a New Connection", level=3),
-        c.Paragraph(text='1. Mail NOC of domain A and Z to determine Customer VLAN IDs and add matching endpoints to their NSI domain topologies.'),
-        c.Paragraph(text='2. Wait 1 minute till we reloaded their topologies from NSI-DDS.'),
-        c.Link(components=[c.Paragraph(text='3. Select endpoints and link')], on_click=GoToEvent(url="/reservations/new")),
+        c.Paragraph(
+            text="1. Mail NOC of domain A and Z to determine Customer VLAN IDs and add matching endpoints to their NSI domain topologies."
+        ),
+        c.Paragraph(text="2. Wait 1 minute till we reloaded their topologies from NSI-DDS."),
+        c.Link(
+            components=[c.Paragraph(text="3. Select endpoints and link")], on_click=GoToEvent(url="/reservations/new")
+        ),
         c.Heading(text="Other Operations?", level=3),
-        c.Paragraph(text='See buttons at top of page.')
+        c.Paragraph(text="See buttons at top of page."),
     )
