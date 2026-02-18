@@ -133,9 +133,9 @@ def generate_modify_form(reservation_id: int) -> ValidatedBaseModel:
         """Input form with all connection input fields with validation, where possible."""
 
         description: descriptionType = reservation.description
-        sourceSTP: str = generate_stp_field("source endpoint", str(reservation.sourceStpId), reservation.sourceStp)
+        sourceSTP: str = generate_stp_field("source endpoint", str(reservation.sourceStpId), reservation.sourceStp.stpId)
         sourceVlan: destVlanType = reservation.sourceVlan
-        destSTP: str = generate_stp_field("destination endpoint", str(reservation.destStpId), reservation.destStp)
+        destSTP: str = generate_stp_field("destination endpoint", str(reservation.destStpId), reservation.destStp.stpId)
         destVlan: destVlanType = reservation.destVlan
         bandwidth: bandwidthType = reservation.bandwidth
         constraint1: Annotated[str, generate_sdp_field("constraint 1", sdp1)]
