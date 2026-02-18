@@ -905,7 +905,7 @@ wheels = [
 
 [[package]]
 name = "nsi-aura"
-version = "0.2.1.dev1"
+version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "apscheduler" },
