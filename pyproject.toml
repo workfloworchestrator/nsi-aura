@@ -6,18 +6,18 @@ build-backend = "setuptools.build_meta"
 name = "nsi-aura"
 version = "0.2.1.dev1"
 dependencies = [
-    "apscheduler",
-    "fastapi[standard]",
+    "apscheduler==3.11.2",
+    "fastapi[standard]==0.129.0",
     "fastui==0.9.0",
-    "lxml",
-    "psycopg2-binary>=2.9.11",
-    "pydantic<2.12.6",
-    "pydantic-settings",
-    "python-statemachine",
-    "pytz",
-    "requests",
-    "sqlmodel",
-    "structlog",
+    "lxml==6.0.2",
+    "psycopg2-binary==2.9.11",
+    "pydantic==2.12.5",
+    "pydantic-settings==2.13.0",
+    "python-statemachine==2.6.0",
+    "pytz==2025.2",
+    "requests==2.32.5",
+    "sqlmodel==0.0.34",
+    "structlog==25.5.0",
 ]
 requires-python = ">=3.12"
 authors = [
@@ -47,26 +47,26 @@ packages = ["aura", "aura.frontend"]
 [tool.setuptools.data-files]
 "share/aura/static" = ["static/*"]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    "black",
-    "flake8",
-    "flake8-bandit", # security checks
-    "flake8-bugbear", # assorted opinionated checks
-    "flake8-builtins", # check for name collision with builtins
-    "flake8-comprehensions",
-    "flake8-docstrings",
-    "flake8-implicit-str-concat",
-    "flake8-print",
-    "flake8-rst", # Allows run flake8 on code snippets in docstrings or rst files
-    "flake8-string-format",
-    "isort",
-    "lxml-stubs",
-    "mypy",
-    "python-statemachine[diagrams]",
-    "ruff",
-    "types-pytz",
-    "types-requests",
+    "black==26.1.0",
+    "flake8==7.3.0",
+    "flake8-bandit==4.1.1",
+    "flake8-bugbear==25.11.29",
+    "flake8-builtins==3.1.0",
+    "flake8-comprehensions==3.17.0",
+    "flake8-docstrings==1.7.0",
+    "flake8-implicit-str-concat==0.6.0",
+    "flake8-print==5.0.0",
+    "flake8-rst==0.8.0",
+    "flake8-string-format==0.3.0",
+    "isort==7.0.0",
+    "lxml-stubs==0.5.1",
+    "mypy==1.19.1",
+    "python-statemachine[diagrams]==2.6.0",
+    "ruff==0.15.1",
+    "types-pytz==2025.2.0.20251108",
+    "types-requests==2.32.4.20260107",
 ]
 
 [project.urls]
