@@ -64,7 +64,7 @@ dev = [
     "lxml-stubs==0.5.1",
     "mypy==1.19.1",
     "python-statemachine[diagrams]==2.6.0",
-    "ruff==0.15.1",
+    "ruff==0.15.2",
     "types-pytz==2025.2.0.20251108",
     "types-requests==2.32.4.20260107",
 ]
