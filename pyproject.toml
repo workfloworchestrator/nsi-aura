@@ -65,7 +65,7 @@ dev = [
     "mypy==1.19.1",
     "python-statemachine[diagrams]==2.6.0",
     "ruff==0.15.4",
-    "types-pytz==2025.2.0.20251108",
+    "types-pytz==2026.1.1.20260304",
     "types-requests==2.32.4.20260107",
 ]
 
