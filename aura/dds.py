@@ -209,7 +209,7 @@ def update_sdps() -> None:
             stpA = session.query(STP).filter(STP.id == vanished_sdp[0]).one()
             stpZ = session.query(STP).filter(STP.id == vanished_sdp[1]).one()
             logger.info("mark SDP as inactive", stpA=stpA.stpId, stpZ=stpZ.stpId, vlanRange=stpA.vlanRange)
-            session.execute(update(SDP).where(SDP.stpAId == stpA.id and SDP.stpZId == stpA.id).values(active=False))
+            session.execute(update(SDP).where(SDP.stpAId == stpA.id and SDP.stpZId == stpZ.id).values(active=False))
         session.commit()
 
 
