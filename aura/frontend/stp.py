@@ -85,11 +85,11 @@ def stp_detail(id: int) -> list[AnyComponent]:
                     on_click=GoToEvent(url="/stp"),
                     class_name="+ ms-2",
                 ),
-                c.Button(
-                    text="Modify",
-                    on_click=GoToEvent(url=f"/stp/{id}/modify"),
-                    class_name="+ ms-2",
-                ),
+                # c.Button(
+                #     text="Modify",
+                #     on_click=GoToEvent(url=f"/stp/{id}/modify"),
+                #     class_name="+ ms-2",
+                # ),
             ]
         ),
         c.Details(data=stp),
@@ -97,23 +97,23 @@ def stp_detail(id: int) -> list[AnyComponent]:
     )
 
 
-@router.get("/{id}/modify", response_model=FastUI, response_model_exclude_none=True)
-def stp_modify_form(id: int) -> list[AnyComponent]:
-    with Session() as session:
-        stp = session.query(STP).filter(STP.id == id).one_or_none()  # type: ignore[arg-type]
-    if stp is None:
-        return app_page(title=f"No STP with id {id}.")
-
-    class StpModifyForm(BaseModel):
-        description: str = Field(default=stp.description, title="Description")
-
-    """Render modify input form."""
-    submit_url = f"/api/stp/{stp.id}/update"
-    return app_page(
-        c.Heading(text=stp.stpId, level=4),
-        c.ModelForm(model=StpModifyForm, submit_url=submit_url, display_mode="default"),
-        title="Modify STP",
-    )
+# @router.get("/{id}/modify", response_model=FastUI, response_model_exclude_none=True)
+# def stp_modify_form(id: int) -> list[AnyComponent]:
+#     with Session() as session:
+#         stp = session.query(STP).filter(STP.id == id).one_or_none()  # type: ignore[arg-type]
+#     if stp is None:
+#         return app_page(title=f"No STP with id {id}.")
+#
+#     class StpModifyForm(BaseModel):
+#         description: str = Field(default=stp.description, title="Description")
+#
+#     """Render modify input form."""
+#     submit_url = f"/api/stp/{stp.id}/update"
+#     return app_page(
+#         c.Heading(text=stp.stpId, level=4),
+#         c.ModelForm(model=StpModifyForm, submit_url=submit_url, display_mode="default"),
+#         title="Modify STP",
+#     )
 
 
 class StpUpdateForm(BaseModel):

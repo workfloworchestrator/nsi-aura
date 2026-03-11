@@ -85,11 +85,11 @@ def sdp_detail(id: int) -> list[AnyComponent]:
                     on_click=GoToEvent(url="/sdp"),
                     class_name="+ ms-2",
                 ),
-                c.Button(
-                    text="Modify",
-                    on_click=GoToEvent(url=f"/sdp/{id}/modify"),
-                    class_name="+ ms-2",
-                ),
+                # c.Button(
+                #     text="Modify",
+                #     on_click=GoToEvent(url=f"/sdp/{id}/modify"),
+                #     class_name="+ ms-2",
+                # ),
             ]
         ),
         c.Heading(text="SDP details", level=4),
@@ -102,23 +102,23 @@ def sdp_detail(id: int) -> list[AnyComponent]:
     )
 
 
-@router.get("/{id}/modify", response_model=FastUI, response_model_exclude_none=True)
-def sdp_modify_form(id: int) -> list[AnyComponent]:
-    with Session() as session:
-        sdp = session.query(SDP).filter(SDP.id == id).one_or_none()  # type: ignore[arg-type]
-    if sdp is None:
-        return app_page(title=f"No SDP with id {id}.")
-
-    class SdpModifyForm(BaseModel):
-        description: str = Field(default=sdp.description, title="Description")
-
-    """Render modify input form."""
-    submit_url = f"/api/sdp/{sdp.id}/update"
-    return app_page(
-        c.Heading(text=f"{sdp.stpAId} <-> {sdp.stpZId}", level=4),
-        c.ModelForm(model=SdpModifyForm, submit_url=submit_url, display_mode="default"),
-        title="Modify SDP",
-    )
+# @router.get("/{id}/modify", response_model=FastUI, response_model_exclude_none=True)
+# def sdp_modify_form(id: int) -> list[AnyComponent]:
+#     with Session() as session:
+#         sdp = session.query(SDP).filter(SDP.id == id).one_or_none()  # type: ignore[arg-type]
+#     if sdp is None:
+#         return app_page(title=f"No SDP with id {id}.")
+#
+#     class SdpModifyForm(BaseModel):
+#         description: str = Field(default=sdp.description, title="Description")
+#
+#     """Render modify input form."""
+#     submit_url = f"/api/sdp/{sdp.id}/update"
+#     return app_page(
+#         c.Heading(text=f"{sdp.stpAId} <-> {sdp.stpZId}", level=4),
+#         c.ModelForm(model=SdpModifyForm, submit_url=submit_url, display_mode="default"),
+#         title="Modify SDP",
+#     )
 
 
 class SdpUpdateForm(BaseModel):

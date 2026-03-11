@@ -17,7 +17,7 @@ import zlib
 
 import structlog
 from pydantic import HttpUrl
-from sqlalchemy import update
+from sqlalchemy import or_, update
 
 from aura.db import Session
 from aura.model import SDP, STP
@@ -96,7 +96,11 @@ def topology_to_stps(topology: dict) -> list[STP]:
                 inboundAlias=inboundAliasId,
                 outboundAlias=outboundAliasId,
                 vlanRange=inboundPort["LabelGroup"] if inboundPort else "",
-                description=bidirectionalPorts[bidirectionalPortId]["name"] if bidirectionalPorts[bidirectionalPortId]["name"] else "",
+                description=(
+                    bidirectionalPorts[bidirectionalPortId]["name"]
+                    if bidirectionalPorts[bidirectionalPortId]["name"]
+                    else ""
+                ),
                 active=True,
             )
         )
@@ -129,6 +133,7 @@ def update_stps(stps: list[STP]) -> None:
                 or existing_stp.inboundAlias != new_stp.inboundAlias
                 or existing_stp.outboundAlias != new_stp.outboundAlias
                 or existing_stp.vlanRange != new_stp.vlanRange
+                or existing_stp.description != new_stp.description  # comment out to enable modify description
                 or existing_stp.active != new_stp.active
             ):
                 log.info("update existing STP")
@@ -137,6 +142,7 @@ def update_stps(stps: list[STP]) -> None:
                 existing_stp.inboundAlias = new_stp.inboundAlias
                 existing_stp.outboundAlias = new_stp.outboundAlias
                 existing_stp.vlanRange = new_stp.vlanRange
+                existing_stp.description = new_stp.description  # comment out to enable modify description
                 existing_stp.active = new_stp.active
             else:
                 log.debug("STP did not change")
@@ -185,7 +191,16 @@ def update_sdps() -> None:
             active=True,
         )
         with Session.begin() as session:
-            existing_sdp = session.query(SDP).filter((SDP.stpAId == stp_a.id) & (SDP.stpZId == stp_z.id)).one_or_none()  # type: ignore[arg-type]
+            existing_sdp = (
+                session.query(SDP)
+                .filter(
+                    or_(
+                        (SDP.stpAId == stp_a.id) & (SDP.stpZId == stp_z.id),
+                        (SDP.stpAId == stp_z.id) & (SDP.stpZId == stp_a.id),
+                    )
+                )
+                .one_or_none()
+            )  # type: ignore[arg-type]
             if existing_sdp is None:
                 log.info("add new SDP")
                 session.add(
@@ -196,9 +211,14 @@ def update_sdps() -> None:
                         description=description,
                     )
                 )
-            elif existing_sdp.vlanRange != stp_a.vlanRange or not existing_sdp.active:
+            elif (
+                existing_sdp.vlanRange != stp_a.vlanRange
+                or existing_sdp.description != description  # comment out to enable modify description
+                or not existing_sdp.active
+            ):
                 log.info("update existing SDP")
                 existing_sdp.vlanRange = stp_a.vlanRange  # TODO: should store a and z overlapping range only
+                existing_sdp.description = description  # comment out to enable modify description
                 existing_sdp.active = True
             else:
                 log.debug("SDP did not change")
