@@ -475,3 +475,64 @@ def reservations_attention() -> list[AnyComponent]:
         reservation_table(reservations),
         title="Reservations that need attention",
     )
+
+
+#
+# QUERY RECURSIVE
+#
+
+async def reservation_query_recursive_stream(id: int) -> AsyncIterable[str]:
+    lines = []
+    last_timestamp = datetime.fromtimestamp(0)
+    while True:
+        await asyncio.sleep(0.5)
+        with Session() as session:
+            messages = (
+                session.query(Log.message, Log.timestamp)  # type: ignore[call-overload]
+                .filter(Log.reservation_id == id)
+                .filter(Log.timestamp > last_timestamp)
+                .all()
+            )
+        for message, timestamp in messages:
+            lines.append(c.Div(components=[c.Text(text=f"{timestamp.isoformat()} - {message}")]))
+            last_timestamp = timestamp
+        m = FastUI(root=lines)  # type: ignore[arg-type]
+        yield f"data: {m.model_dump_json(by_alias=True, exclude_none=True)}\n\n"
+
+
+@router.get("/{id}/query-recursive/sse")
+async def reservation_query_recursive_sse(id: int) -> StreamingResponse:
+    return StreamingResponse(reservation_query_recursive_stream(id), media_type="text/event-stream")
+
+
+@router.get("/{id}/query-recursive", response_model=FastUI, response_model_exclude_none=True)
+async def reservation_query_recursive(id: int) -> list[AnyComponent]:
+    """Show streaming log for reservation with given id."""
+    with Session() as session:
+        reservation = session.query(Reservation).filter(Reservation.id == id).one_or_none()  # type: ignore[arg-type]
+    if reservation is None:
+        return app_page(title=f"No reservation with id {id}.")
+    return app_page(
+        button_row(
+            [
+                c.Button(
+                    text="Back",
+                    on_click=GoToEvent(url=f"/reservations/{id}/"),
+                    class_name="+ ms-2",
+                )
+            ]
+        ),
+        reservation_header(reservation),
+        c.Div(
+            components=[
+                c.ServerLoad(
+                    path=f"/reservations/{id}/query-recursive/sse",
+                    sse=True,
+                    sse_retry=500,
+                ),
+            ],
+            class_name="my-2 p-2 border rounded",
+        ),
+        title=f"Streaming spans {reservation.description}",
+    )
+

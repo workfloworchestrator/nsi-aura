@@ -18,9 +18,11 @@ from statemachine.exceptions import TransitionNotAllowed
 
 from aura.fsm import ConnectionStateMachine
 from aura.job import nsi_send_reserve_commit_job, scheduler
-from aura.model import Reservation
+from aura.model import Reservation, Log
 from aura.nsi import acknowledgement_template, generate_acknowledgement_xml, nsi_xml_to_dict
 from aura.settings import settings
+import sys
+import datetime
 
 router = APIRouter()
 
@@ -38,6 +40,10 @@ async def nsi_callback(request: Request) -> Response:
     from aura.db import Session
 
     body = nsi_xml_to_dict(await request.body())
+
+    print("ARNO /callback", body['Body'])
+    print("ARNO /callback connectionId", body['Body']['queryRecursiveConfirmed']['reservation']['connectionId'])
+    print("ARNO /callback children", body['Body']['queryRecursiveConfirmed']['reservation']['criteria']['children'])
     with Session.begin() as session:
         try:
             # TODO: add PassedEndTime
@@ -50,9 +56,40 @@ async def nsi_callback(request: Request) -> Response:
             elif soap_action(request, '"http://schemas.ogf.org/nsi/2013/12/connection/service/reserveTimeout"'):
                 connectionId = body["Body"]["reserveTimeout"]["connectionId"]
                 reservation = session.query(Reservation).filter(Reservation.connectionId == connectionId).one()
+            elif soap_action(request, '"http://schemas.ogf.org/nsi/2013/12/connection/service/queryRecursiveConfirmed"'):
+                connectionId = body["Body"]["queryRecursiveConfirmed"]["reservation"]["connectionId"]
+                correlationId = body["Header"]["nsiHeader"]["correlationId"]
+
+                print("ARNO /callback: connId", connectionId, "corrId", correlationId)
+
+                childtext = repr(body['Body']['queryRecursiveConfirmed']['reservation']['criteria']['children'])
+
+                session.add(
+                    Log(
+                        reservation_id=1,
+                        name="record.name",
+                        module="record.module",
+                        line=1,
+                        function="record.funcName",
+                        filename="record.filename",
+                        timestamp=datetime.datetime.now(),
+                        message=childtext,
+                    )
+                )
+
+                ##reservation = session.query(Reservation).filter(Reservation.connectionId == connectionId).one()
             else:
                 correlationId = body["Header"]["nsiHeader"]["correlationId"]
                 reservation = session.query(Reservation).filter(Reservation.correlationId == correlationId).one()
+
+            # STOP
+            nsi_acknowledgement = generate_acknowledgement_xml(
+                acknowledgement_template, body["Header"]["nsiHeader"]["correlationId"], settings.NSI_PROVIDER_ID
+            )
+            return Response(content=nsi_acknowledgement, media_type="application/xml")
+
+
+
             log = logger.bind(
                 reservationId=reservation.id,
                 correlationId=str(reservation.correlationId),
@@ -100,6 +137,13 @@ async def nsi_callback(request: Request) -> Response:
                     text = body["Body"]["errorEvent"]["serviceException"]["text"]
                     log.warning(f"error event from nsi provider: {text}", text=text)
                     csm.nsi_receive_error_event()
+                case '"http://schemas.ogf.org/nsi/2013/12/connection/service/queryRecursiveConfirmed"':
+                    print("ARNO GOT queryRecursiveConfirmed")
+
+                    children = body['Body']['queryRecursiveConfirmed']['reservation']['criteria']['children']
+                    print("ARNO GOT queryRec children", children)
+
+                    log.info("ARNO query recursive confirmed from nsi provider")
                 case _:
                     log.error("no matching soap action in message from nsi provider")
             reservation_id = reservation.id

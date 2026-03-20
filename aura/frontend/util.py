@@ -375,5 +375,19 @@ def reservation_buttons(reservation: Reservation) -> c.Div:
                 and csm.current_state != ConnectionStateMachine.ConnectionReserveFailed
                 else []
             ),
+            *(  # Arno
+                [
+                    c.Button(
+                        text="Spans",
+                        on_click=GoToEvent(url=f"/reservations/{reservation.id}/query-recursive"),
+                        class_name="+ ms-2",
+                    )
+                ]
+                if csm.current_state == ConnectionStateMachine.ConnectionReserveFailed
+                   or csm.current_state == ConnectionStateMachine.ConnectionReserveCommitted
+                   or csm.current_state == ConnectionStateMachine.ConnectionProvisioned
+                else []
+            ),
+
         ]
     )
