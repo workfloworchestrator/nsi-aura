@@ -1070,3 +1070,23 @@ def nsi_send_query_summary_sync(reservation: Reservation) -> dict[str, Any]:
     )
     soap_xml = nsi_util_post_soap(settings.NSI_PROVIDER_URL, soap_xml)
     return nsi_xml_to_dict(soap_xml)
+
+
+def nsi_send_query_recursive(reservation: Reservation) -> dict[str, Any]:
+    """Send NSI query recursive SOAP/XML message to NSI provider for given reservation.
+
+    Every NSI request needs a unique correlation id,
+    will set a new correlationId on message her but not store it on the reservation,
+    thus not interfering with any currently outstanding other NSI request,
+    and we do not expect a async reply on this sync request anyway.
+    """
+    soap_xml = generate_query_recursive_xml(
+        query_recursive_template,
+        uuid4(),
+        str(settings.NSA_BASE_URL) + "api/nsi/callback/",
+        str(reservation.connectionId),
+        settings.NSI_PROVIDER_ID,
+    )
+    soap_xml = nsi_util_post_soap(settings.NSI_PROVIDER_URL, soap_xml)
+    return nsi_xml_to_dict(soap_xml)
+

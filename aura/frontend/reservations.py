@@ -50,6 +50,7 @@ from aura.job import (
     nsi_send_release_job,
     nsi_send_reserve_job,
     nsi_send_terminate_job,
+    nsi_send_query_recursive_job,
     scheduler,
 )
 from aura.model import SDP, STP, Bandwidth, Log, Reservation, Vlan
@@ -510,6 +511,10 @@ async def reservation_query_recursive(id: int) -> list[AnyComponent]:
     """Show streaming log for reservation with given id."""
     with Session() as session:
         reservation = session.query(Reservation).filter(Reservation.id == id).one_or_none()  # type: ignore[arg-type]
+
+        # Ask for children
+        scheduler.add_job(nsi_send_query_recursive_job, args=[id])
+
     if reservation is None:
         return app_page(title=f"No reservation with id {id}.")
     return app_page(

@@ -29,6 +29,7 @@ from aura.nsi import (
     nsi_send_reserve,
     nsi_send_reserve_commit,
     nsi_send_terminate,
+    nsi_send_query_recursive,
     nsi_xml_to_dict,
 )
 from aura.settings import settings
@@ -150,3 +151,25 @@ def nsi_send_release_job(reservation_id: int) -> None:
         # TODO: transition to error state (that needs to be defined)
     else:
         log.info("send release successful")
+
+# Arno: ask for children
+def nsi_send_query_recursive_job(reservation_id: int) -> None:
+    new_correlation_id_on_reservation(reservation_id)
+    with Session() as session:
+        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()  # type: ignore[arg-type]
+    try:
+        retdict = nsi_send_query_recursive(reservation)  # TODO: need error handling post soap failure
+    except OSError as e:
+        log = logger.bind(reservationId=reservation.id, globalReservationId=str(reservation.globalReservationId))
+        log.warning(str(e))
+
+        # Bad query recursive doesn't affect Connection's state machine
+
+        #with Session.begin() as session:
+        #    reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()  # type: ignore[arg-type]
+        #    csm = ConnectionStateMachine(reservation)
+        #    csm.connection_error()
+    #else:
+    #    with Session.begin() as session:
+    #        reservation = session.query(Reservation).filter(Reservation.id == reservation_id).one()  # type: ignore[arg-type]
+    #        reservation.connectionId = UUID(retdict["connectionId"])  # TODO: make nsi_comm return a UUID
