@@ -57,38 +57,14 @@ async def nsi_callback(request: Request) -> Response:
                 connectionId = body["Body"]["reserveTimeout"]["connectionId"]
                 reservation = session.query(Reservation).filter(Reservation.connectionId == connectionId).one()
             elif soap_action(request, '"http://schemas.ogf.org/nsi/2013/12/connection/service/queryRecursiveConfirmed"'):
+                # Arno: callback from Aggregator with children info
                 connectionId = body["Body"]["queryRecursiveConfirmed"]["reservation"]["connectionId"]
                 correlationId = body["Header"]["nsiHeader"]["correlationId"]
-
                 print("ARNO /callback: connId", connectionId, "corrId", correlationId)
-
-                childtext = repr(body['Body']['queryRecursiveConfirmed']['reservation']['criteria']['children'])
-
-                session.add(
-                    Log(
-                        reservation_id=1,
-                        name="record.name",
-                        module="record.module",
-                        line=1,
-                        function="record.funcName",
-                        filename="record.filename",
-                        timestamp=datetime.datetime.now(),
-                        message=childtext,
-                    )
-                )
-
-                ##reservation = session.query(Reservation).filter(Reservation.connectionId == connectionId).one()
+                reservation = session.query(Reservation).filter(Reservation.connectionId == connectionId).one()
             else:
                 correlationId = body["Header"]["nsiHeader"]["correlationId"]
                 reservation = session.query(Reservation).filter(Reservation.correlationId == correlationId).one()
-
-            # STOP
-            nsi_acknowledgement = generate_acknowledgement_xml(
-                acknowledgement_template, body["Header"]["nsiHeader"]["correlationId"], settings.NSI_PROVIDER_ID
-            )
-            return Response(content=nsi_acknowledgement, media_type="application/xml")
-
-
 
             log = logger.bind(
                 reservationId=reservation.id,
@@ -138,12 +114,25 @@ async def nsi_callback(request: Request) -> Response:
                     log.warning(f"error event from nsi provider: {text}", text=text)
                     csm.nsi_receive_error_event()
                 case '"http://schemas.ogf.org/nsi/2013/12/connection/service/queryRecursiveConfirmed"':
-                    print("ARNO GOT queryRecursiveConfirmed")
 
-                    children = body['Body']['queryRecursiveConfirmed']['reservation']['criteria']['children']
-                    print("ARNO GOT queryRec children", children)
+                    # Arno Hack to get info on children, put in database as Log entry
+                    # ARNOTODO: figure out exact format. What if there are multiple children? response appears dict...
+                    childtext = repr(body['Body']['queryRecursiveConfirmed']['reservation']['criteria']['children'])
 
-                    log.info("ARNO query recursive confirmed from nsi provider")
+                    session.add(
+                        Log(
+                            reservation_id=reservation.id,
+                            name="record.name",
+                            module="record.module",
+                            line=1,
+                            function="record.funcName",
+                            filename="record.filename",
+                            timestamp=datetime.datetime.now(),
+                            message=childtext,
+                        )
+                    )
+
+                    log.info("query recursive confirmed from nsi provider")
                 case _:
                     log.error("no matching soap action in message from nsi provider")
             reservation_id = reservation.id
