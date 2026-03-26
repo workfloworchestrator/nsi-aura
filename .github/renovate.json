@@ -3,25 +3,13 @@
   "extends": [
     "config:recommended"
   ],
-  "packageRules": [
-    {
-      "matchManagers": ["uv"]
-    },
-    {
-      "matchPackageNames": ["python"],
-      "rangeStrategy": "widen",
-      "enabled": false
-    }
-  ],
   "lockFileMaintenance": {
     "enabled": true
   },
-  "ignorePaths": [
-    "Dockerfile"
-  ],
-  "schedule": [
-    "* * * * *"
-  ],
-  "timezone": "Europe/Amsterdam",
-  "updateNotScheduled": false
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true
+    }
+  ]
 }
