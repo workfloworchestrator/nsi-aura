@@ -67,6 +67,8 @@ dev = [
     "ruff==0.15.5",
     "types-pytz==2026.1.1.20260304",
     "types-requests==2.32.4.20260107",
+    "pytest==9.0.2",
+    "pytest-asyncio==0.26.0",
 ]
 
 [project.urls]
@@ -187,3 +189,7 @@ warn_unreachable = true
 strict_equality = true
 show_error_codes = true
 show_column_numbers = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
