@@ -16,9 +16,13 @@
 
 import logging
 import os
+from pathlib import Path
 
-# Must set DATABASE_URI before any aura module imports trigger settings/db initialization
+# Must set DATABASE_URI and create dummy PEM files before any aura module imports
+# trigger settings/db initialization (Settings validates FilePath at import time)
 os.environ["DATABASE_URI"] = "sqlite://"
+for _pem in ("aura-certificate.pem", "aura-private-key.pem"):
+    Path(_pem).touch(exist_ok=True)
 
 from datetime import datetime, timezone
 from uuid import uuid4
