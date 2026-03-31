@@ -24,18 +24,26 @@ from aura.nsi import (
     content_type_is_valid_soap,
     generate_acknowledgement_xml,
     generate_provision_xml,
+    generate_query_recursive_xml,
+    generate_query_summary_sync_xml,
     generate_release_xml,
+    generate_reserve_abort_xml,
     generate_reserve_commit_xml,
     generate_reserve_xml,
+    generate_reserve_timeout_ack_xml,
     generate_terminate_xml,
     nsi_soap_parse_correlationid_reply,
     nsi_soap_parse_reserve_reply,
     nsi_util_element_to_dict,
     nsi_xml_to_dict,
     provision_template,
+    query_recursive_template,
+    query_summary_sync_template,
     release_template,
+    reserve_abort_template,
     reserve_commit_template,
     reserve_template,
+    reserve_timeout_ack_template,
     terminate_template,
 )
 
@@ -112,9 +120,12 @@ class TestGenerateSimpleXml:
         "generator,template",
         [
             pytest.param(generate_reserve_commit_xml, reserve_commit_template, id="reserve-commit"),
+            pytest.param(generate_reserve_abort_xml, reserve_abort_template, id="reserve-abort"),
             pytest.param(generate_provision_xml, provision_template, id="provision"),
             pytest.param(generate_terminate_xml, terminate_template, id="terminate"),
             pytest.param(generate_release_xml, release_template, id="release"),
+            pytest.param(generate_reserve_timeout_ack_xml, reserve_timeout_ack_template, id="reserve-timeout-ack"),
+            pytest.param(generate_query_recursive_xml, query_recursive_template, id="query-recursive"),
         ],
     )
     def test_placeholders_replaced(self, generator, template):
@@ -133,13 +144,35 @@ class TestGenerateSimpleXml:
         "generator,template",
         [
             pytest.param(generate_reserve_commit_xml, reserve_commit_template, id="reserve-commit"),
+            pytest.param(generate_reserve_abort_xml, reserve_abort_template, id="reserve-abort"),
             pytest.param(generate_provision_xml, provision_template, id="provision"),
             pytest.param(generate_terminate_xml, terminate_template, id="terminate"),
             pytest.param(generate_release_xml, release_template, id="release"),
+            pytest.param(generate_reserve_timeout_ack_xml, reserve_timeout_ack_template, id="reserve-timeout-ack"),
+            pytest.param(generate_query_recursive_xml, query_recursive_template, id="query-recursive"),
         ],
     )
     def test_returns_bytes(self, generator, template):
         result = generator(template, uuid4(), "http://example.com/cb", "conn-id", "prov-nsa")
+        assert isinstance(result, bytes)
+
+
+class TestGenerateQuerySummarySyncXml:
+    """query_summary_sync has a different signature: no reply_to_url parameter."""
+
+    def test_placeholders_replaced(self):
+        corr_id = uuid4()
+        conn_id = "test-conn-id"
+        result = generate_query_summary_sync_xml(query_summary_sync_template, corr_id, conn_id, "provider-nsa")
+        xml_str = result.decode()
+        assert "#CORRELATION-ID#" not in xml_str
+        assert "#CONNECTION-ID#" not in xml_str
+        assert "#PROVIDER-NSA-ID#" not in xml_str
+        assert str(corr_id) in xml_str
+        assert conn_id in xml_str
+
+    def test_returns_bytes(self):
+        result = generate_query_summary_sync_xml(query_summary_sync_template, uuid4(), "conn-id", "prov-nsa")
         assert isinstance(result, bytes)
 
 
@@ -266,6 +299,23 @@ class TestNsiSoapParseReserveReply:
         </soap:Envelope>"""
         result = nsi_soap_parse_reserve_reply(xml)
         assert result["faultstring"] == "Some SOAP error"
+
+
+class TestNsiXmlToDictEdgeCases:
+    def test_invalid_xml_raises(self):
+        from lxml import etree
+
+        with pytest.raises(etree.XMLSyntaxError):
+            nsi_xml_to_dict(b"<unclosed>")
+
+    def test_three_duplicate_keys_become_list(self):
+        xml = b"""<root>
+            <item>first</item>
+            <item>second</item>
+            <item>third</item>
+        </root>"""
+        result = nsi_xml_to_dict(xml)
+        assert result["item"] == ["first", "second", "third"]
 
 
 class TestNsiSoapParseCorrelationidReply:

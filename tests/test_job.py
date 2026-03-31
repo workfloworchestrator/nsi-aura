@@ -165,6 +165,46 @@ class TestNsiSendTerminateJob:
         nsi_send_terminate_job(1)
 
 
+class TestNsiSendReserveCommitJob:
+    @patch("aura.job.nsi_send_reserve_commit")
+    @patch("aura.job.new_correlation_id_on_reservation")
+    @patch("aura.job.Session")
+    def test_successful_reserve_commit(self, mock_session_cls, mock_new_corr, mock_nsi_send):
+        from aura.job import nsi_send_reserve_commit_job
+
+        mock_reservation = MagicMock(id=1, correlationId=uuid4(), connectionId=uuid4())
+
+        mock_session = MagicMock()
+        mock_session.query.return_value.filter.return_value.one.return_value = mock_reservation
+        mock_session_cls.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_session_cls.return_value.__exit__ = MagicMock(return_value=False)
+
+        nsi_send_reserve_commit_job(1)
+
+        mock_new_corr.assert_called_once_with(1)
+        mock_nsi_send.assert_called_once_with(mock_reservation)
+
+
+class TestNsiSendProvisionJob:
+    @patch("aura.job.nsi_send_provision")
+    @patch("aura.job.new_correlation_id_on_reservation")
+    @patch("aura.job.Session")
+    def test_successful_provision(self, mock_session_cls, mock_new_corr, mock_nsi_send):
+        from aura.job import nsi_send_provision_job
+
+        mock_reservation = MagicMock(id=1, correlationId=uuid4(), connectionId=uuid4())
+
+        mock_session = MagicMock()
+        mock_session.query.return_value.filter.return_value.one.return_value = mock_reservation
+        mock_session_cls.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_session_cls.return_value.__exit__ = MagicMock(return_value=False)
+
+        nsi_send_provision_job(1)
+
+        mock_new_corr.assert_called_once_with(1)
+        mock_nsi_send.assert_called_once_with(mock_reservation)
+
+
 class TestNsiSendReleaseJob:
     @patch("aura.job.nsi_send_release")
     @patch("aura.job.new_correlation_id_on_reservation")
@@ -183,3 +223,33 @@ class TestNsiSendReleaseJob:
 
         nsi_send_release_job(1)
         mock_nsi_send.assert_called_once()
+
+    @patch("aura.job.nsi_send_release")
+    @patch("aura.job.new_correlation_id_on_reservation")
+    @patch("aura.job.Session")
+    def test_release_fault_handled_gracefully(self, mock_session_cls, mock_new_corr, mock_nsi_send):
+        from aura.job import nsi_send_release_job
+
+        mock_reservation = MagicMock(id=1, correlationId=uuid4(), connectionId=uuid4())
+
+        mock_session = MagicMock()
+        mock_session.query.return_value.filter.return_value.one.return_value = mock_reservation
+        mock_session_cls.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_session_cls.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_nsi_send.return_value = {
+            "Body": {
+                "Fault": {
+                    "detail": {
+                        "serviceException": {
+                            "nsaId": "urn:test",
+                            "errorId": "00201",
+                            "text": "Release failed",
+                        }
+                    }
+                }
+            }
+        }
+
+        # Should not raise - fault is handled gracefully
+        nsi_send_release_job(1)

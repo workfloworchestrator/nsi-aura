@@ -36,6 +36,12 @@ class TestExpandRanges:
             pytest.param([[1, 5], [3, 7]], True, [1, 2, 3, 4, 5, 6, 7], id="overlapping-ranges"),
             pytest.param([[1], [1]], False, [1], id="duplicate-values"),
             pytest.param([[5, 3]], False, [], id="reversed-range-exclusive"),
+            pytest.param([[-5, -1]], True, [-5, -4, -3, -2, -1], id="negative-inclusive"),
+            pytest.param([[-2, 2]], True, [-2, -1, 0, 1, 2], id="crossing-zero"),
+            pytest.param([[0, 3]], True, [0, 1, 2, 3], id="starting-at-zero"),
+            pytest.param([[0]], False, [0], id="single-zero"),
+            pytest.param([[1, 1]], True, [1], id="single-element-range-inclusive"),
+            pytest.param([[1, 1]], False, [], id="single-element-range-exclusive"),
         ],
     )
     def test_expand_ranges(self, ranges, inclusive, expected):
@@ -67,7 +73,13 @@ class TestToRanges:
             pytest.param([1, 2, 3], [range(1, 4)], id="consecutive"),
             pytest.param([1, 3, 5], [range(1, 2), range(3, 4), range(5, 6)], id="non-consecutive"),
             pytest.param([], [], id="empty"),
+            pytest.param([-5, -4, -3, 0, 1], [range(-5, -2), range(0, 2)], id="negative-numbers"),
+            pytest.param([1, 1000000], [range(1, 2), range(1000000, 1000001)], id="large-gap"),
         ],
     )
     def test_to_ranges(self, input_iter, expected_ranges):
         assert list(to_ranges(input_iter)) == expected_ranges
+
+    def test_generator_input(self):
+        result = list(to_ranges(x for x in [1, 2, 3, 5]))
+        assert result == [range(1, 4), range(5, 6)]

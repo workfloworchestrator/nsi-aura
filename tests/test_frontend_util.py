@@ -236,6 +236,30 @@ class TestReservationButtons:
                 ["Release", "Provision", "Reserve Again", "Terminate", "Verify"],
                 id="new-state",
             ),
+            pytest.param(
+                "CONNECTION_RESERVE_TIMEOUT",
+                ["Terminate", "Verify"],
+                ["Release", "Provision", "Reserve Again"],
+                id="timeout-state",
+            ),
+            pytest.param(
+                "CONNECTION_FAILED",
+                ["Terminate", "Verify"],
+                ["Release", "Provision", "Reserve Again"],
+                id="failed-state",
+            ),
+            pytest.param(
+                "CONNECTION_RELEASING",
+                ["Verify"],
+                ["Release", "Provision", "Reserve Again", "Terminate"],
+                id="releasing-state",
+            ),
+            pytest.param(
+                "CONNECTION_RESERVE_CHECKING",
+                ["Verify"],
+                ["Release", "Provision", "Reserve Again", "Terminate"],
+                id="checking-state",
+            ),
         ],
     )
     def test_buttons_per_state(self, state, expected_buttons, absent_buttons, reservation_factory):

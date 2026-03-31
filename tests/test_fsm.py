@@ -136,6 +136,15 @@ class TestConnectionStateMachineTransitions:
             pytest.param("nsi_receive_data_plane_up", "CONNECTION_NEW", id="dataplane-up-from-new"),
             pytest.param("gui_delete_connection", "CONNECTION_NEW", id="delete-from-new"),
             pytest.param("nsi_send_reserve_commit", "CONNECTION_NEW", id="commit-from-new"),
+            pytest.param("nsi_send_release", "CONNECTION_PROVISIONING", id="release-from-provisioning"),
+            pytest.param("nsi_receive_data_plane_up", "CONNECTION_PROVISIONING", id="dataplane-up-from-provisioning"),
+            pytest.param("nsi_send_reserve", "CONNECTION_PROVISIONED", id="reserve-from-provisioned"),
+            pytest.param("nsi_receive_data_plane_down", "CONNECTION_PROVISIONED", id="dataplane-down-from-provisioned"),
+            pytest.param("nsi_send_reserve", "CONNECTION_ACTIVE", id="reserve-from-active"),
+            pytest.param("nsi_receive_data_plane_up", "CONNECTION_ACTIVE", id="dataplane-up-from-active"),
+            pytest.param("nsi_send_reserve", "CONNECTION_RELEASED", id="reserve-from-released"),
+            pytest.param("nsi_send_terminate", "CONNECTION_RELEASING", id="terminate-from-releasing"),
+            pytest.param("gui_delete_connection", "CONNECTION_DELETED", id="delete-from-deleted"),
         ],
     )
     def test_invalid_transition_raises(self, event, invalid_source_state, reservation_factory):
@@ -154,13 +163,22 @@ class TestConnectionStateMachineProperties:
     def test_final_state_is_deleted(self):
         assert ConnectionStateMachine.ConnectionDeleted.final
 
-    def test_active_state_values_includes_expected(self):
-        active = ConnectionStateMachine.active_state_values
-        assert "CONNECTION_ACTIVE" in active
-        assert "CONNECTION_PROVISIONED" in active
-        assert "CONNECTION_PROVISIONING" in active
-        assert "CONNECTION_RESERVE_CHECKING" in active
-        assert "RESERVE_HELD" in active
+    def test_active_state_values_complete(self):
+        active = set(ConnectionStateMachine.active_state_values)
+        expected = {
+            "CONNECTION_PROVISIONED",
+            "CONNECTION_RELEASED",
+            "CONNECTION_ACTIVE",
+            "CONNECTION_FAILED",
+            "CONNECTION_RESERVE_CHECKING",
+            "RESERVE_HELD",
+            "CONNECTION_RESERVE_COMMITTING",
+            "CONNECTION_RESERVE_COMMITTED",
+            "CONNECTION_PROVISIONING",
+            "CONNECTION_RELEASING",
+            "CONNECTION_TERMINATING",
+        }
+        assert active == expected
 
     def test_active_state_values_excludes_terminal(self):
         active = ConnectionStateMachine.active_state_values
@@ -169,3 +187,35 @@ class TestConnectionStateMachineProperties:
         assert "CONNECTION_DELETED" not in active
         assert "CONNECTION_RESERVE_FAILED" not in active
         assert "CONNECTION_RESERVE_TIMEOUT" not in active
+
+
+class TestConnectionStateMachineFullPath:
+    def test_happy_path_reserve_to_terminate(self, reservation_factory):
+        reservation = reservation_factory(state="CONNECTION_NEW")
+        csm = ConnectionStateMachine(reservation)
+        csm.nsi_send_reserve()
+        assert reservation.state == "CONNECTION_RESERVE_CHECKING"
+        csm.nsi_receive_reserve_confirmed()
+        assert reservation.state == "RESERVE_HELD"
+        csm.nsi_send_reserve_commit()
+        assert reservation.state == "CONNECTION_RESERVE_COMMITTING"
+        csm.nsi_receive_reserve_commit_confirmed()
+        assert reservation.state == "CONNECTION_RESERVE_COMMITTED"
+        csm.nsi_send_provision()
+        assert reservation.state == "CONNECTION_PROVISIONING"
+        csm.nsi_receive_provision_confirmed()
+        assert reservation.state == "CONNECTION_PROVISIONED"
+        csm.nsi_receive_data_plane_up()
+        assert reservation.state == "CONNECTION_ACTIVE"
+        csm.nsi_send_release()
+        assert reservation.state == "CONNECTION_RELEASING"
+        csm.nsi_receive_release_confirmed()
+        assert reservation.state == "CONNECTION_RELEASED"
+        csm.nsi_receive_data_plane_down()
+        assert reservation.state == "CONNECTION_RESERVE_COMMITTED"
+        csm.nsi_send_terminate()
+        assert reservation.state == "CONNECTION_TERMINATING"
+        csm.nsi_receive_terminate_confirmed()
+        assert reservation.state == "CONNECTION_TERMINATED"
+        csm.gui_delete_connection()
+        assert reservation.state == "CONNECTION_DELETED"
