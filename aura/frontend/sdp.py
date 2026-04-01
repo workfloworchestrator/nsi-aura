@@ -38,7 +38,7 @@ async def sdp() -> list[AnyComponent]:
 def sdp_active() -> list[AnyComponent]:
     """Display all active SDP in a table."""
     with Session() as session:
-        sdps = session.query(SDP).filter(SDP.active).all()
+        sdps = session.query(SDP).filter(SDP.active).order_by(SDP.id).all()
     return app_page(
         *tabs(),
         sdp_table(sdps),
@@ -50,7 +50,7 @@ def sdp_active() -> list[AnyComponent]:
 def sdp_inactive() -> list[AnyComponent]:
     """Display all inactive SDP in a table."""
     with Session() as session:
-        sdps = session.query(SDP).filter(not SDP.active).all()
+        sdps = session.query(SDP).filter(not SDP.active).order_by(SDP.id).all()
     return app_page(
         *tabs(),
         sdp_table(sdps),
@@ -62,7 +62,7 @@ def sdp_inactive() -> list[AnyComponent]:
 def sdp_all() -> list[AnyComponent]:
     """Display all SDP in a table."""
     with Session() as session:
-        sdps = session.query(SDP).all()
+        sdps = session.query(SDP).order_by(SDP.id).all()
     return app_page(
         *tabs(),
         sdp_table(sdps),

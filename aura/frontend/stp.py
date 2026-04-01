@@ -38,7 +38,7 @@ async def stp() -> list[AnyComponent]:
 def stp_active() -> list[AnyComponent]:
     """Display all active STP in a table."""
     with Session() as session:
-        stps = session.query(STP).filter(STP.active).all()
+        stps = session.query(STP).filter(STP.active).order_by(STP.id).all()
     return app_page(
         *tabs(),
         stp_table(stps),
@@ -50,7 +50,7 @@ def stp_active() -> list[AnyComponent]:
 def stp_inactive() -> list[AnyComponent]:
     """Display all inactive STP in a table."""
     with Session() as session:
-        stps = session.query(STP).filter(not STP.active).all()
+        stps = session.query(STP).filter(not STP.active).order_by(STP.id).all()
     return app_page(
         *tabs(),
         stp_table(stps),
@@ -62,7 +62,7 @@ def stp_inactive() -> list[AnyComponent]:
 def stp_all() -> list[AnyComponent]:
     """Display all STP in a table."""
     with Session() as session:
-        stps = session.query(STP).all()
+        stps = session.query(STP).order_by(STP.id).all()
     return app_page(
         *tabs(),
         stp_table(stps),

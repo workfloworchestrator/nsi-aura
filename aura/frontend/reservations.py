@@ -435,7 +435,7 @@ async def reservation_provision(id: int) -> list[AnyComponent]:
 def reservations_all() -> list[AnyComponent]:
     """Display overview of all reservations."""
     with Session() as session:
-        reservations = session.query(Reservation).all()
+        reservations = session.query(Reservation).order_by(Reservation.id).all()
     return app_page(
         *reservation_tabs(),
         reservation_table(reservations),
@@ -448,7 +448,10 @@ def reservations_active() -> list[AnyComponent]:
     """Display overview of active reservations."""
     with Session() as session:
         reservations = (
-            session.query(Reservation).filter(Reservation.state == ConnectionStateMachine.ConnectionActive.value).all()
+            session.query(Reservation)
+            .filter(Reservation.state == ConnectionStateMachine.ConnectionActive.value)
+            .order_by(Reservation.id)
+            .all()
         )
     return app_page(
         *reservation_tabs(),
@@ -468,6 +471,7 @@ def reservations_attention() -> list[AnyComponent]:
                 & (Reservation.state != ConnectionStateMachine.ConnectionTerminating.value)
                 & (Reservation.state != ConnectionStateMachine.ConnectionTerminated.value)
             )
+            .order_by(Reservation.id)
             .all()
         )
     return app_page(
