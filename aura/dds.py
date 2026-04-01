@@ -175,11 +175,18 @@ def update_sdps() -> None:
         stps = session.query(STP).filter(STP.active == True).all()
     # find connected STPs
     sdps = []
+    paired: set[int] = set()
     for a in stps:
+        if a.id in paired:
+            continue
         for z in stps:
+            if z.id in paired or z.id == a.id:
+                continue
             if is_sdp(a, z):
                 sdps.append((a, z))
-                stps.remove(z)  # remove STP at other side of SDP as candidate
+                paired.add(a.id)
+                paired.add(z.id)
+                break
     # process found SDPs
     for stp_a, stp_z in sdps:
         description = f"{stp_a.description} <-> {stp_z.description}"
@@ -229,7 +236,7 @@ def update_sdps() -> None:
             stpA = session.query(STP).filter(STP.id == vanished_sdp[0]).one()
             stpZ = session.query(STP).filter(STP.id == vanished_sdp[1]).one()
             logger.info("mark SDP as inactive", stpA=stpA.stpId, stpZ=stpZ.stpId, vlanRange=stpA.vlanRange)
-            session.execute(update(SDP).where(SDP.stpAId == stpA.id and SDP.stpZId == stpZ.id).values(active=False))
+            session.execute(update(SDP).where((SDP.stpAId == stpA.id) & (SDP.stpZId == stpZ.id)).values(active=False))
         session.commit()
 
 
