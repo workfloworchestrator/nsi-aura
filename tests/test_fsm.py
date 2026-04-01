@@ -158,7 +158,7 @@ class TestConnectionStateMachineProperties:
     def test_initial_state(self, reservation_factory):
         reservation = reservation_factory(state="CONNECTION_NEW")
         csm = ConnectionStateMachine(reservation)
-        assert csm.current_state == ConnectionStateMachine.ConnectionNew
+        assert csm.ConnectionNew.is_active
 
     def test_final_state_is_deleted(self):
         assert ConnectionStateMachine.ConnectionDeleted.final
