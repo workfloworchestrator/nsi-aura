@@ -62,7 +62,7 @@ dev = [
     "flake8-string-format==0.3.0",
     "isort==8.0.1",
     "lxml-stubs==0.5.1",
-    "mypy==1.19.1",
+    "mypy==1.20.0",
     "python-statemachine[diagrams]==2.6.0",
     "ruff==0.15.8",
     "types-pytz==2026.1.1.20260304",
