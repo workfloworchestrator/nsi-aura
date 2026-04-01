@@ -42,4 +42,5 @@ def main() -> None:
     uvicorn.run(app, host=settings.NSI_AURA_HOST, port=settings.NSI_AURA_PORT, log_config=None)
 
 
-main()
+if __name__ == "__main__":
+    main()
