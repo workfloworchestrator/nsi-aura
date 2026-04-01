@@ -320,7 +320,7 @@ def reservation_buttons(reservation: Reservation) -> c.Div:
                     modal="Are you sure you want to release this reservation?",
                     url=f"/api/reservations/{reservation.id}/release",
                 )
-                if csm.current_state == ConnectionStateMachine.ConnectionActive
+                if csm.ConnectionActive.is_active
                 else []
             ),
             *(
@@ -331,7 +331,7 @@ def reservation_buttons(reservation: Reservation) -> c.Div:
                     modal="Are you sure you want to Provision this reservation?",
                     url=f"/api/reservations/{reservation.id}/provision",
                 )
-                if csm.current_state == ConnectionStateMachine.ConnectionReserveCommitted
+                if csm.ConnectionReserveCommitted.is_active
                 else []
             ),
             *(
@@ -342,8 +342,8 @@ def reservation_buttons(reservation: Reservation) -> c.Div:
                     modal="Are you sure you want to reserve this reservation again?",
                     url=f"/api/reservations/{reservation.id}/reserve-again",
                 )
-                if csm.current_state == ConnectionStateMachine.ConnectionReserveFailed
-                or csm.current_state == ConnectionStateMachine.ConnectionTerminated
+                if csm.ConnectionReserveFailed.is_active
+                or csm.ConnectionTerminated.is_active
                 else []
             ),
             *(
@@ -354,11 +354,11 @@ def reservation_buttons(reservation: Reservation) -> c.Div:
                     modal="Are you sure you want to terminate this reservation?",
                     url=f"/api/reservations/{reservation.id}/terminate",
                 )
-                if csm.current_state == ConnectionStateMachine.ConnectionReserveTimeout
-                or csm.current_state == ConnectionStateMachine.ConnectionFailed
-                or csm.current_state == ConnectionStateMachine.ConnectionReserveCommitted
-                or csm.current_state == ConnectionStateMachine.ConnectionProvisioned
-                or csm.current_state == ConnectionStateMachine.ConnectionReserveFailed
+                if csm.ConnectionReserveTimeout.is_active
+                or csm.ConnectionFailed.is_active
+                or csm.ConnectionReserveCommitted.is_active
+                or csm.ConnectionProvisioned.is_active
+                or csm.ConnectionReserveFailed.is_active
                 else []
             ),
             *(
@@ -369,10 +369,10 @@ def reservation_buttons(reservation: Reservation) -> c.Div:
                         class_name="+ ms-2",
                     )
                 ]
-                if csm.current_state != ConnectionStateMachine.ConnectionNew
-                # and csm.current_state != ConnectionStateMachine.ConnectionReserveChecking
-                and csm.current_state != ConnectionStateMachine.ConnectionProvisioned
-                and csm.current_state != ConnectionStateMachine.ConnectionReserveFailed
+                if not csm.ConnectionNew.is_active
+                # and not csm.ConnectionReserveChecking.is_active
+                and not csm.ConnectionProvisioned.is_active
+                and not csm.ConnectionReserveFailed.is_active
                 else []
             ),
         ]
