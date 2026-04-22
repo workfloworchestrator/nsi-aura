@@ -9,7 +9,7 @@ dependencies = [
     "apscheduler==3.11.2",
     "fastapi[standard]==0.135.3",
     "fastui==0.9.0",
-    "lxml==6.0.2",
+    "lxml==6.1.0",
     "psycopg2-binary==2.9.11",
     "pydantic==2.12.5",
     "pydantic-settings==2.13.1",
