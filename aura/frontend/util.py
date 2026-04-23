@@ -84,7 +84,7 @@ def aura_logo() -> AnyComponent:
         components=[
             c.Image(
                 # src='https://avatars.githubusercontent.com/u/110818415',
-                src="/static/ANA-website-footer.png",
+                src=f"{settings.ROOT_PATH}/static/ANA-website-footer.png",
                 alt="ANA footer Logo",
                 width=900,
                 height=240,
@@ -318,7 +318,7 @@ def reservation_buttons(reservation: Reservation) -> c.Div:
                     button="Release",
                     title=f"Release reservation {reservation.description}?",
                     modal="Are you sure you want to release this reservation?",
-                    url=f"/api/reservations/{reservation.id}/release",
+                    url=f"{settings.ROOT_PATH}/api/reservations/{reservation.id}/release",
                 )
                 if csm.ConnectionActive.is_active
                 else []
@@ -329,7 +329,7 @@ def reservation_buttons(reservation: Reservation) -> c.Div:
                     button="Provision",
                     title=f"Provision reservation {reservation.description}?",
                     modal="Are you sure you want to Provision this reservation?",
-                    url=f"/api/reservations/{reservation.id}/provision",
+                    url=f"{settings.ROOT_PATH}/api/reservations/{reservation.id}/provision",
                 )
                 if csm.ConnectionReserveCommitted.is_active
                 else []
@@ -340,7 +340,7 @@ def reservation_buttons(reservation: Reservation) -> c.Div:
                     button="Reserve Again",
                     title=f"Reserve reservation {reservation.description} again?",
                     modal="Are you sure you want to reserve this reservation again?",
-                    url=f"/api/reservations/{reservation.id}/reserve-again",
+                    url=f"{settings.ROOT_PATH}/api/reservations/{reservation.id}/reserve-again",
                 )
                 if csm.ConnectionReserveFailed.is_active
                 or csm.ConnectionTerminated.is_active
@@ -352,7 +352,7 @@ def reservation_buttons(reservation: Reservation) -> c.Div:
                     button="Terminate",
                     title=f"Terminate reservation {reservation.description}?",
                     modal="Are you sure you want to terminate this reservation?",
-                    url=f"/api/reservations/{reservation.id}/terminate",
+                    url=f"{settings.ROOT_PATH}/api/reservations/{reservation.id}/terminate",
                 )
                 if csm.ConnectionReserveTimeout.is_active
                 or csm.ConnectionFailed.is_active

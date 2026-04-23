@@ -54,6 +54,7 @@ from aura.job import (
 )
 from aura.model import SDP, STP, Bandwidth, Log, Reservation, Vlan
 from aura.nsi import nsi_send_query_summary_sync
+from aura.settings import settings
 from aura.vlan import free_vlan_ranges
 
 router = APIRouter()
@@ -94,14 +95,14 @@ class ValidatedBaseModel(BaseModel):
 
 
 def generate_stp_field(title: str = "give me a title", value: str | None = None, label: str | None = None) -> Any:
-    json_schema_extra = {"search_url": "/api/reservations/endpoints"}
+    json_schema_extra = {"search_url": f"{settings.ROOT_PATH}/api/reservations/endpoints"}
     if value and label:
         json_schema_extra["initial"] = {"value": value, "label": label}  # type: ignore
     return Field(title=title, json_schema_extra=json_schema_extra)  # type: ignore
 
 
 def generate_sdp_field(title: str = "give me a title", sdp: SDP | None = None) -> Any:
-    json_schema_extra = {"search_url": "/api/reservations/demarcation_points"}
+    json_schema_extra = {"search_url": f"{settings.ROOT_PATH}/api/reservations/demarcation_points"}
     json_schema_extra["initial"] = (
         {"value": str(sdp.id), "label": sdp.description} if sdp else NO_DEMARCATION_POINT_CONSTRAINT
     )
@@ -177,7 +178,7 @@ def demarcation_points() -> SelectSearchResponse:
 @router.get("/new", response_model=FastUI, response_model_exclude_none=True)
 def input_form() -> list[AnyComponent]:
     """Render new input form."""
-    submit_url = "/api/reservations/create"
+    submit_url = f"{settings.ROOT_PATH}/api/reservations/create"
     return app_page(
         *reservation_tabs(),
         c.ModelForm(model=ReservationInputForm, submit_url=submit_url, display_mode="default"),
@@ -305,7 +306,7 @@ async def reservation_log(id: int) -> list[AnyComponent]:
 @router.get("/{id}/modify", response_model=FastUI, response_model_exclude_none=True)
 def modify_form(id: int) -> list[AnyComponent]:
     """Render modify input form."""
-    submit_url = "/api/reservations/create"
+    submit_url = f"{settings.ROOT_PATH}/api/reservations/create"
     return app_page(
         *reservation_tabs(),
         c.ModelForm(model=generate_modify_form(id), submit_url=submit_url, display_mode="default"),

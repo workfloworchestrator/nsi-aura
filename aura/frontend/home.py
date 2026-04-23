@@ -18,6 +18,7 @@ from fastui import components as c
 from fastui.events import GoToEvent
 
 from aura.frontend.util import app_page
+from aura.settings import settings
 
 router = APIRouter()
 
@@ -45,7 +46,7 @@ def home() -> list[AnyComponent]:
         c.Div(
             components=[
                 c.Image(
-                    src="/static/AuRA Reservation States.svg",
+                    src=f"{settings.ROOT_PATH}/static/AuRA Reservation States.svg",
                     alt="AURA Connection State and Actions diagram",
                     loading="lazy",
                     referrer_policy="no-referrer",

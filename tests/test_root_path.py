@@ -16,7 +16,8 @@
 
 Verifies that the FastAPI app respects the ROOT_PATH setting so that
 it works correctly behind a reverse proxy with a path prefix (e.g. /aura),
-including FastUI prebuilt_html parameters for the React SPA.
+including FastUI prebuilt_html parameters for the React SPA and that
+image paths, form submit URLs, and search URLs are correctly prefixed.
 """
 
 import pytest
@@ -117,3 +118,134 @@ class TestRootPathPrebuiltHtml:
         html = resp.text
         # api_path_strip should not appear in the default case
         assert "api_path_strip" not in html
+
+
+def find_values(obj, key):
+    """Recursively find all values for a given key in a nested dict/list structure."""
+    results = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if k == key:
+                results.append(v)
+            results.extend(find_values(v, key))
+    elif isinstance(obj, list):
+        for item in obj:
+            results.extend(find_values(item, key))
+    return results
+
+
+class TestRootPathImageUrls:
+    def test_home_images_without_root_path(self, test_app):
+        """Without ROOT_PATH, image src paths start with /static/."""
+        client = TestClient(test_app)
+        resp = client.get("/api/")
+        assert resp.status_code == 200
+        srcs = find_values(resp.json(), "src")
+        static_srcs = [s for s in srcs if "/static/" in s]
+        assert len(static_srcs) > 0
+        for src in static_srcs:
+            assert src.startswith("/static/")
+            assert not src.startswith("/aura/static/")
+
+    def test_home_images_with_root_path(self, app_with_root_path):
+        """With ROOT_PATH, image src paths start with /aura/static/."""
+        client = TestClient(app_with_root_path)
+        resp = client.get("/api/")
+        assert resp.status_code == 200
+        srcs = find_values(resp.json(), "src")
+        static_srcs = [s for s in srcs if "/static/" in s]
+        assert len(static_srcs) > 0
+        for src in static_srcs:
+            assert src.startswith("/aura/static/")
+
+
+class TestRootPathFormUrls:
+    def test_reservation_form_urls_without_root_path(self, test_app):
+        """Without ROOT_PATH, form submit and search URLs start with /api/."""
+        client = TestClient(test_app)
+        resp = client.get("/api/reservations/new")
+        assert resp.status_code == 200
+        data = resp.json()
+        submit_urls = find_values(data, "submitUrl")
+        assert any("/api/reservations/create" in u for u in submit_urls)
+        for u in submit_urls:
+            assert not u.startswith("/aura/")
+
+    def test_reservation_form_urls_with_root_path(self, app_with_root_path):
+        """With ROOT_PATH, form submit URLs are prefixed with /aura."""
+        client = TestClient(app_with_root_path)
+        resp = client.get("/api/reservations/new")
+        assert resp.status_code == 200
+        data = resp.json()
+        submit_urls = find_values(data, "submitUrl")
+        assert any("/aura/api/reservations/create" in u for u in submit_urls)
+
+    def test_search_urls_without_root_path(self, test_app):
+        """Without ROOT_PATH, search URLs start with /api/."""
+        client = TestClient(test_app)
+        resp = client.get("/api/reservations/new")
+        assert resp.status_code == 200
+        body = resp.text
+        assert "/api/reservations/endpoints" in body
+        assert "/aura/api/reservations/endpoints" not in body
+
+
+class TestRootPathFieldGenerators:
+    """Test that field generator functions use ROOT_PATH.
+
+    Note: generate_stp_field/generate_sdp_field are called at class definition
+    time for ReservationInputForm, so in production ROOT_PATH must be set before
+    import. These tests verify the functions themselves produce correct URLs.
+    """
+
+    def test_stp_field_search_url_with_root_path(self):
+        from aura.frontend.reservations import generate_stp_field
+        from aura.settings import settings
+
+        original = settings.ROOT_PATH
+        try:
+            settings.ROOT_PATH = "/aura"
+            field = generate_stp_field("test")
+            search_url = field.json_schema_extra["search_url"]
+            assert search_url == "/aura/api/reservations/endpoints"
+        finally:
+            settings.ROOT_PATH = original
+
+    def test_stp_field_search_url_without_root_path(self):
+        from aura.frontend.reservations import generate_stp_field
+        from aura.settings import settings
+
+        original = settings.ROOT_PATH
+        try:
+            settings.ROOT_PATH = ""
+            field = generate_stp_field("test")
+            search_url = field.json_schema_extra["search_url"]
+            assert search_url == "/api/reservations/endpoints"
+        finally:
+            settings.ROOT_PATH = original
+
+    def test_sdp_field_search_url_with_root_path(self):
+        from aura.frontend.reservations import generate_sdp_field
+        from aura.settings import settings
+
+        original = settings.ROOT_PATH
+        try:
+            settings.ROOT_PATH = "/aura"
+            field = generate_sdp_field("test")
+            search_url = field.json_schema_extra["search_url"]
+            assert search_url == "/aura/api/reservations/demarcation_points"
+        finally:
+            settings.ROOT_PATH = original
+
+    def test_sdp_field_search_url_without_root_path(self):
+        from aura.frontend.reservations import generate_sdp_field
+        from aura.settings import settings
+
+        original = settings.ROOT_PATH
+        try:
+            settings.ROOT_PATH = ""
+            field = generate_sdp_field("test")
+            search_url = field.json_schema_extra["search_url"]
+            assert search_url == "/api/reservations/demarcation_points"
+        finally:
+            settings.ROOT_PATH = original
