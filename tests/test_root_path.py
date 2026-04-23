@@ -36,17 +36,19 @@ def test_app():
 
 @pytest.fixture()
 def app_with_root_path(test_app):
-    """Temporarily set root_path on the app and ROOT_PATH on settings."""
+    """Temporarily set ROOT_PATH on settings (without setting root_path on the app).
+
+    We intentionally do NOT set app.root_path because Starlette's get_route_path()
+    assumes scope["path"] contains root_path as a prefix. When a reverse proxy
+    strips the prefix before forwarding, this breaks StaticFiles mounts by
+    double-counting the mount path in the file lookup.
+    """
     from aura.settings import settings
 
-    original_app_root = test_app.root_path
     original_settings_root = settings.ROOT_PATH
-    test_app.root_path = "/aura"
     settings.ROOT_PATH = "/aura"
-    # Reset cached OpenAPI schema so it regenerates with new root_path
     test_app.openapi_schema = None
     yield test_app
-    test_app.root_path = original_app_root
     settings.ROOT_PATH = original_settings_root
     test_app.openapi_schema = None
 
@@ -75,16 +77,10 @@ class TestRootPathOpenApi:
         assert resp.status_code == 200
         assert resp.json()["openapi"]
 
-    def test_openapi_servers_contains_root_path(self, app_with_root_path):
-        client = TestClient(app_with_root_path)
-        spec = client.get("/openapi.json").json()
-        server_urls = [s["url"] for s in spec.get("servers", [])]
-        assert "/aura" in server_urls
-
 
 class TestRootPathRoutes:
     def test_routes_work_with_root_path(self, app_with_root_path):
-        """root_path must not change route matching — API paths stay the same."""
+        """ROOT_PATH must not change route matching — API paths stay the same."""
         client = TestClient(app_with_root_path)
         assert client.get("/healthcheck").status_code == 200
         assert client.get("/api/").status_code == 200
@@ -92,6 +88,25 @@ class TestRootPathRoutes:
     def test_healthcheck_works_without_root_path(self, test_app):
         client = TestClient(test_app)
         assert client.get("/healthcheck").status_code == 200
+
+    def test_static_files_work_with_root_path(self, app_with_root_path):
+        """Static files must be served correctly when ROOT_PATH is set.
+
+        This verifies the fix for a Starlette get_route_path() incompatibility:
+        when root_path is set on the FastAPI app AND a reverse proxy strips the
+        prefix, StaticFiles mounts break because the mount path gets double-counted
+        in the file lookup (e.g. static/static/file.png instead of static/file.png).
+        The fix is to NOT set root_path on the FastAPI app.
+        """
+        client = TestClient(app_with_root_path)
+        resp = client.get("/static/ANA-website-footer.png")
+        assert resp.status_code == 200
+
+    def test_static_files_work_without_root_path(self, test_app):
+        """Static files must work in the default (no ROOT_PATH) case."""
+        client = TestClient(test_app)
+        resp = client.get("/static/ANA-website-footer.png")
+        assert resp.status_code == 200
 
 
 class TestRootPathPrebuiltHtml:

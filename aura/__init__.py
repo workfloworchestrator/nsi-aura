@@ -51,7 +51,7 @@ scheduler.add_job(
 #
 # application
 #
-app = FastAPI(root_path=settings.ROOT_PATH)
+app = FastAPI()
 
 # make sure the folder named 'static' exists in the project,
 # and put the css and js files inside a subfolder called 'assets'
