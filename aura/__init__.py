@@ -51,7 +51,7 @@ scheduler.add_job(
 #
 # application
 #
-app = FastAPI()
+app = FastAPI(root_path=settings.ROOT_PATH)
 
 # make sure the folder named 'static' exists in the project,
 # and put the css and js files inside a subfolder called 'assets'
@@ -78,4 +78,8 @@ async def favicon_ico() -> str:
 
 @app.get("/{path:path}")
 async def html_landing() -> HTMLResponse:
-    return HTMLResponse(prebuilt_html(title="AURA PoC"))
+    kwargs: dict = {"title": settings.SITE_TITLE}
+    if settings.ROOT_PATH:
+        kwargs["api_root_url"] = f"{settings.ROOT_PATH}/api"
+        kwargs["api_path_strip"] = settings.ROOT_PATH
+    return HTMLResponse(prebuilt_html(**kwargs))

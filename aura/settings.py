@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     SQL_LOGGING: bool = False
     LOG_LEVEL: str = "INFO"
 
+    # ASGI root path prefix for reverse proxy with path stripping
+    ROOT_PATH: str = ""
+
     # NOTE: HttpUrl class will automatically add trailing / when converting to str
     @property
     def NSA_BASE_URL(self) -> HttpUrl:
