@@ -29,7 +29,7 @@ if (parse_result := urlparse(settings.DATABASE_URI)).scheme not in ("sqlite", "p
     exit(1)
 log.info("Create database connection.")
 try:
-    engine = create_engine(settings.DATABASE_URI, echo=settings.SQL_LOGGING)
+    engine = create_engine(settings.DATABASE_URI, echo=settings.SQL_LOGGING, pool_pre_ping=True)
     SQLModel.metadata.create_all(engine)
 except OperationalError as e:
     log.error("Failed to create database connection.", reason=e)
