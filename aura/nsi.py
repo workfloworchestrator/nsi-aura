@@ -601,7 +601,7 @@ def nsi_util_get_xml(url: HttpUrl) -> bytes | None:
     # logger.debug log.debug(r.headers['content-type'])
     # logger.debug log.debug(r.encoding)
     log.debug(r.status_code)
-    log.debug(r.headers["content-type"])
+    log.debug(r.headers.get("content-type"))
     log.debug(r.encoding)
     log.debug(r.content)
     # except:
@@ -612,7 +612,7 @@ def nsi_util_get_xml(url: HttpUrl) -> bytes | None:
     if r.status_code != 200:
         log.warning(f"{url} returned {r.status_code} with message {r.reason}")
         return None
-    if (content_type := r.headers["content-type"].lower()) != "application/xml":
+    if (content_type := r.headers.get("content-type", "").lower()) != "application/xml":
         log.warning(f"{url} did not return application/xml but {content_type}")
         return None
     return r.content

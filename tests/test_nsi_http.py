@@ -18,6 +18,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests.exceptions
+from requests.structures import CaseInsensitiveDict
 
 
 class TestNsiUtilGetXml:
@@ -53,6 +54,33 @@ class TestNsiUtilGetXml:
         mock_response.reason = "Not Found"
         mock_response.headers = {"content-type": "text/html"}
         mock_response.encoding = "utf-8"
+        mock_response.content = b""
+        mock_session.get.return_value = mock_response
+
+        result = nsi_util_get_xml("http://example.com/doc")
+        assert result is None
+
+    @patch("aura.nsi.session")
+    def test_error_response_without_content_type_returns_none(self, mock_session):
+        """A 5xx from the linkerd sidecar carries no content-type header; must not raise KeyError.
+
+        Reproduces the production crash where nsi_util_get_xml read r.headers["content-type"]
+        unconditionally (before the status check), raising KeyError on proxy error responses
+        such as: {'Content-Length': '0', 'L5d-Proxy-Error': 'endpoint ...: client error (Connect)'}.
+        """
+        from aura.nsi import nsi_util_get_xml
+
+        mock_response = MagicMock()
+        mock_response.status_code = 503
+        mock_response.reason = "Service Unavailable"
+        mock_response.headers = CaseInsensitiveDict(
+            {
+                "Content-Length": "0",
+                "L5d-Proxy-Connection": "close",
+                "L5d-Proxy-Error": "endpoint 10.246.13.2:8401: client error (Connect)",
+            }
+        )
+        mock_response.encoding = None
         mock_response.content = b""
         mock_session.get.return_value = mock_response
 
