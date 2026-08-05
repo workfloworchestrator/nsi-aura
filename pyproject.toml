@@ -7,7 +7,7 @@ name = "nsi-aura"
 version = "0.3.2.dev1"
 dependencies = [
     "apscheduler==3.11.3",
-    "fastapi[standard]==0.140.0",
+    "fastapi[standard]==0.140.7",
     "fastui==0.9.0",
     "lxml==6.1.1",
     "psycopg2-binary==2.9.12",
@@ -65,7 +65,7 @@ dev = [
     "mypy==2.3.0",
     "python-statemachine[diagrams]==3.2.0",
     "ruff==0.16.0",
-    "types-pytz==2026.2.0.20260518",
+    "types-pytz==2026.3.1.20260727",
     "types-requests==2.33.0.20260712",
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
