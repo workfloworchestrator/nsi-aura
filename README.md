@@ -59,6 +59,22 @@ And then (re)generate the image(s) in the `images` folder:
 python aura/fsm.py
 ```
 
+## Versioning
+
+The release git tag is the only place a version is written by hand. `pyproject.toml` declares
+`dynamic = ["version"]` and setuptools-scm derives it: a tag builds `0.3.2`, any other commit builds
+the next patch as a dev release with its commit, `0.3.3.dev3+g1a2b3c4`. AuRA logs that version at
+startup and exposes it via `importlib.metadata.version("nsi-aura")`.
+
+The container build has no `.git`, so `.github/workflows/build-push-container.yml` checks out with
+`fetch-depth: 0`, resolves the version on the runner, and passes it as `--build-arg VERSION=...`,
+which the `Dockerfile` hands to setuptools-scm as `SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NSI_AURA`. A
+build without that argument fails rather than producing a mislabelled image:
+
+```shell
+docker build --build-arg VERSION="$(uvx --from setuptools-scm python -m setuptools_scm)" -t nsi-aura .
+```
+
 ## Authors
 Arno Bakker (SURF)  
 Hans Trompert (SURF)

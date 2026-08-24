@@ -66,6 +66,15 @@ The test setup in `conftest.py` has important ordering constraints:
 - `DatabaseLogHandler` is removed from all loggers to prevent DB writes during tests
 - Each test gets its own DB session with automatic rollback via a transaction wrapper
 
+## Versioning
+
+The version is the git tag; never edit it. `pyproject.toml` is `dynamic = ["version"]` with
+setuptools-scm, so a tag builds `0.3.2` and any other commit builds `0.3.3.dev<n>+g<sha>`. The
+container build has no `.git`, so `build-push-container.yml` resolves the version on the runner and
+passes `--build-arg VERSION`, which the `Dockerfile` exports as
+`SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NSI_AURA`. Omitting it fails the build by design. `uv.lock`
+records the project as `(dynamic)` and so does not churn per commit.
+
 ## Code style
 
 - Line length: 120 (black, isort, ruff all configured consistently)

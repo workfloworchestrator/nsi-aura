@@ -1,10 +1,12 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
 
 [project]
 name = "nsi-aura"
-version = "0.3.2.dev1"
+dynamic = ["version"]
 dependencies = [
     "apscheduler==3.11.3",
     "fastapi[standard]==0.141.1",
