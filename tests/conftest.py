@@ -28,8 +28,8 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.orm import sessionmaker
-from sqlmodel import Session as SQLModelSession, SQLModel, create_engine
+from sqlmodel import Session as SQLModelSession
+from sqlmodel import SQLModel, create_engine
 
 from aura.log import DatabaseLogHandler
 from aura.model import SDP, STP, Reservation
@@ -69,7 +69,7 @@ def db_session(engine):
 
 @pytest.fixture()
 def stp_factory():
-    """Factory for creating STP instances."""
+    """Create a factory for STP instances."""
 
     def _make_stp(**kwargs):
         defaults = {
@@ -90,7 +90,7 @@ def stp_factory():
 
 @pytest.fixture()
 def sdp_factory():
-    """Factory for creating SDP instances."""
+    """Create a factory for SDP instances."""
 
     def _make_sdp(**kwargs):
         defaults = {
@@ -108,7 +108,7 @@ def sdp_factory():
 
 @pytest.fixture()
 def reservation_factory():
-    """Factory for creating Reservation instances."""
+    """Create a factory for Reservation instances."""
 
     def _make_reservation(**kwargs):
         defaults = {

@@ -342,8 +342,7 @@ def reservation_buttons(reservation: Reservation) -> c.Div:
                     modal="Are you sure you want to reserve this reservation again?",
                     url=f"{settings.ROOT_PATH}/api/reservations/{reservation.id}/reserve-again",
                 )
-                if csm.ConnectionReserveFailed.is_active
-                or csm.ConnectionTerminated.is_active
+                if csm.ConnectionReserveFailed.is_active or csm.ConnectionTerminated.is_active
                 else []
             ),
             *(

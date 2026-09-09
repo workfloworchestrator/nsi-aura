@@ -19,13 +19,14 @@ from statemachine.exceptions import TransitionNotAllowed
 
 from aura.fsm import ConnectionStateMachine
 
-
 VALID_TRANSITIONS = [
     pytest.param("nsi_send_reserve", "CONNECTION_NEW", "CONNECTION_RESERVE_CHECKING", id="new-to-checking"),
     pytest.param(
         "nsi_send_reserve", "CONNECTION_RESERVE_FAILED", "CONNECTION_RESERVE_CHECKING", id="failed-to-checking"
     ),
-    pytest.param("nsi_send_reserve", "CONNECTION_TERMINATED", "CONNECTION_RESERVE_CHECKING", id="terminated-to-checking"),
+    pytest.param(
+        "nsi_send_reserve", "CONNECTION_TERMINATED", "CONNECTION_RESERVE_CHECKING", id="terminated-to-checking"
+    ),
     pytest.param(
         "nsi_receive_reserve_confirmed",
         "CONNECTION_RESERVE_CHECKING",
@@ -41,12 +42,8 @@ VALID_TRANSITIONS = [
     pytest.param(
         "connection_error", "CONNECTION_RESERVE_CHECKING", "CONNECTION_RESERVE_FAILED", id="checking-error-to-failed"
     ),
-    pytest.param(
-        "nsi_receive_reserve_timeout", "RESERVE_HELD", "CONNECTION_RESERVE_TIMEOUT", id="held-to-timeout"
-    ),
-    pytest.param(
-        "nsi_send_reserve_commit", "RESERVE_HELD", "CONNECTION_RESERVE_COMMITTING", id="held-to-committing"
-    ),
+    pytest.param("nsi_receive_reserve_timeout", "RESERVE_HELD", "CONNECTION_RESERVE_TIMEOUT", id="held-to-timeout"),
+    pytest.param("nsi_send_reserve_commit", "RESERVE_HELD", "CONNECTION_RESERVE_COMMITTING", id="held-to-committing"),
     pytest.param(
         "nsi_receive_reserve_commit_confirmed",
         "CONNECTION_RESERVE_COMMITTING",
@@ -75,9 +72,7 @@ VALID_TRANSITIONS = [
         "CONNECTION_RESERVE_COMMITTED",
         id="released-to-committed",
     ),
-    pytest.param(
-        "nsi_receive_error_event", "CONNECTION_ACTIVE", "CONNECTION_FAILED", id="active-error-to-failed"
-    ),
+    pytest.param("nsi_receive_error_event", "CONNECTION_ACTIVE", "CONNECTION_FAILED", id="active-error-to-failed"),
     pytest.param(
         "nsi_receive_error_event", "CONNECTION_PROVISIONING", "CONNECTION_FAILED", id="provisioning-error-to-failed"
     ),
@@ -99,9 +94,7 @@ VALID_TRANSITIONS = [
     pytest.param(
         "nsi_send_terminate", "CONNECTION_PROVISIONED", "CONNECTION_TERMINATING", id="provisioned-to-terminating"
     ),
-    pytest.param(
-        "nsi_send_terminate", "CONNECTION_FAILED", "CONNECTION_TERMINATING", id="failed-to-terminating"
-    ),
+    pytest.param("nsi_send_terminate", "CONNECTION_FAILED", "CONNECTION_TERMINATING", id="failed-to-terminating"),
     pytest.param(
         "nsi_send_terminate",
         "CONNECTION_RESERVE_FAILED",
@@ -114,9 +107,7 @@ VALID_TRANSITIONS = [
         "CONNECTION_TERMINATED",
         id="terminating-to-terminated",
     ),
-    pytest.param(
-        "gui_delete_connection", "CONNECTION_TERMINATED", "CONNECTION_DELETED", id="terminated-to-deleted"
-    ),
+    pytest.param("gui_delete_connection", "CONNECTION_TERMINATED", "CONNECTION_DELETED", id="terminated-to-deleted"),
 ]
 
 

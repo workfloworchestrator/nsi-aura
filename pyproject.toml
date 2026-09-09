@@ -51,18 +51,6 @@ packages = ["aura", "aura.frontend"]
 
 [dependency-groups]
 dev = [
-    "black==26.5.1",
-    "flake8==7.3.0",
-    "flake8-bandit==4.1.1",
-    "flake8-bugbear==25.11.29",
-    "flake8-builtins==3.1.0",
-    "flake8-comprehensions==3.17.0",
-    "flake8-docstrings==1.7.0",
-    "flake8-implicit-str-concat==0.7.0",
-    "flake8-print==5.0.0",
-    "flake8-rst==0.8.0",
-    "flake8-string-format==0.4.0",
-    "isort==9.0.1",
     "lxml-stubs==0.5.1",
     "mypy==2.3.1",
     "python-statemachine[diagrams]==3.2.1",
@@ -142,39 +130,9 @@ lint.ignore = [
     "N815",
     "N816",
     "PGH003",
-    "S320",
 ]
 exclude = ["old/*"]
-
-[tool.black]
-line-length = 120
-target-version = ["py313"]
-exclude = '''
-(
-  /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | venv
-    | old
-    | build
-  )/
-)
-'''
-
-[tool.isort]
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-line_length = 120
-forced_separate = "supa"
-skip = ["venv", "static"]
-profile = "black"
-skip_glob = ["old/*"]
+lint.per-file-ignores = { "tests/**" = ["ANN", "ARG002", "S101"], "tests/conftest.py" = ["E402"] }
 
 [tool.mypy]
 plugins = ['pydantic.mypy']

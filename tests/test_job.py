@@ -17,8 +17,6 @@
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
-import pytest
-
 
 class TestNewCorrelationIdOnReservation:
     @patch("aura.job.Session")
@@ -69,7 +67,6 @@ class TestNsiSendReserveJob:
 
         conn_id = str(uuid4())
         mock_reservation = MagicMock(id=1, connectionId=None)
-        mock_stp = MagicMock()
 
         mock_session = MagicMock()
         mock_session.query.return_value.filter.return_value.one.return_value = mock_reservation

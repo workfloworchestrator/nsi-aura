@@ -20,7 +20,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from aura.model import STP, Reservation
+from aura.model import Reservation
 
 
 def _reservation_data(**overrides):

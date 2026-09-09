@@ -19,7 +19,6 @@ import zlib
 from unittest.mock import patch
 
 import pytest
-from sqlalchemy import or_, update
 
 from aura.dds import has_alias, strip_urn, to_dict, to_list, topology_to_stps, unzip, update_sdps
 from aura.model import SDP, STP
@@ -129,7 +128,9 @@ class TestTopologyToStps:
     def test_parses_descriptions(self):
         stps = topology_to_stps(MOXY_TOPOLOGY)
         stp_by_id = {stp.stpId: stp for stp in stps}
-        assert stp_by_id["moxy.ana.dlp.surfnet.nl:2024:ana-moxy:hpc-1"].description == "High Performance Cluster in Canada"
+        assert (
+            stp_by_id["moxy.ana.dlp.surfnet.nl:2024:ana-moxy:hpc-1"].description == "High Performance Cluster in Canada"
+        )
 
     def test_all_stps_active(self):
         stps = topology_to_stps(MOXY_TOPOLOGY)
@@ -188,7 +189,9 @@ class TestUpdateSdps:
         # West network: 2 endpoints + 2 links to center
         west_endpoint = STP(
             stpId="west.example:2024:net:london-1",
-            vlanRange="3000-3999", description="London", active=True,
+            vlanRange="3000-3999",
+            description="London",
+            active=True,
         )
         west_link1 = STP(
             stpId="west.example:2024:net:to-east-1",
@@ -196,7 +199,9 @@ class TestUpdateSdps:
             outboundPort="west.example:2024:net:to-east-1:out",
             inboundAlias="center.example:2024:net:to-west-1:out",
             outboundAlias="center.example:2024:net:to-west-1:in",
-            vlanRange="1000-1999", description="To Center 1", active=True,
+            vlanRange="1000-1999",
+            description="To Center 1",
+            active=True,
         )
         west_link2 = STP(
             stpId="west.example:2024:net:to-east-2",
@@ -204,13 +209,17 @@ class TestUpdateSdps:
             outboundPort="west.example:2024:net:to-east-2:out",
             inboundAlias="center.example:2024:net:to-west-2:out",
             outboundAlias="center.example:2024:net:to-west-2:in",
-            vlanRange="1000-1999", description="To Center 2", active=True,
+            vlanRange="1000-1999",
+            description="To Center 2",
+            active=True,
         )
 
         # East network: 2 endpoints + 2 links to center
         east_endpoint = STP(
             stpId="east.example:2024:net:berlin-1",
-            vlanRange="3000-3999", description="Berlin", active=True,
+            vlanRange="3000-3999",
+            description="Berlin",
+            active=True,
         )
         east_link1 = STP(
             stpId="east.example:2024:net:to-west-1",
@@ -218,7 +227,9 @@ class TestUpdateSdps:
             outboundPort="east.example:2024:net:to-west-1:out",
             inboundAlias="center.example:2024:net:to-east-1:out",
             outboundAlias="center.example:2024:net:to-east-1:in",
-            vlanRange="2000-2999", description="To Center 1", active=True,
+            vlanRange="2000-2999",
+            description="To Center 1",
+            active=True,
         )
         east_link2 = STP(
             stpId="east.example:2024:net:to-west-2",
@@ -226,13 +237,17 @@ class TestUpdateSdps:
             outboundPort="east.example:2024:net:to-west-2:out",
             inboundAlias="center.example:2024:net:to-east-2:out",
             outboundAlias="center.example:2024:net:to-east-2:in",
-            vlanRange="2000-2999", description="To Center 2", active=True,
+            vlanRange="2000-2999",
+            description="To Center 2",
+            active=True,
         )
 
         # Center network: 2 endpoints + 4 links (2 to west, 2 to east)
         center_endpoint = STP(
             stpId="center.example:2024:net:amsterdam-1",
-            vlanRange="3000-3999", description="Amsterdam", active=True,
+            vlanRange="3000-3999",
+            description="Amsterdam",
+            active=True,
         )
         center_to_west1 = STP(
             stpId="center.example:2024:net:to-west-1",
@@ -240,7 +255,9 @@ class TestUpdateSdps:
             outboundPort="center.example:2024:net:to-west-1:out",
             inboundAlias="west.example:2024:net:to-east-1:out",
             outboundAlias="west.example:2024:net:to-east-1:in",
-            vlanRange="1000-1999", description="To West 1", active=True,
+            vlanRange="1000-1999",
+            description="To West 1",
+            active=True,
         )
         center_to_west2 = STP(
             stpId="center.example:2024:net:to-west-2",
@@ -248,7 +265,9 @@ class TestUpdateSdps:
             outboundPort="center.example:2024:net:to-west-2:out",
             inboundAlias="west.example:2024:net:to-east-2:out",
             outboundAlias="west.example:2024:net:to-east-2:in",
-            vlanRange="1000-1999", description="To West 2", active=True,
+            vlanRange="1000-1999",
+            description="To West 2",
+            active=True,
         )
         center_to_east1 = STP(
             stpId="center.example:2024:net:to-east-1",
@@ -256,7 +275,9 @@ class TestUpdateSdps:
             outboundPort="center.example:2024:net:to-east-1:out",
             inboundAlias="east.example:2024:net:to-west-1:out",
             outboundAlias="east.example:2024:net:to-west-1:in",
-            vlanRange="2000-2999", description="To East 1", active=True,
+            vlanRange="2000-2999",
+            description="To East 1",
+            active=True,
         )
         center_to_east2 = STP(
             stpId="center.example:2024:net:to-east-2",
@@ -264,14 +285,23 @@ class TestUpdateSdps:
             outboundPort="center.example:2024:net:to-east-2:out",
             inboundAlias="east.example:2024:net:to-west-2:out",
             outboundAlias="east.example:2024:net:to-west-2:in",
-            vlanRange="2000-2999", description="To East 2", active=True,
+            vlanRange="2000-2999",
+            description="To East 2",
+            active=True,
         )
 
         all_stps = [
-            west_endpoint, west_link1, west_link2,
-            east_endpoint, east_link1, east_link2,
-            center_endpoint, center_to_west1, center_to_west2,
-            center_to_east1, center_to_east2,
+            west_endpoint,
+            west_link1,
+            west_link2,
+            east_endpoint,
+            east_link1,
+            east_link2,
+            center_endpoint,
+            center_to_west1,
+            center_to_west2,
+            center_to_east1,
+            center_to_east2,
         ]
         for stp in all_stps:
             db_session.add(stp)
@@ -319,8 +349,7 @@ class TestUpdateSdps:
         )
 
     def test_duplicate_sdps_detected_by_one_or_none(self, db_session):
-        """If duplicate SDPs exist in the database (corruption), one_or_none()
-        correctly signals this by raising MultipleResultsFound.
+        """Duplicate SDPs make one_or_none() raise MultipleResultsFound.
 
         This is intentional — duplicates should never be created by the code,
         but if they exist (e.g., from a past bug or manual data entry),
@@ -364,10 +393,11 @@ class TestUpdateSdps:
             mock.stop()
 
     def test_update_sdps_finds_sdp_regardless_of_stp_order(self, db_session):
-        """An SDP(A, Z) must be found even when the STP pair is discovered in
-        reverse order (Z, A) on a subsequent run. The or_ query covers both
-        orderings, so no duplicate should be created."""
-        stp_a, stp_z = self._make_sdp_pair(db_session)
+        """An SDP(A, Z) must be found even when the STP pair is discovered as (Z, A).
+
+        The or_ query covers both orderings, so no duplicate should be created.
+        """
+        stp_a, _stp_z = self._make_sdp_pair(db_session)
 
         mock = self._patch_session(db_session)
         try:

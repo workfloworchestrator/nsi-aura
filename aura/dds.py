@@ -172,7 +172,7 @@ def update_sdps() -> None:
         )
 
     with Session() as session:
-        stps = session.query(STP).filter(STP.active == True).all()
+        stps = session.query(STP).filter(STP.active.is_(True)).all()
     # find connected STPs
     sdps = []
     paired: set[int] = set()

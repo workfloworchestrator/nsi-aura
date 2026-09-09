@@ -15,7 +15,6 @@
 from fastapi import APIRouter
 from fastui import AnyComponent, FastUI
 from fastui import components as c
-from fastui.events import GoToEvent
 
 from aura.frontend.util import app_page
 from aura.settings import settings
@@ -35,6 +34,7 @@ how_to = """
 2. Allow the topology change(s) to propagate.
 3. [Select endpoints and transatlantic link](/reservations/new).
 """
+
 
 @router.get("/", response_model=FastUI, response_model_exclude_none=True)
 def home() -> list[AnyComponent]:

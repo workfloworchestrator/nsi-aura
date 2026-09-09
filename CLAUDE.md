@@ -10,19 +10,20 @@ NSI-AuRA (ultimate Requester Agent) — a FastAPI + FastUI web application for m
 
 ```bash
 # Run all tests (matches CI)
-uv run --group dev pytest tests/ -v
+uv run pytest
 
 # Run a single test file
-uv run --group dev pytest tests/test_vlan.py -v
+uv run pytest tests/test_vlan.py -v
 
 # Run a specific test
-uv run --group dev pytest tests/ -k "test_free_vlan_ranges"
+uv run pytest tests/ -k "test_free_vlan_ranges"
 
-# Type checking
-uv run --group dev mypy aura/
+# Lint and format check (matches CI)
+uv run ruff check .
+uv run ruff format --check .
 
-# Linting
-uv run --group dev ruff check aura/
+# Type checking (not in CI: 41 pre-existing SQLModel/SQLAlchemy typing errors)
+uv run mypy aura
 
 # Build wheel
 uv build --wheel
@@ -77,7 +78,7 @@ records the project as `(dynamic)` and so does not churn per commit.
 
 ## Code style
 
-- Line length: 120 (black, isort, ruff all configured consistently)
+- Line length: 120 (ruff does linting, import sorting, and formatting)
 - Python target: 3.13
 - mypy with `pydantic.mypy` plugin, `disallow_untyped_defs = true`
 - ruff rules: ANN, ARG, B, C, D, E, F, I, N, PGH, PTH, Q, RET, RUF, S, T, W
