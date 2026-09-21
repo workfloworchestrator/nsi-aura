@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
 #
 # Build stage
-FROM ghcr.io/astral-sh/uv:python3.13-alpine@sha256:e20433e476f56f543355bcef972d93813d050d0884ad5a570d8d0d291c317194 AS build
+FROM ghcr.io/astral-sh/uv:python3.13-alpine@sha256:66cfb8e0b8aca1decede4fddf5fecd750eea0b5f82dad20a8355b6e67f0b3982 AS build
 ARG VERSION
 ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NSI_AURA=${VERSION}
 WORKDIR /app
@@ -11,7 +11,7 @@ COPY static static
 RUN uv build --no-cache --wheel --out-dir dist
 
 # Final stage
-FROM ghcr.io/astral-sh/uv:python3.13-alpine@sha256:e20433e476f56f543355bcef972d93813d050d0884ad5a570d8d0d291c317194
+FROM ghcr.io/astral-sh/uv:python3.13-alpine@sha256:66cfb8e0b8aca1decede4fddf5fecd750eea0b5f82dad20a8355b6e67f0b3982
 COPY --from=build /app/dist/*.whl /tmp/
 RUN uv pip install --system --no-cache /tmp/*.whl && rm /tmp/*.whl
 RUN addgroup -g 1000 aura && adduser -D -u 1000 -G aura aura
