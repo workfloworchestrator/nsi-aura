@@ -76,6 +76,12 @@ passes `--build-arg VERSION`, which the `Dockerfile` exports as
 `SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NSI_AURA`. Omitting it fails the build by design. `uv.lock`
 records the project as `(dynamic)` and so does not churn per commit.
 
+## Dependency cooldown
+
+`exclude-newer = "8 days"` in `pyproject.toml` and `minimumReleaseAge` in `.github/renovate.json`
+must stay equal. uv enforces the cooldown on indirect dependencies, which Renovate cannot. An urgent
+fix younger than that needs a temporary `exclude-newer-package = { <pkg> = false }`.
+
 ## Code style
 
 - Line length: 120 (ruff does linting, import sorting, and formatting)
