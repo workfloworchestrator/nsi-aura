@@ -52,9 +52,9 @@ packages = ["aura", "aura.frontend"]
 [dependency-groups]
 dev = [
     "lxml-stubs==0.5.1",
-    "mypy==2.3.1",
+    "mypy==2.4.0",
     "python-statemachine[diagrams]==3.2.1",
-    "ruff==0.16.9",
+    "ruff==0.16.10",
     "types-pytz==2026.4.0.20260926",
     "types-requests==2.33.0.20260906",
     "pytest==9.1.1",
