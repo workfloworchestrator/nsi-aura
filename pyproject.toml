@@ -18,7 +18,7 @@ dependencies = [
     "python-statemachine==3.2.1",
     "pytz==2026.5",
     "requests==2.34.2",
-    "sqlmodel==0.0.47",
+    "sqlmodel==0.0.48",
     "structlog==26.1.0",
 ]
 requires-python = ">=3.12"
@@ -55,8 +55,8 @@ dev = [
     "mypy==2.4.0",
     "python-statemachine[diagrams]==3.2.1",
     "ruff==0.16.10",
-    "types-pytz==2026.4.0.20260926",
-    "types-requests==2.33.0.20260906",
+    "types-pytz==2026.5.0.20261006",
+    "types-requests==2.33.0.20261006",
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
 ]
