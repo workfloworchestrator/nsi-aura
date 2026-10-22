@@ -322,7 +322,7 @@ wheels = [
 
 [[package]]
 name = "fastapi"
-version = "0.143.0"
+version = "0.143.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -332,9 +332,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0b/d7/6a8753ab6c1d432dc53703c3e1b92974a94531b7d047c32bbaae461ea844/fastapi-0.143.0.tar.gz", hash = "sha256:1acffe48206a80917cf7dac21992b5c44b25384e8902bf745c1fd9dabcf6c51f", size = 468391, upload-time = "2026-10-08T12:29:46.54Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/96/16/52ca959230f9820660fd822f488f883d7dc42310716b4cc6d2a944835dcd/fastapi-0.143.1.tar.gz", hash = "sha256:4cafaab64df8534758bf0fce61947f5e27e6cd512798ccbbaad5425086c3b664", size = 469025, upload-time = "2026-10-14T12:53:09.448Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bd/f4/27e386913417ad32aae42bba48b0c0cce40e9ff2fba1a871ca2702c37324/fastapi-0.143.0-py3-none-any.whl", hash = "sha256:3e9395fd35276425b61b516a31fdd7c77fe2af83e41b4da22e30696fb1304c5d", size = 144665, upload-time = "2026-10-08T12:29:44.853Z" },
+    { url = "https://files.pythonhosted.org/packages/ca/73/30ee3dd8f26fd385e451bbded9e1b54766a277db588e70154dd894f4b698/fastapi-0.143.1-py3-none-any.whl", hash = "sha256:687beb445804e4c4dbe2a76fd83c25e9b973ac48c267defb86f791e099baecc4", size = 144682, upload-time = "2026-10-14T12:53:07.69Z" },
 ]
 
 [package.optional-dependencies]
@@ -1124,13 +1124,13 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "apscheduler", specifier = "==3.11.3" },
-    { name = "fastapi", extras = ["standard"], specifier = "==0.143.0" },
+    { name = "fastapi", extras = ["standard"], specifier = "==0.143.1" },
     { name = "fastui", specifier = "==0.9.0" },
     { name = "lxml", specifier = "==6.1.3" },
     { name = "psycopg2-binary", specifier = "==2.9.13" },
     { name = "pydantic", specifier = "==2.14.1" },
-    { name = "pydantic-settings", specifier = "==2.15.0" },
-    { name = "python-statemachine", specifier = "==3.2.1" },
+    { name = "pydantic-settings", specifier = "==2.16.0" },
+    { name = "python-statemachine", specifier = "==3.2.2" },
     { name = "pytz", specifier = "==2026.5" },
     { name = "requests", specifier = "==2.34.2" },
     { name = "sqlmodel", specifier = "==0.0.48" },
@@ -1143,7 +1143,7 @@ dev = [
     { name = "mypy", specifier = "==2.4.0" },
     { name = "pytest", specifier = "==9.1.1" },
     { name = "pytest-asyncio", specifier = "==1.4.0" },
-    { name = "python-statemachine", extras = ["diagrams"], specifier = "==3.2.1" },
+    { name = "python-statemachine", extras = ["diagrams"], specifier = "==3.2.2" },
     { name = "ruff", specifier = "==0.17.0" },
     { name = "types-pytz", specifier = "==2026.5.0.20261006" },
     { name = "types-requests", specifier = "==2.33.0.20261006" },
@@ -1496,16 +1496,17 @@ wheels = [
 
 [[package]]
 name = "pydantic-settings"
-version = "2.15.0"
+version = "2.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "python-dotenv" },
+    { name = "typing-extensions" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/68/ca/31c57507b13119d7d3cfa1576dad2911a4861e3be07b579395f4e9d393f9/pydantic_settings-2.15.0.tar.gz", hash = "sha256:694b793e84f766ba76a90ebdefc01d0a9a045dab0382bee70393da93712ad117", size = 261253, upload-time = "2026-08-07T09:24:57.419Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2e/3b/a5d2294799b53b448319978cfb5bd139d5a9d45e862af91661614f14c922/pydantic_settings-2.16.0.tar.gz", hash = "sha256:5b6c578049ede4db0e2ef3b4eaa4ad4069cfa9211f83fb38df899dfade50a614", size = 301031, upload-time = "2026-10-14T12:44:09.998Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/30/a4/2bffa9f8e804325a09867f0e9d30795c80ea9f8d62560bd1b6ad6220eb2f/pydantic_settings-2.15.0-py3-none-any.whl", hash = "sha256:0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42", size = 69413, upload-time = "2026-08-07T09:24:55.839Z" },
+    { url = "https://files.pythonhosted.org/packages/53/f4/b987bf8c51e5b19a95fa66d1ee596074141e085d9c2ddf97920803c7029b/pydantic_settings-2.16.0-py3-none-any.whl", hash = "sha256:7e73acf7f61936a15e5a3b6eedaea29f133357faf7272f2607ba479b049dd7f2", size = 80364, upload-time = "2026-10-14T12:44:08.233Z" },
 ]
 
 [[package]]
@@ -1587,11 +1588,11 @@ wheels = [
 
 [[package]]
 name = "python-statemachine"
-version = "3.2.1"
+version = "3.2.2"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/da/ec/9600288c5cd4960bab1f20d2420d3a93845f278938bc70a6380edbcc807a/python_statemachine-3.2.1.tar.gz", hash = "sha256:dff36682cab00ba7f797e01ebdd90c4dbb2c2e00fe7cfcc9f926f63c50266507", size = 770078, upload-time = "2026-08-01T16:52:44.987Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5f/30/52678909680544def104120a59fa64baf506b288702c600adb593a3479f8/python_statemachine-3.2.2.tar.gz", hash = "sha256:5968c5e07a537f7531b8b1d0a0d5067a3452c88941fa0ac6c244870d48f78325", size = 858814, upload-time = "2026-10-14T00:46:36.305Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/91/d5/e1dde86357f286b508f4b8241e2b634cf1c24ccaa3f2fe6a250a008f8d4c/python_statemachine-3.2.1-py3-none-any.whl", hash = "sha256:609b46fcc68f400affac42a2fe514a5b5e552cb859319475f91e1f08696d7759", size = 158637, upload-time = "2026-08-01T16:52:43.683Z" },
+    { url = "https://files.pythonhosted.org/packages/85/d1/d722672f4bfbe1176588157e0f9fa6dd5331a71922bed36aca0e79271535/python_statemachine-3.2.2-py3-none-any.whl", hash = "sha256:141d20e00776815692e424d3df825b1bd7ccaeedc6fda7787ddf249e767e1676", size = 167322, upload-time = "2026-10-14T00:46:34.988Z" },
 ]
 
 [package.optional-dependencies]
