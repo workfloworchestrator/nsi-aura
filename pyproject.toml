@@ -57,7 +57,7 @@ dev = [
     "ruff==0.17.3",
     "types-pytz==2026.5.0.20261006",
     "types-requests==2.33.0.20261006",
-    "pytest==9.1.1",
+    "pytest==9.2.0",
     "pytest-asyncio==1.4.1",
 ]
 
