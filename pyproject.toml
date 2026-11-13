@@ -13,7 +13,7 @@ dependencies = [
     "fastui==0.9.0",
     "lxml==6.1.3",
     "psycopg2-binary==2.9.13",
-    "pydantic==2.14.2",
+    "pydantic==2.14.3",
     "pydantic-settings==2.16.2",
     "python-statemachine==3.2.2",
     "pytz==2026.6",
