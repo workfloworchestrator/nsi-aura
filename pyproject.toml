@@ -9,16 +9,16 @@ name = "nsi-aura"
 dynamic = ["version"]
 dependencies = [
     "apscheduler==3.11.3",
-    "fastapi[standard]==0.162.5",
+    "fastapi[standard]==0.162.7",
     "fastui==0.9.0",
     "lxml==6.1.3",
     "psycopg2-binary==2.9.13",
     "pydantic==2.14.3",
-    "pydantic-settings==2.16.2",
+    "pydantic-settings==2.16.3",
     "python-statemachine==3.2.2",
     "pytz==2026.6",
     "requests==2.34.2",
-    "sqlmodel==0.0.49",
+    "sqlmodel==0.0.50",
     "structlog==26.1.0",
 ]
 requires-python = ">=3.12"
